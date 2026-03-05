@@ -7,10 +7,6 @@ logs/
 *.log
 
 # Builds
-build/
-dist/
-installer/build/
-installer/dist/
 *.spec
 
 # Virtualenv
