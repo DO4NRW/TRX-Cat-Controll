@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+*.log
+
+# Builds
+build/
+dist/
+installer/build/
+installer/dist/
+*.spec
+
+# Virtualenv
+.venv/
+venv/
+
+# Archives / media / temp / backups
+*.zip
+*.7z
+*.rar
+*.wav
+*.mp3
+*.mp4
+*.jpg
+*.jpeg
+*.png
+temp_*
+*Backup*
