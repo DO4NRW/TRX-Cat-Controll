@@ -7,6 +7,9 @@ logs/
 *.log
 
 # Builds
+build/
+installer/build/
+installer/dist/TRX_Cat_control/
 *.spec
 
 # Virtualenv
@@ -14,8 +17,6 @@ logs/
 venv/
 
 # Archives / media / temp / backups
-*.zip
-*.7z
 *.rar
 *.wav
 *.mp3
