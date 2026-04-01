@@ -198,11 +198,16 @@ def _combo(values, current=""):
     return cb
 
 
+_card_counter = 0
 def _card(title):
     """Returns (card_widget, inner_layout) — a bordered card with a bold title."""
+    global _card_counter
+    _card_counter += 1
     card = QWidget()
+    obj_name = f"card_{_card_counter}"
+    card.setObjectName(obj_name)
     card.setStyleSheet(f"""
-        QWidget {{
+        QWidget#{obj_name} {{
             background-color: {with_alpha(T['bg_mid'], 220)};
             border: 1px solid {T['bg_light']};
             border-radius: 8px;
@@ -311,8 +316,9 @@ class RadioSetupOverlay(QWidget):
 
         # ── RIGHT: PTT / Mode card (custom header with test buttons) ──
         self._ptt_card = QWidget()
+        self._ptt_card.setObjectName("pttCard")
         self._ptt_card.setStyleSheet(f"""
-            QWidget {{
+            QWidget#pttCard {{
                 background-color: {with_alpha(T['bg_mid'], 220)};
                 border: 1px solid {T['bg_light']};
                 border-radius: 8px;
@@ -427,7 +433,6 @@ class RadioSetupOverlay(QWidget):
                     resp = s.read_until(b";")
                     ok = resp.startswith(b"FA") and len(resp) >= 3
             except Exception as e:
-                print(f"Test CAT Fehler: {e}")
             self._cat_result_sig.emit(ok)
 
         threading.Thread(target=run, daemon=True).start()
@@ -440,8 +445,10 @@ class RadioSetupOverlay(QWidget):
     # ── Test PTT ──────────────────────────────────────────────────────
 
     def _test_ptt(self):
-        port   = self.combo_ptt_port.currentText()
-        method = (self.tg_ptt_method.value() or "RTS").upper()
+        cat_port = self.combo_cat_port.currentText()
+        cat_baud = int(self.combo_baud.currentText())
+        ptt_port = self.combo_ptt_port.currentText()
+        method = (self.tg_ptt_method.value() or "CAT").upper()
         invert = self.tg_ptt_invert.isChecked()
         self.btn_test_ptt.setEnabled(False)
 
@@ -449,21 +456,32 @@ class RadioSetupOverlay(QWidget):
             ok = False
             try:
                 import serial, time
-                with serial.Serial(port, 38400, timeout=0.5,
-                                   rtscts=False, dsrdtr=False) as s:
-                    safe = invert
-                    s.setRTS(safe)
-                    s.setDTR(safe)
-                    time.sleep(0.05)
-                    if method == "RTS":
-                        s.setRTS(not safe)
-                        time.sleep(0.3)
+                if method == "CAT":
+                    # PTT via CAT: TX1; auf dem CAT-Port
+                    with serial.Serial(cat_port, cat_baud, timeout=0.5,
+                                       rtscts=False, dsrdtr=False) as s:
+                        s.write(b"TX1;")
+                        time.sleep(0.5)
+                        s.write(b"TX0;")
+                        time.sleep(0.1)
+                        ok = True
+                else:
+                    # PTT via RTS/DTR auf dem PTT-Port
+                    with serial.Serial(ptt_port, 38400, timeout=0.5,
+                                       rtscts=False, dsrdtr=False) as s:
+                        safe = invert
                         s.setRTS(safe)
-                    elif method == "DTR":
-                        s.setDTR(not safe)
-                        time.sleep(0.3)
                         s.setDTR(safe)
-                    ok = True
+                        time.sleep(0.05)
+                        if method == "RTS":
+                            s.setRTS(not safe)
+                            time.sleep(0.3)
+                            s.setRTS(safe)
+                        elif method == "DTR":
+                            s.setDTR(not safe)
+                            time.sleep(0.3)
+                            s.setDTR(safe)
+                        ok = True
             except Exception as e:
                 print(f"Test PTT Fehler: {e}")
             self._ptt_result_sig.emit(ok)
@@ -500,13 +518,20 @@ class RadioSetupOverlay(QWidget):
                 background-color: {T['bg_mid']}; color: {T['text_secondary']};
                 selection-background-color: {T['bg_light']}; border: 1px solid {T['border']};
             }}"""
-        _card_style = f"""
-            QWidget {{
+        self._cat_card.setObjectName("catCard")
+        self._ptt_card.setObjectName("pttCard")
+        _card_style_cat = f"""
+            QWidget#catCard {{
                 background-color: {with_alpha(T['bg_mid'], 220)};
                 border: 1px solid {T['bg_light']}; border-radius: 8px;
             }}"""
-        self._cat_card.setStyleSheet(_card_style)
-        self._ptt_card.setStyleSheet(_card_style)
+        _card_style_ptt = f"""
+            QWidget#pttCard {{
+                background-color: {with_alpha(T['bg_mid'], 220)};
+                border: 1px solid {T['bg_light']}; border-radius: 8px;
+            }}"""
+        self._cat_card.setStyleSheet(_card_style_cat)
+        self._ptt_card.setStyleSheet(_card_style_ptt)
         for cb in self.panel.findChildren(QComboBox):
             cb.setStyleSheet(_combo_style)
         for lbl in self.panel.findChildren(QLabel):
@@ -701,15 +726,13 @@ class RadioSetupOverlay(QWidget):
         self.btn_save.setStyleSheet(style)
         QTimer.singleShot(2000, lambda: self.btn_save.setStyleSheet(self._save_style_default))
 
-        # Top-Bar Combo synchronisieren und Rig-Widget neu laden
+        # Top-Bar Combo synchronisieren (nur wenn Rig gewechselt wurde)
         if ok:
             main_win = self.parent().window() if self.parent() else None
             if main_win and hasattr(main_win, "combo_rig_select"):
                 new_rig = self.combo_rig.currentText()
                 if main_win.combo_rig_select.currentText() != new_rig:
                     main_win.combo_rig_select.setCurrentText(new_rig)
-                else:
-                    main_win._on_rig_changed()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -2141,6 +2164,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("RigLink")
         self.resize(1000, 700)
         self.setMinimumSize(900, 640)
+
+        # Fenster-Icon setzen
+        logo = os.path.join(os.path.dirname(__file__), "Logo.png")
+        if os.path.exists(logo):
+            self.setWindowIcon(QIcon(logo))
 
         # Fenster-Background entkoppeln vom System-Theme
         self._apply_window_bg()
