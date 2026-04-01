@@ -60,7 +60,7 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
-![TRX Cat Control V2](Screenshot.png)
+*Folgen in Kürze*
 
 ---
 
