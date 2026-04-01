@@ -1,8 +1,10 @@
 # RigLink — CAT Voice Control Interface
 
-**RigLink** ist ein **CAT Voice Control Interface** für Funkgeräte (aktueller Fokus: **Yaesu FT-991A**).
+**RigLink** ist ein **CAT Voice Control Interface** für Funkgeräte — unterstützt **Yaesu, Icom, Kenwood** und **Elecraft**.
 
 Ziel: Über **CAT** und die **eingebaute Soundkarte / USB-FT8-Schnittstelle** dein TRX steuern und darüber funken – **ohne** zusätzliche Adapter-Hardware. So kannst du direkt über die FT8/USB-Audio-Schnittstelle senden/empfangen und gleichzeitig per CAT (Frequenz/Mode/PTT) steuern.
+
+**Getestet mit:** Yaesu FT-991A, Icom IC-705 (inkl. Wasserfall/Spektrum)
 
 > **V2** ist ein kompletter Rewrite von CustomTkinter → **PySide6/Qt** mit neuem Theme-System und modularer Rig-Architektur.
 > Die alte V1 (CustomTkinter + Windows .exe) findest du unter [Releases → v1.0-customtkinter](https://github.com/DO4NRW/RigLink/releases/tag/v1.0-customtkinter).
@@ -11,7 +13,7 @@ Ziel: Über **CAT** und die **eingebaute Soundkarte / USB-FT8-Schnittstelle** de
 
 ## Warum?
 
-Viele TRX (z.B. FT-991A) liefern über USB:
+Viele TRX (z.B. FT-991A, IC-705, IC-7300, TS-890S) liefern über USB:
 
 - **CAT** (Frequenz/Mode/PTT-Steuerung)
 - **Audio In/Out** (wie bei FT8/WSJT-X)
@@ -23,12 +25,21 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ## Features
 
 ### CAT Control
-- Frequenzanzeige + Tuning (Step Up/Down, direkte Eingabe)
-- Mode-Umschaltung (LSB, USB, CW, FM, AM)
-- DSP-Tools: ATT, NB, DNR, DNF, NOTCH
-- Preamp-Umschaltung (IPO/AMP1/AMP2)
+- **Globaler CAT-Handler:** Yaesu, Icom CI-V, Kenwood/Elecraft Protokolle
+- **24 Rigs** von 4 Herstellern vorkonfiguriert
+- Frequenzanzeige 14.200.000 MHz + Tuning (Step Up/Down, direkte Eingabe)
+- Mode-Umschaltung (LSB, USB, CW, CW-R, FM, RTTY, RTTY-R + DATA)
+- DSP-Tools: ATT, NB, NR, NOTCH, COMP, AGC (rig-spezifisch)
+- Preamp-Umschaltung
 - Power-Regler
-- S-Meter mit Kalibrierung pro Preamp + Modus
+- S-Meter mit Kalibrierung aus Config
+
+### Wasserfall / Spektrum (Icom)
+- Echtzeit Spektrum + scrollender Wasserfall via CI-V Scope
+- Frequenz-Leiste mit Labels
+- Center-Marker + Passband-Anzeige (USB/LSB/FM)
+- Span-Slider (2.5 kHz - 500 kHz)
+- Smooth Blend zwischen Sweeps
 
 ### PTT
 - Methoden: CAT, RTS, DTR, VOX
@@ -52,9 +63,19 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ### Modulare Rig-Architektur
 - Jeder TRX hat eigenen Ordner: `rig/<hersteller>/<modell>/`
-- `config.json` + optional `<modell>_ui.py` pro Rig
+- `config.json` + `<modell>_ui.py` pro Rig
+- Globaler CAT-Handler in `core/cat/` (Yaesu, Icom, Kenwood)
+- Hersteller/Modell Dropdowns in Radio Settings
 - Rig-Widget wird dynamisch geladen
 - Neues Rig = Ordner + config.json anlegen, App scannt automatisch
+
+### Unterstützte Rigs
+| Hersteller | Modelle |
+|---|---|
+| Yaesu | FT-991A, FT-891, FT-710, FT-DX101D/MP, FT-DX10, FT-950, FT-2000, FT-450, FT-857, FT-818 |
+| Icom | IC-705, IC-7300, IC-7610, IC-9700, IC-7100 |
+| Kenwood | TS-890S, TS-2000, TS-590SG, TS-480 |
+| Elecraft | K3, K3S, KX2, KX3 |
 
 ---
 
@@ -123,13 +144,18 @@ configs/
   theme.json                     — Aktuelle Farbkonfiguration (RGBA)
   status_conf.json               — Status-Messages, last_rig, last_theme
   user_themes.json               — Gespeicherte User-Themes
+core/
+  cat/                           — Globaler CAT-Handler
+    __init__.py                  — CatBase + Factory
+    yaesu.py                     — Yaesu CAT Protokoll
+    icom.py                      — Icom CI-V Protokoll
+    kenwood.py                   — Kenwood/Elecraft Protokoll
+  waterfall.py                   — Wasserfall/Spektrum Widget
+  rig_widget.py                  — Generisches Rig-Widget
 rig/
-  yaesu/ft991a/
-    config.json                  — CAT, PTT, Audio, VOX Config
-    cat_handler.py               — CAT-Befehle (Serial)
-    ft991a_ui.py                 — Rig-spezifische GUI
-  icom/ic7300/
-    config.json                  — (Config vorhanden, GUI folgt)
+  yaesu/ft991a/                  — FT-991A (CAT + Audio + UI)
+  icom/ic705/                    — IC-705 (CAT + Wasserfall + UI)
+  ...                            — 24 Rigs total
 assets/
   icons/                         — SVG/PNG Icons (helles Set)
   icons/light/                   — SVG Icons (dunkles Set für helle Themes)
