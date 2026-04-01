@@ -30,7 +30,7 @@ class IcomCat(CatBase):
         self._civ_addr = civ_address
         self._ctrl_addr = 0xE0  # Controller (PC) Adresse
         self._scope_buffer = []  # Gepufferte Scope-Frames
-        self._scope_spectrum = []  # Akkumulierte Waveform-Bytes
+        self._scope_spectrum = [0] * 475
         self._scope_last_div = 0
         self._scope_div_max = 11
         self._scope_latest = None
@@ -330,34 +330,32 @@ class IcomCat(CatBase):
         self._scope_running = False
 
     def _flush_scope_from_serial(self):
-        """Lese alle wartenden Daten vom Serial-Port und puffere Scope-Frames.
-        Wird vom Scope-Thread aufgerufen OHNE Query zu senden."""
-        with self._lock:
-            if not self._ser or not self._ser.is_open:
+        """Lese wartende Daten vom Serial-Port — non-blocking wenn Query läuft."""
+        if not self._lock.acquire(blocking=False):
+            return  # Query läuft gerade, nicht blockieren
+        try:
+            if not self._ser or not self._ser.is_open or self._ser.in_waiting == 0:
                 return
-            try:
-                if self._ser.in_waiting == 0:
-                    return
-                import time
-                buf = b""
-                while self._ser.in_waiting > 0:
-                    buf += self._ser.read(self._ser.in_waiting)
-                    time.sleep(0.003)
-                # Frames parsen
-                while True:
-                    start = buf.find(bytes([0xFE, 0xFE]))
-                    if start < 0:
-                        break
-                    end = buf.find(bytes([0xFD]), start)
-                    if end < 0:
-                        break
-                    f = buf[start:end + 1]
-                    buf = buf[end + 1:]
-                    if len(f) >= 6 and f[2] == self._ctrl_addr and f[4] == 0x27 and f[5] == 0x00:
-                        with self._scope_lock:
-                            self._scope_buffer.append(f)
-            except Exception:
-                pass
+            import time
+            buf = b""
+            while self._ser.in_waiting > 0:
+                buf += self._ser.read(self._ser.in_waiting)
+                time.sleep(0.003)
+            while True:
+                start = buf.find(bytes([0xFE, 0xFE]))
+                if start < 0:
+                    break
+                end = buf.find(bytes([0xFD]), start)
+                if end < 0:
+                    break
+                f = buf[start:end + 1]
+                buf = buf[end + 1:]
+                if len(f) >= 6 and f[2] == self._ctrl_addr and f[4] == 0x27 and f[5] == 0x00:
+                    self._scope_buffer.append(f)
+        except Exception:
+            pass
+        finally:
+            self._lock.release()
 
     @staticmethod
     def _bcd_byte(b):
@@ -432,13 +430,14 @@ class IcomCat(CatBase):
                 time.sleep(0.03)
 
     def scope_read(self):
-        """Scope-Daten aus dem Buffer verarbeiten. Nur komplette Sweeps zurückgeben."""
+        """Scope-Daten live verarbeiten. Jede Division sofort ins Spektrum."""
         frames = self._scope_buffer[:]
         self._scope_buffer.clear()
 
         if not frames:
-            return self._scope_latest
+            return None
 
+        changed = False
         for frame in frames:
             if len(frame) < 10:
                 continue
@@ -447,34 +446,21 @@ class IcomCat(CatBase):
             div_max = self._bcd_byte(frame[8])
 
             if div_order == 1:
-                # Neuer Sweep — altes fertig wenn genug Daten
-                if len(self._scope_spectrum) >= 400:
-                    # Auf 475 padden/trimmen
-                    padded = (self._scope_spectrum + [0] * 475)[:475]
-                    self._scope_latest = padded
-                self._scope_spectrum = []
-                self._scope_last_div = 1
-                self._scope_div_max = div_max
-                # Span aus Header parsen (frame[15:18] = 3 BCD bytes)
                 if len(frame) >= 18:
                     self._scope_span_hz = self._bcd_to_int(frame[15:18])
                 continue
 
-            # Nur sequentielle Divisionen akzeptieren (wie wfview)
-            if div_order <= self._scope_last_div or div_order > self._scope_div_max:
-                continue
-            self._scope_last_div = div_order
-
-            # Waveform-Daten anhängen (nach 3 Header-Bytes: 00, div, max)
-            # frame[9:-1] = alles nach den 3 Header-Bytes bis vor FD
             wave_data = frame[9:-1]
-            self._scope_spectrum.extend(wave_data)
+            if not wave_data:
+                continue
 
-            # Letzte Division → fertig
-            if div_order >= div_max:
-                padded = (self._scope_spectrum + [0] * 475)[:475]
-                self._scope_latest = padded
-                self._scope_spectrum = []
-                self._scope_last_div = 0
+            if div_order < 2 or div_order > 11:
+                continue
+            offset = (div_order - 2) * 50
+            for i, val in enumerate(wave_data):
+                idx = offset + i
+                if 0 <= idx < 475:
+                    self._scope_spectrum[idx] = min(160, val)
+            changed = True
 
-        return self._scope_latest
+        return self._scope_spectrum[:] if changed else None

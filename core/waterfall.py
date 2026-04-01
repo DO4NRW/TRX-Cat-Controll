@@ -28,13 +28,17 @@ class WaterfallWidget(QWidget):
         self._wf_image.fill(QColor(8, 12, 35))
 
         # Display Settings
-        self._color_gain = 6.0     # Farbverstärkung
-        self._black_level = 5      # Unter diesem Wert = schwarz
+        self._color_gain = 3.0     # Farbverstärkung (weniger aggressiv)
+        self._black_level = 3      # Unter diesem Wert = schwarz
         self._spectrum_frac = 0.35  # 35% Spektrum, 65% Wasserfall
         self._fill_alpha = 0.75
 
         # Farbpalette
         self._palette = self._build_palette()
+
+        self._last_spectrum = np.zeros(num_points, dtype=np.float32)
+        self._display_spectrum = np.zeros(num_points, dtype=np.float32)
+        self._scroll_timer = None
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
@@ -79,19 +83,43 @@ class WaterfallWidget(QWidget):
         scaled = (val - self._black_level) * self._color_gain
         return min(255, max(0, int(scaled)))
 
+    def start_scroll(self, interval_ms=80):
+        """Wasserfall durchgehend scrollen starten."""
+        if self._scroll_timer is None:
+            from PySide6.QtCore import QTimer
+            self._scroll_timer = QTimer(self)
+            self._scroll_timer.timeout.connect(self._scroll_tick)
+        self._scroll_timer.start(interval_ms)
+
+    def stop_scroll(self):
+        if self._scroll_timer:
+            self._scroll_timer.stop()
+
+    def _scroll_tick(self):
+        """Jeder Tick: langsam zum Ziel blenden und neue Zeile schreiben."""
+        # 10% pro Tick Richtung Ziel → ~30 Zwischenzeilen pro Übergang
+        self._display_spectrum += 0.10 * (self._last_spectrum - self._display_spectrum)
+        self._spectrum = self._display_spectrum.copy()
+        self._write_row(self._display_spectrum)
+        self.update()
+
     def update_spectrum(self, data):
-        """Neue Spektrumdaten (0-160 pro Punkt)."""
+        """Neues Ziel-Spektrum setzen (Blend passiert im Scroll-Timer)."""
         if data is None or len(data) != self._num_points:
             return
-        self._spectrum = np.array(data, dtype=np.float32)
+        new = np.array(data, dtype=np.float32)
+        # Erstes Update: direkt setzen statt blenden
+        if self._last_spectrum.max() == 0:
+            self._display_spectrum = new.copy()
+            self._spectrum = new.copy()
+        self._last_spectrum = new
 
-        # Wasserfall-Zeile schreiben (Ring-Buffer)
+    def _write_row(self, spectrum):
+        """Eine Zeile in den Wasserfall Ring-Buffer schreiben."""
         for col in range(self._num_points):
-            idx = self._amp_to_color_idx(int(self._spectrum[col]))
+            idx = self._amp_to_color_idx(int(spectrum[col]))
             self._wf_image.setPixel(col, self._wf_write_row, self._palette[idx])
         self._wf_write_row = (self._wf_write_row + 1) % self._wf_lines
-
-        self.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -161,30 +189,30 @@ class WaterfallWidget(QWidget):
         img_h = self._wf_lines
         wr = self._wf_write_row
 
-        # Ring-Buffer: [0..writeRow) = neu, [writeRow..end] = alt
-        # Oben = neueste Zeile, unten = älteste
+        # Ring-Buffer zeichnen: älteste oben, neueste unten
+        # [wr..end] = älteste (oben), [0..wr) = neueste (unten)
         from PySide6.QtCore import QRect
-        top_rows = wr        # Neuere Daten (0..writeRow)
-        bot_rows = img_h - wr  # Ältere Daten (writeRow..end)
+        old_rows = img_h - wr  # [wr..end] = ältere
+        new_rows = wr           # [0..wr) = neuere
 
-        if bot_rows >= img_h:
+        if old_rows >= img_h:
             p.drawImage(wf_rect, self._wf_image)
         else:
             scale = wf_h / img_h if img_h > 0 else 1
-            top_h = int(top_rows * scale)
-            bot_h = wf_h - top_h
+            old_h = int(old_rows * scale)
+            new_h = wf_h - old_h
 
-            # Oben: neueste Zeilen (rückwärts von writeRow)
-            if top_rows > 0 and top_h > 0:
+            # Oben: ältere Zeilen [wr..end]
+            if old_rows > 0 and old_h > 0:
                 p.drawImage(
-                    QRect(0, spec_h + 1, w, top_h),
+                    QRect(0, spec_h + 1, w, old_h),
                     self._wf_image,
-                    QRect(0, 0, self._num_points, top_rows))
-            # Unten: ältere Zeilen
-            if bot_rows > 0 and bot_h > 0:
+                    QRect(0, wr, self._num_points, old_rows))
+            # Unten: neuere Zeilen [0..wr)
+            if new_rows > 0 and new_h > 0:
                 p.drawImage(
-                    QRect(0, spec_h + 1 + top_h, w, bot_h),
+                    QRect(0, spec_h + 1 + old_h, w, new_h),
                     self._wf_image,
-                    QRect(0, wr, self._num_points, bot_rows))
+                    QRect(0, 0, self._num_points, new_rows))
 
         p.end()

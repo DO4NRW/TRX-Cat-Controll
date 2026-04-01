@@ -137,6 +137,7 @@ class IC705Widget(QWidget):
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
         self.waterfall.setMinimumHeight(180)
+        self.waterfall.start_scroll(60)  # Repaint ~16fps
         root.addWidget(self.waterfall, stretch=1)
 
         # ── 1. Frequency Display ─────────────────────────────────────
@@ -331,11 +332,11 @@ class IC705Widget(QWidget):
         # Scope aktivieren (IC-705 CI-V)
         if hasattr(cat, 'scope_enable'):
             cat.scope_enable(True)
-        # Ein schneller Timer für alles (80ms = ~12fps)
+        # Schneller Timer (50ms = ~20fps), Queries nur jeden 3. Tick
         if self._poll_timer is None:
             self._poll_timer = QTimer(self)
             self._poll_timer.timeout.connect(self._poll)
-        self._poll_timer.start(80)
+        self._poll_timer.start(40)  # 25fps poll
 
     def stop_polling(self):
         if self._poll_timer:
@@ -364,16 +365,19 @@ class IC705Widget(QWidget):
             return
 
         self._poll_count += 1
+
+        # Sync bei Connect
         if self._poll_count <= 3:
             self._sync_rig_state()
 
-        # 1. Scope-Daten aus Serial flush + anzeigen
+        # Scope-Daten lesen: bei Query-Ticks aus dem Buffer, sonst direkt vom Port
+        if self._poll_count % 5 != 0 and hasattr(self._cat, '_flush_scope_from_serial'):
+            self._cat._flush_scope_from_serial()
         if hasattr(self._cat, 'scope_read') and hasattr(self, 'waterfall'):
             spectrum = self._cat.scope_read()
             if spectrum:
                 self.waterfall.update_spectrum(spectrum)
-                # Span aus Header syncen (einmalig beim Connect)
-                if self._poll_count <= 5 and hasattr(self._cat, '_scope_span_hz'):
+                if hasattr(self._cat, '_scope_span_hz'):
                     span_hz = self._cat._scope_span_hz
                     if span_hz > 0:
                         for i, (hz, _) in enumerate(self._SPAN_VALUES):
@@ -384,8 +388,8 @@ class IC705Widget(QWidget):
                                 self.slider_span.blockSignals(False)
                                 break
 
-        # 2. Abwechselnd Freq oder S-Meter (nicht beides → schneller)
-        if self._poll_count % 2 == 0:
+        # Frequenz: erste 10 Ticks normal, danach nur alle 50 Ticks (~5 Sek)
+        if self._poll_count <= 10 or self._poll_count % 50 == 0:
             freq = self._cat.get_frequency()
             if freq is not None and freq != self._current_freq:
                 self._current_freq = freq
@@ -394,8 +398,8 @@ class IC705Widget(QWidget):
                 hz_part = freq % 1_000
                 self.lbl_freq.setText(f"{mhz_int}.{khz_part:03d}.{hz_part:03d} MHz")
 
-        # S-Meter (nur bei ungeraden Polls)
-        raw = self._cat.get_smeter() if self._poll_count % 2 == 1 else None
+        # S-Meter nur jeden 3. Tick — Rest der Zeit geht Bandbreite an Scope
+        raw = self._cat.get_smeter() if self._poll_count % 5 == 0 else None
         if raw is not None:
             self._smeter_smooth = 0.8 * raw + 0.2 * self._smeter_smooth
             val = int(self._smeter_smooth)
