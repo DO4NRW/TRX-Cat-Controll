@@ -1,4 +1,4 @@
-# TRX Cat Control V2 — Projektkontext
+# RigLink — Projektkontext
 
 ## Übersicht
 Amateurfunk TRX-Steuerung (CAT Control) mit PySide6/Qt. Steuert Transceiver via CAT-Protokoll, Audio-Routing zwischen PC und TRX, VOX, S-Meter.

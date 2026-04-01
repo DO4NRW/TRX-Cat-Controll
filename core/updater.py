@@ -49,7 +49,7 @@ class UpdateChecker(QObject):
             import urllib.request
             req = urllib.request.Request(RELEASES_API)
             req.add_header("Accept", "application/vnd.github.v3+json")
-            req.add_header("User-Agent", "TRX-Cat-Control-Updater")
+            req.add_header("User-Agent", "RigLink-Updater")
 
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode())

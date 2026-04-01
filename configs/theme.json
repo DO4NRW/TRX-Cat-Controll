@@ -1,5 +1,5 @@
 {
-    "_comment": "Globale Farbkonfiguration f\u00fcr TRX Cat Control V2 (RGBA Format)",
+    "_comment": "Globale Farbkonfiguration f\u00fcr RigLink (RGBA Format)",
     "_comment_accent": "Hauptfarbe (Logo-Teal) f\u00fcr Borders, Handles, Highlights",
     "accent": "rgba(6, 198, 164, 255)",
     "accent_dark": "rgba(4, 138, 115, 255)",

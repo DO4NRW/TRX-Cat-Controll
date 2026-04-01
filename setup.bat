@@ -1,12 +1,11 @@
 @echo off
-REM TRX Cat Control V2 — Setup (Windows)
-REM Einmal ausführen: Doppelklick auf setup.bat
+REM RigLink — Setup (Windows)
 
 cd /d "%~dp0"
 
 echo.
 echo ==================================
-echo   TRX Cat Control V2 — Setup
+echo   RigLink — Setup
 echo ==================================
 echo.
 
@@ -29,8 +28,8 @@ pip install --quiet --upgrade pip
 pip install --quiet PySide6 numpy sounddevice pyserial
 
 REM Desktop-Verknüpfung
-set SHORTCUT=%USERPROFILE%\Desktop\TRX Cat Control V2.lnk
-powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%~dp0start.bat'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'TRX Cat Control V2'; $s.Save()" 2>nul
+set SHORTCUT=%USERPROFILE%\Desktop\RigLink.lnk
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%~dp0start.bat'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'RigLink'; $s.Save()" 2>nul
 echo Desktop-Verknuepfung erstellt.
 
 echo.

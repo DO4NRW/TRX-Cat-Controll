@@ -1,5 +1,5 @@
 @echo off
-REM TRX Cat Control V2 — Start (Windows)
+REM RigLink — Start (Windows)
 cd /d "%~dp0"
 if not exist "venv" (
     echo Erst setup.bat ausführen!

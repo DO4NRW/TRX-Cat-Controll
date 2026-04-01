@@ -1,6 +1,6 @@
-# TRX Cat Control V2 (CAT Voice Control Interface)
+# RigLink — CAT Voice Control Interface
 
-**TRX Cat Control** ist ein **CAT Voice Control Interface** für Funkgeräte (aktueller Fokus: **Yaesu FT-991A**).
+**RigLink** ist ein **CAT Voice Control Interface** für Funkgeräte (aktueller Fokus: **Yaesu FT-991A**).
 
 Ziel: Über **CAT** und die **eingebaute Soundkarte / USB-FT8-Schnittstelle** dein TRX steuern und darüber funken – **ohne** zusätzliche Adapter-Hardware. So kannst du direkt über die FT8/USB-Audio-Schnittstelle senden/empfangen und gleichzeitig per CAT (Frequenz/Mode/PTT) steuern.
 
@@ -79,7 +79,7 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ### Linux (empfohlen)
 ```bash
 # Fertige Binary (kein Python nötig):
-# → Download unter Releases: TRX_Cat_Control_V2_Linux.zip
+# → Download unter Releases: RigLink_Linux.zip
 
 # Oder aus Source:
 git clone https://github.com/DO4NRW/TRX-Cat-Controll.git

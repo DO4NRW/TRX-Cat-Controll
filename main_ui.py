@@ -2138,7 +2138,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("TRX Cat Control V2")
+        self.setWindowTitle("RigLink")
         self.resize(1000, 700)
         self.setMinimumSize(900, 640)
 

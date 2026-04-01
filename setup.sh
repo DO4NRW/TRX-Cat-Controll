@@ -1,5 +1,5 @@
 #!/bin/bash
-# TRX Cat Control V2 — Setup (Linux/macOS)
+# RigLink — Setup (Linux/macOS)
 # Einmal ausführen: chmod +x setup.sh && ./setup.sh
 
 cd "$(dirname "$0")"
@@ -7,7 +7,7 @@ APP_DIR="$(pwd)"
 
 echo ""
 echo "=================================="
-echo "  TRX Cat Control V2 — Setup"
+echo "  RigLink — Setup"
 echo "=================================="
 echo ""
 
@@ -33,20 +33,20 @@ pip install --quiet PySide6 numpy sounddevice pyserial
 # Desktop-Eintrag
 if [ "$(uname)" = "Darwin" ]; then
     # macOS: .command Datei auf Desktop
-    cat > "$HOME/Desktop/TRX Cat Control V2.command" << EOF
+    cat > "$HOME/Desktop/RigLink.command" << EOF
 #!/bin/bash
 cd "$APP_DIR"
 source venv/bin/activate
 python main.py
 EOF
-    chmod +x "$HOME/Desktop/TRX Cat Control V2.command"
+    chmod +x "$HOME/Desktop/RigLink.command"
     echo "Desktop-Starter erstellt (macOS)"
 else
     # Linux: .desktop Eintrag im App-Menü
     mkdir -p "$HOME/.local/share/applications"
-    cat > "$HOME/.local/share/applications/TRX_Cat_Control.desktop" << EOF
+    cat > "$HOME/.local/share/applications/RigLink.desktop" << EOF
 [Desktop Entry]
-Name=TRX Cat Control V2
+Name=RigLink
 Comment=Amateurfunk TRX-Steuerung
 Exec=bash -c 'cd "$APP_DIR" && source venv/bin/activate && python main.py'
 Icon=$APP_DIR/Logo.png
@@ -54,7 +54,7 @@ Terminal=false
 Type=Application
 Categories=HamRadio;Audio;
 EOF
-    chmod +x "$HOME/.local/share/applications/TRX_Cat_Control.desktop"
+    chmod +x "$HOME/.local/share/applications/RigLink.desktop"
     echo "App-Menü Eintrag erstellt (Linux)"
 fi
 
