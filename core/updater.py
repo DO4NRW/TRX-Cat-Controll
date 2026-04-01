@@ -1,13 +1,16 @@
 """
 Auto-Updater — prüft GitHub auf neue Versionen.
 Zeigt Popup wenn Update verfügbar, User entscheidet.
+Bei Ja: git pull → pip install → App neu starten.
 """
 
 import os
+import sys
 import json
+import platform
 import subprocess
 import threading
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox, QApplication
 from PySide6.QtCore import Signal, QObject
 
 # Aktuelle Version
@@ -24,7 +27,7 @@ _PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class UpdateChecker(QObject):
     """Prüft im Hintergrund ob ein Update auf GitHub verfügbar ist."""
 
-    update_available = Signal(str, str)  # (local_hash, remote_hash)
+    update_available = Signal(str, str)  # (local_hash, remote_info)
     no_update = Signal()
     check_failed = Signal(str)  # error message
 
@@ -67,26 +70,43 @@ class UpdateChecker(QObject):
 
     @staticmethod
     def do_update():
-        """Git pull ausführen."""
+        """Git pull + Dependencies updaten."""
         try:
+            # Git pull
             result = subprocess.run(
                 ["git", "pull", "origin", "main"],
                 capture_output=True, text=True, timeout=30,
                 cwd=_PROJECT_DIR
             )
-            return result.returncode == 0, result.stdout + result.stderr
+            if result.returncode != 0:
+                return False, result.stdout + result.stderr
+
+            # Dependencies updaten (falls neue dazu kamen)
+            pip_cmd = [sys.executable, "-m", "pip", "install", "--quiet",
+                       "PySide6", "numpy", "sounddevice", "pyserial"]
+            subprocess.run(pip_cmd, capture_output=True, timeout=60)
+
+            return True, result.stdout
         except Exception as e:
             return False, str(e)
 
+    @staticmethod
+    def restart_app():
+        """App komplett neu starten."""
+        python = sys.executable
+        script = os.path.join(_PROJECT_DIR, "main.py")
+        QApplication.quit()
+        os.execv(python, [python, script])
+
 
 def show_update_dialog(parent, local_hash, remote_info):
-    """Zeigt Update-Dialog. Gibt True zurück wenn User updaten will."""
+    """Zeigt Update-Dialog mit Ja/Nein."""
     msg = QMessageBox(parent)
     msg.setWindowTitle("Update verfügbar")
     msg.setText(f"Eine neue Version ist auf GitHub verfügbar!\n\n"
                 f"Lokal:  {local_hash}\n"
-                f"Remote: {remote_info}\n\n"
-                f"Jetzt aktualisieren?")
+                f"Neu:    {remote_info}\n\n"
+                f"Jetzt aktualisieren und neu starten?")
     msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
     msg.setDefaultButton(QMessageBox.No)
     msg.button(QMessageBox.Yes).setText("Ja, updaten")
@@ -95,14 +115,14 @@ def show_update_dialog(parent, local_hash, remote_info):
     if msg.exec() == QMessageBox.Yes:
         ok, output = UpdateChecker.do_update()
         if ok:
-            # Neustart-Dialog
             restart_msg = QMessageBox(parent)
             restart_msg.setWindowTitle("Update erfolgreich")
             restart_msg.setText("Update installiert!\n\n"
-                               "Die App muss neu gestartet werden.\n"
-                               "Bitte schließe und starte die App erneut.")
+                               "App wird jetzt neu gestartet...")
             restart_msg.setStandardButtons(QMessageBox.Ok)
             restart_msg.exec()
+            # Auto-Restart
+            UpdateChecker.restart_app()
         else:
             err_msg = QMessageBox(parent)
             err_msg.setWindowTitle("Update fehlgeschlagen")
