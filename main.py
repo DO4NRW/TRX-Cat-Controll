@@ -30,7 +30,7 @@ def main():
     from core.updater import UpdateChecker, show_update_dialog
     updater = UpdateChecker()
     updater.update_available.connect(
-        lambda local, remote: show_update_dialog(window, local, remote))
+        lambda local, remote, msg: show_update_dialog(window, local, remote, msg))
     updater.check()
 
     sys.exit(app.exec())
