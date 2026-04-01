@@ -41,6 +41,7 @@ class WaterfallWidget(QWidget):
         self._scroll_timer = None
         self._center_freq = 0  # Hz
         self._span_hz = 0
+        self._filter_width = 2700  # Default SSB Bandbreite in Hz
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
@@ -105,10 +106,12 @@ class WaterfallWidget(QWidget):
         self._write_row(self._display_spectrum)
         self.update()
 
-    def set_freq_info(self, center_hz, span_hz):
-        """Center-Frequenz und Span für Frequenz-Labels."""
+    def set_freq_info(self, center_hz, span_hz, filter_width=None):
+        """Center-Frequenz, Span und Filter-Bandbreite."""
         self._center_freq = center_hz
         self._span_hz = span_hz
+        if filter_width is not None:
+            self._filter_width = filter_width
 
     def update_spectrum(self, data):
         """Neues Ziel-Spektrum setzen (Blend passiert im Scroll-Timer)."""
@@ -239,10 +242,21 @@ class WaterfallWidget(QWidget):
                 p.drawImage(QRect(0, wf_y + new_h, w, old_h),
                            self._wf_image, QRect(0, wr, self._num_points, img_h - wr))
 
-        # ── Center-Marker (über alles) ───────────────────────────────
+        # ── Center-Marker (nur im Wasserfall) ────────────────────────
         if self._center_freq > 0:
             cx = w // 2
             p.setPen(QPen(QColor(6, 198, 164, 60), 1))
-            p.drawLine(cx, 0, cx, h)
+            p.drawLine(cx, wf_y, cx, h)
+
+            # ── Bandbreiten-Anzeige (Passband) ───────────────────────
+            if self._span_hz > 0 and self._filter_width > 0:
+                bw_pixels = int(self._filter_width / self._span_hz * w)
+                bx = cx - bw_pixels // 2
+                # Halbtransparentes Rechteck im Wasserfall
+                p.fillRect(bx, wf_y, bw_pixels, wf_h, QColor(6, 198, 164, 25))
+                # Ränder
+                p.setPen(QPen(QColor(6, 198, 164, 80), 1))
+                p.drawLine(bx, wf_y, bx, h)
+                p.drawLine(bx + bw_pixels, wf_y, bx + bw_pixels, h)
 
         p.end()
