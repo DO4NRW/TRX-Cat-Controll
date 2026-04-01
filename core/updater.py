@@ -16,7 +16,7 @@ import zipfile
 from PySide6.QtWidgets import QMessageBox, QProgressDialog, QApplication
 from PySide6.QtCore import Signal, QObject, Qt
 
-CURRENT_VERSION = "2.0.1"
+CURRENT_VERSION = "2.0.2"
 
 REPO_OWNER = "DO4NRW"
 REPO_NAME = "RigLink"
