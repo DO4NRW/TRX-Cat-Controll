@@ -137,14 +137,12 @@ class IC705Widget(QWidget):
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
         self.waterfall.setMinimumHeight(180)
-        self.waterfall.start_scroll(60)  # Repaint ~16fps
+        # Scroll Timer startet erst beim CAT Connect
         root.addWidget(self.waterfall, stretch=1)
 
-        # ── 1. Frequency Display ─────────────────────────────────────
-        self.lbl_freq = QLabel("---.---.--- MHz")
-        self.lbl_freq.setAlignment(Qt.AlignCenter)
-        self.lbl_freq.setFont(QFont("Roboto", 32, QFont.Bold))
-        self.lbl_freq.setStyleSheet(f"color: {T['text']}; font-size: 32px; border: none;")
+        # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
+        self.lbl_freq = QLabel("")
+        self.lbl_freq.setFixedHeight(0)
         root.addWidget(self.lbl_freq)
 
         # ── 2. Tuning Row ────────────────────────────────────────────
@@ -332,6 +330,9 @@ class IC705Widget(QWidget):
         # Scope aktivieren (IC-705 CI-V)
         if hasattr(cat, 'scope_enable'):
             cat.scope_enable(True)
+        # Wasserfall Scroll starten
+        if hasattr(self, 'waterfall'):
+            self.waterfall.start_scroll(60)
         # Schneller Timer (50ms = ~20fps), Queries nur jeden 3. Tick
         if self._poll_timer is None:
             self._poll_timer = QTimer(self)
@@ -339,6 +340,8 @@ class IC705Widget(QWidget):
         self._poll_timer.start(40)  # 25fps poll
 
     def stop_polling(self):
+        if hasattr(self, 'waterfall'):
+            self.waterfall.stop_scroll()
         if self._poll_timer:
             self._poll_timer.stop()
         if self._cat and hasattr(self._cat, 'scope_enable'):
@@ -377,6 +380,8 @@ class IC705Widget(QWidget):
             spectrum = self._cat.scope_read()
             if spectrum:
                 self.waterfall.update_spectrum(spectrum)
+                if self._poll_count % 30 == 0:
+                    print(f"SCOPE: {sum(1 for v in spectrum if v>0)}/475 max={max(spectrum)}")
                 # Freq+Span an Wasserfall für Labels
                 if self._current_freq > 0 and hasattr(self._cat, '_scope_span_hz'):
                     self.waterfall.set_freq_info(self._current_freq, self._cat._scope_span_hz)

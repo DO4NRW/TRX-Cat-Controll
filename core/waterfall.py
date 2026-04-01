@@ -7,7 +7,7 @@ import numpy as np
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (QPainter, QColor, QImage, QLinearGradient,
-                           QPainterPath, QPen)
+                           QPainterPath, QPen, QFont)
 
 from core.theme import T
 
@@ -122,15 +122,11 @@ class WaterfallWidget(QWidget):
         self._last_spectrum = new
 
     def _write_row(self, spectrum):
-        """Bild eine Zeile nach unten schieben, neue Zeile oben rein."""
-        # Alles eine Zeile runter kopieren
-        for y in range(self._wf_lines - 1, 0, -1):
-            for x in range(self._num_points):
-                self._wf_image.setPixel(x, y, self._wf_image.pixel(x, y - 1))
-        # Neue Zeile oben (y=0)
+        """Ring-Buffer: neue Zeile schreiben, Pointer weiter."""
         for col in range(self._num_points):
             idx = self._amp_to_color_idx(int(spectrum[col]))
-            self._wf_image.setPixel(col, 0, self._palette[idx])
+            self._wf_image.setPixel(col, self._wf_write_row, self._palette[idx])
+        self._wf_write_row = (self._wf_write_row + 1) % self._wf_lines
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -220,10 +216,28 @@ class WaterfallWidget(QWidget):
                 p.drawLine(x, freq_y, x, freq_y + 4)
                 p.setPen(QColor(160, 170, 180))
 
-        # ── Wasserfall ───────────────────────────────────────────────
+        # ── Wasserfall (Ring-Buffer: neueste oben) ────────────────────
         from PySide6.QtCore import QRect
         wf_y = freq_y + freq_bar_h
-        p.drawImage(QRect(0, wf_y, w, wf_h), self._wf_image)
+        wr = self._wf_write_row
+        img_h = self._wf_lines
+
+        # Teil 1: [wr..end] = ältere (unten)
+        # Teil 2: [0..wr) = neuere (oben)
+        # Neueste oben → erst [0..wr) dann [wr..end]
+        if wr == 0:
+            p.drawImage(QRect(0, wf_y, w, wf_h), self._wf_image)
+        else:
+            scale = wf_h / img_h
+            new_h = max(1, int(wr * scale))
+            old_h = wf_h - new_h
+            # Oben: neuere [wr-1 → 0] (umgekehrt gezeichnet = neueste ganz oben)
+            p.drawImage(QRect(0, wf_y, w, new_h),
+                       self._wf_image, QRect(0, 0, self._num_points, wr))
+            # Unten: ältere [end → wr]
+            if old_h > 0:
+                p.drawImage(QRect(0, wf_y + new_h, w, old_h),
+                           self._wf_image, QRect(0, wr, self._num_points, img_h - wr))
 
         # ── Center-Marker (über alles) ───────────────────────────────
         if self._center_freq > 0:
