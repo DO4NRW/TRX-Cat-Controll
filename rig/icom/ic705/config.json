@@ -21,7 +21,28 @@
         "preamp": "IPO",
         "split": "Fake It"
     },
-    "audio": {},
+    "audio": {
+        "pc_mic": {
+            "device": "[pw:alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.analog-stereo] Focusrite Scarlett 2i2 Analoges Stereo",
+            "rate": 44100,
+            "channels": 1
+        },
+        "trx_mic": {
+            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "rate": 44100,
+            "channels": 1
+        },
+        "trx_speaker": {
+            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "rate": 44100,
+            "channels": 1
+        },
+        "pc_speaker": {
+            "device": "[pw:alsa_output.pci-0000_06_00.6.analog-stereo] Family 17h/19h HD Audio Controller Analoges Stereo",
+            "rate": 44100,
+            "channels": 1
+        }
+    },
     "vox": {
         "threshold": -25.0,
         "hold_ms": 700

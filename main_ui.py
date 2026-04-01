@@ -905,11 +905,9 @@ def _list_audio_devices_linux(kind="all", bus="all"):
 
     formatted = []
     for pw_name, name, direction in result:
-        if name_count[name] > 1:
-            suffix = "Eingang" if direction == "in" else "Ausgabe"
-            formatted.append(f"[pw:{pw_name}] {name} ({suffix})")
-        else:
-            formatted.append(f"[pw:{pw_name}] {name}")
+        # Anzeige kürzen: "Analoges Stereo", "Digital Stereo" etc. entfernen
+        display = re.sub(r"\s*(Analoges|Digital)\s*Stereo\s*", "", name).strip()
+        formatted.append((display, f"[pw:{pw_name}] {name}"))
 
     return formatted
 
@@ -1144,10 +1142,10 @@ class AudioSetupOverlay(QWidget):
 
         # ── 4 Device rows ─────────────────────────────────────────────
         rows_cfg = [
-            ("1. PC MIKROFON",      "all"),
-            ("2. TRX MIKROFON",     "all"),
-            ("3. TRX LAUTSPRECHER", "all"),
-            ("4. PC LAUTSPRECHER",  "all"),
+            ("1. PC MIKROFON",      "input"),
+            ("2. TRX MIKROFON",     "input"),
+            ("3. TRX LAUTSPRECHER", "output"),
+            ("4. PC LAUTSPRECHER",  "output"),
         ]
 
         _combo_style = f"""
@@ -1173,7 +1171,13 @@ class AudioSetupOverlay(QWidget):
             row.setSpacing(8)
 
             dev_cb = DropDownComboBox()
-            dev_cb.addItems(_list_audio_devices(kind))
+            devs = _list_audio_devices(kind)
+            for item in devs:
+                if isinstance(item, tuple):
+                    display, internal = item
+                    dev_cb.addItem(display, userData=internal)
+                else:
+                    dev_cb.addItem(item, userData=item)
             dev_cb.setStyleSheet(_combo_style)
             row.addWidget(dev_cb, stretch=1)
 
@@ -1289,9 +1293,29 @@ class AudioSetupOverlay(QWidget):
             dev  = row.get("device", "")
             rate = str(row.get("rate", "44100"))
             chan = str(row.get("channels", "1"))
-            if dev and self.device_combos[i].findText(dev) == -1:
-                self.device_combos[i].insertItem(0, dev)
-            self.device_combos[i].setCurrentText(dev)
+            # Device aus Config matchen (über userData oder Display-Name)
+            cb = self.device_combos[i]
+            matched = False
+            if dev:
+                for idx in range(cb.count()):
+                    if cb.itemData(idx) == dev:
+                        cb.setCurrentIndex(idx)
+                        matched = True
+                        break
+                if not matched:
+                    # Display-Name aus dem Config-String extrahieren
+                    import re as _re
+                    display = _re.sub(r"^\[.*?\]\s*", "", dev).strip()
+                    for idx in range(cb.count()):
+                        if cb.itemText(idx) == display:
+                            cb.setCurrentIndex(idx)
+                            matched = True
+                            break
+                if not matched and dev:
+                    # Fallback: raw einfügen
+                    display = _re.sub(r"^\[.*?\]\s*", "", dev).strip()
+                    cb.addItem(display, userData=dev)
+                    cb.setCurrentIndex(cb.count() - 1)
             self.rate_combos[i].setCurrentText(rate)
             self.chan_combos[i].setCurrentText(chan)
 
@@ -1313,7 +1337,7 @@ class AudioSetupOverlay(QWidget):
             audio_cfg = {}
             for i, key in enumerate(self._ROW_KEYS):
                 audio_cfg[key] = {
-                    "device":   self.device_combos[i].currentText(),
+                    "device":   self.device_combos[i].currentData() or self.device_combos[i].currentText(),
                     "rate":     int(self.rate_combos[i].currentText()),
                     "channels": int(self.chan_combos[i].currentText()),
                 }
@@ -1375,7 +1399,7 @@ class AudioSetupOverlay(QWidget):
         Format: '[pw:alsa_output.usb-...] Display Name' → 'alsa_output.usb-...'
         Legacy: '[pw:57]' → Fallback pw-cli lookup."""
         import subprocess, re
-        txt = self.device_combos[combo_index].currentText()
+        txt = self.device_combos[combo_index].currentData() or self.device_combos[combo_index].currentText()
         m = re.search(r"\[pw:([^\]]+)\]", txt)
         if not m:
             return None
@@ -2820,7 +2844,7 @@ class MainWindow(QMainWindow):
     # ── Rig Widget laden ─────────────────────────────────────────────
 
     def _load_rig_widget(self):
-        """Lade das Rig-Widget dynamisch: 'Yaesu FT-991A' → rig/yaesu/ft991a/ft991a_ui.py → FT991AWidget."""
+        """Lade Rig-Widget: rig-spezifisch wenn vorhanden, sonst generisch."""
         # Altes Widget sauber entfernen
         if self.rig_widget:
             if hasattr(self.rig_widget, "stop_polling"):
@@ -2845,14 +2869,13 @@ class MainWindow(QMainWindow):
         maker = parts[0].lower()
         model = parts[1].lower().replace("-", "")
 
-        # Prüfe ob UI-Datei existiert: rig/yaesu/ft991a/ft991a_ui.py
+        # UI-Datei laden: rig/yaesu/ft991a/ft991a_ui.py → FT991AWidget
         ui_file = os.path.join(_RIG_DIR, maker, model, f"{model}_ui.py")
         if not os.path.exists(ui_file):
+            print(f"Kein UI für {rig_name}: {ui_file}")
             return
 
-        # Dynamisch importieren: rig.yaesu.ft991a.ft991a_ui
         module_path = f"rig.{maker}.{model}.{model}_ui"
-        # Klassenname: FT991AWidget (model uppercase + "Widget")
         class_name = f"{parts[1].replace('-', '').upper()}Widget"
 
         try:
@@ -2861,6 +2884,7 @@ class MainWindow(QMainWindow):
             widget_class = getattr(mod, class_name)
             self.rig_widget = widget_class(self.central_widget)
             self.main_layout.insertWidget(1, self.rig_widget, stretch=1)
+            print(f"Rig-Widget geladen: {class_name}")
         except Exception as e:
             print(f"Rig-Widget laden fehlgeschlagen: {e}")
 
