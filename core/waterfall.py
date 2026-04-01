@@ -39,6 +39,8 @@ class WaterfallWidget(QWidget):
         self._last_spectrum = np.zeros(num_points, dtype=np.float32)
         self._display_spectrum = np.zeros(num_points, dtype=np.float32)
         self._scroll_timer = None
+        self._center_freq = 0  # Hz
+        self._span_hz = 0
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
@@ -103,6 +105,11 @@ class WaterfallWidget(QWidget):
         self._write_row(self._display_spectrum)
         self.update()
 
+    def set_freq_info(self, center_hz, span_hz):
+        """Center-Frequenz und Span für Frequenz-Labels."""
+        self._center_freq = center_hz
+        self._span_hz = span_hz
+
     def update_spectrum(self, data):
         """Neues Ziel-Spektrum setzen (Blend passiert im Scroll-Timer)."""
         if data is None or len(data) != self._num_points:
@@ -158,9 +165,9 @@ class WaterfallWidget(QWidget):
             n = self._num_points
             auto_scale = 0.85 / max(peak, 1)
 
-            # Gefüllte Balken pro Spalte
+            # Gefüllte Balken pro Spalte (transparenter)
             fill_color = QColor(accent)
-            fill_color.setAlpha(120)
+            fill_color.setAlpha(60)
             line_points = []
 
             for px in range(w):
@@ -196,5 +203,33 @@ class WaterfallWidget(QWidget):
         # Wasserfall: einfach das ganze Bild zeichnen (kein Ring-Buffer mehr)
         from PySide6.QtCore import QRect
         p.drawImage(QRect(0, spec_h + 1, w, wf_h), self._wf_image)
+
+        # ── Center-Marker + Frequenz-Labels ──────────────────────────
+        if self._center_freq > 0 and self._span_hz > 0:
+            # Center-Marker (vertikale Linie über Spektrum + Wasserfall)
+            cx = w // 2
+            p.setPen(QPen(QColor(6, 198, 164, 80), 1))
+            p.drawLine(cx, 0, cx, h)
+
+            # Frequenz-Labels oben
+            p.setFont(QFont("Roboto", 8))
+            p.setPen(QColor(150, 160, 170))
+            start_freq = self._center_freq - self._span_hz // 2
+            end_freq = self._center_freq + self._span_hz // 2
+
+            for i in range(6):
+                freq = start_freq + (end_freq - start_freq) * i / 5
+                x = int(w * i / 5)
+                mhz = freq / 1_000_000
+                label = f"{mhz:.3f}"
+                if i == 0:
+                    p.drawText(x + 2, 10, label)
+                elif i == 5:
+                    p.drawText(x - 45, 10, label)
+                else:
+                    p.drawText(x - 20, 10, label)
+                p.setPen(QColor(40, 50, 60))
+                p.drawLine(x, 0, x, 4)
+                p.setPen(QColor(150, 160, 170))
 
         p.end()

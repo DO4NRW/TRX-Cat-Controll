@@ -46,5 +46,10 @@
     "vox": {
         "threshold": -25.0,
         "hold_ms": 700
+    },
+    "smeter": {
+        "s9_raw": 130,
+        "max_raw": 241,
+        "steps_over_s9": ["S9+20", "S9+40", "S9+60"]
     }
 }

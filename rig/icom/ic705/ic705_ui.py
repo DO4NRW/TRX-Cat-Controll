@@ -377,7 +377,10 @@ class IC705Widget(QWidget):
             spectrum = self._cat.scope_read()
             if spectrum:
                 self.waterfall.update_spectrum(spectrum)
-                if hasattr(self._cat, '_scope_span_hz'):
+                # Freq+Span an Wasserfall für Labels
+                if self._current_freq > 0 and hasattr(self._cat, '_scope_span_hz'):
+                    self.waterfall.set_freq_info(self._current_freq, self._cat._scope_span_hz)
+                if hasattr(self._cat, '_scope_span_hz') and not self.slider_span.isSliderDown():
                     span_hz = self._cat._scope_span_hz
                     if span_hz > 0:
                         for i, (hz, _) in enumerate(self._SPAN_VALUES):
@@ -403,16 +406,27 @@ class IC705Widget(QWidget):
         if raw is not None:
             self._smeter_smooth = 0.8 * raw + 0.2 * self._smeter_smooth
             val = int(self._smeter_smooth)
-            # Generische S-Meter Konvertierung (0-255 linear)
-            s_val = min(13, val * 13 // 256)
-            bar_val = int(val / 255 * 1000)
-            self.smeter_bar.setValue(min(1000, bar_val))
+            # S-Meter aus Config lesen (Fallback: Icom Standard)
+            s9_raw = getattr(self, '_s9_raw', 120)
+            max_raw = getattr(self, '_max_raw', 241)
+            s9_steps = getattr(self, '_s9_steps', ["S9+20", "S9+40", "S9+60"])
 
-            if val <= 128:
-                s_str = f"S{min(9, val * 9 // 128)}"
+            if val <= s9_raw:
+                s_num = val * 9 / max(s9_raw, 1)
+                s_str = f"S{min(9, round(s_num))}"
+                frac = s_num / 13
             else:
-                db_over = int((val - 128) / 127 * 60)
-                s_str = f"S9+{db_over}dB"
+                db_over = (val - s9_raw) / max(max_raw - s9_raw, 1) * 60
+                n_steps = len(s9_steps)
+                step_size = 60 / max(n_steps, 1)
+                s_str = "S9"
+                for i, label in enumerate(s9_steps):
+                    if db_over >= (i + 0.5) * step_size:
+                        s_str = label
+                frac = (9 + db_over / 60 * 4) / 13
+            s_val = min(12, int(frac * 13))
+            bar_val = int(frac * 1000)
+            self.smeter_bar.setValue(min(1000, bar_val))
             preamp = self._current_preamp or "OFF"
             self.lbl_smeter_info.setText(f"S-METER: {s_str} | {preamp}")
             self._update_s_labels(s_val)
@@ -624,6 +638,11 @@ class IC705Widget(QWidget):
         time.sleep(0.2)
         # Scope Output wieder an
         self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
+        # Wasserfall leeren (alte Span-Daten passen nicht mehr)
+        if hasattr(self, 'waterfall'):
+            self.waterfall._wf_image.fill(QColor(8, 12, 35))
+            self.waterfall._display_spectrum[:] = 0
+            self.waterfall._last_spectrum[:] = 0
 
     def _cycle_agc(self):
         if not self._cat or not self._cat.connected:
@@ -783,6 +802,12 @@ class IC705Widget(QWidget):
                 cfg = json.load(f)
         except Exception:
             return False
+
+        # S-Meter Kalibrierung aus Config
+        sm_cfg = cfg.get("smeter", {})
+        self._s9_raw = int(sm_cfg.get("s9_raw", 120))
+        self._max_raw = int(sm_cfg.get("max_raw", 241))
+        self._s9_steps = sm_cfg.get("steps_over_s9", ["S9+20", "S9+40", "S9+60"])
 
         # VOX Config
         vox_cfg = cfg.get("vox", {})
