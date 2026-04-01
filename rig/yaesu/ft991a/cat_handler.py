@@ -169,13 +169,14 @@ class CatHandler:
 
     # ── PTT ───────────────────────────────────────────────────────────
 
-    def ptt_on(self):
-        """Activate TX via CAT."""
-        self._send("TX0;")
+    def ptt_on(self, source=2):
+        """Activate TX via CAT.
+        source: 0=CAT, 1=Front Mic, 2=Rear Data"""
+        self._send(f"TX{source};")
 
     def ptt_off(self):
         """Return to RX via CAT."""
-        self._send("RX;")
+        self._send("TX0;")
 
     # ── RF Power ──────────────────────────────────────────────────────
 
