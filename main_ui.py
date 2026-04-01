@@ -432,7 +432,8 @@ class RadioSetupOverlay(QWidget):
                     s.write(b"FA;")
                     resp = s.read_until(b";")
                     ok = resp.startswith(b"FA") and len(resp) >= 3
-            except Exception as e:
+            except Exception:
+                pass
             self._cat_result_sig.emit(ok)
 
         threading.Thread(target=run, daemon=True).start()
@@ -457,12 +458,12 @@ class RadioSetupOverlay(QWidget):
             try:
                 import serial, time
                 if method == "CAT":
-                    # PTT via CAT: TX1; auf dem CAT-Port
+                    # PTT via CAT: TX0; auf dem CAT-Port, RX; zum Loslassen
                     with serial.Serial(cat_port, cat_baud, timeout=0.5,
                                        rtscts=False, dsrdtr=False) as s:
-                        s.write(b"TX1;")
-                        time.sleep(0.5)
                         s.write(b"TX0;")
+                        time.sleep(0.5)
+                        s.write(b"RX;")
                         time.sleep(0.1)
                         ok = True
                 else:
@@ -746,9 +747,10 @@ class RadioSetupOverlay(QWidget):
 # =====================================================================
 
 def _pw_node_info(node_id):
-    """Hole nick und bus-type für eine PipeWire Node-ID."""
+    """Hole nick, bus-type und node.name für eine PipeWire Node-ID."""
     import subprocess, re
     nick = None
+    node_name = None
     is_usb = False
     try:
         out = subprocess.run(
@@ -760,13 +762,17 @@ def _pw_node_info(node_id):
                 m = re.search(r'"(.+?)"', line)
                 if m and nick is None:
                     nick = m.group(1)
+            if "node.name" in line and "node.nick" not in line:
+                m = re.search(r'"(.+?)"', line)
+                if m and node_name is None:
+                    node_name = m.group(1)
             if "device.bus" in line and '"usb"' in line:
                 is_usb = True
             if "api.alsa.card.name" in line and "usb" in line.lower():
                 is_usb = True
     except Exception:
         pass
-    return nick, is_usb
+    return nick, is_usb, node_name
 
 
 def _list_audio_devices_linux(kind="all", bus="all"):
@@ -813,17 +819,17 @@ def _list_audio_devices_linux(kind="all", bus="all"):
         dev_name = m.group(2).strip()
 
         # Bus-Filter: pc = nur interne, usb = nur USB
+        _, is_usb, node_name = _pw_node_info(dev_id)
         if bus != "all":
-            _, is_usb = _pw_node_info(dev_id)
             if bus == "pc" and is_usb:
                 continue
             if bus == "usb" and not is_usb:
                 continue
 
         if in_sinks and kind in ("output", "all"):
-            result.append((dev_id, dev_name, "out"))
+            result.append((node_name or str(dev_id), dev_name, "out"))
         elif in_sources and kind in ("input", "all"):
-            result.append((dev_id, dev_name, "in"))
+            result.append((node_name or str(dev_id), dev_name, "in"))
 
     # Bei "all": gleiche Namen mit Richtung kennzeichnen
     name_count = {}
@@ -831,12 +837,12 @@ def _list_audio_devices_linux(kind="all", bus="all"):
         name_count[name] = name_count.get(name, 0) + 1
 
     formatted = []
-    for dev_id, name, direction in result:
+    for pw_name, name, direction in result:
         if name_count[name] > 1:
             suffix = "Eingang" if direction == "in" else "Ausgabe"
-            formatted.append(f"[pw:{dev_id}] {name} ({suffix})")
+            formatted.append(f"[pw:{pw_name}] {name} ({suffix})")
         else:
-            formatted.append(f"[pw:{dev_id}] {name}")
+            formatted.append(f"[pw:{pw_name}] {name}")
 
     return formatted
 
@@ -918,28 +924,52 @@ def _list_audio_devices(kind="all", bus="all"):
         return ["(sounddevice fehlt)"]
 
 
+def _pw_find_id_by_name(node_name):
+    """Finde aktuelle PipeWire Node-ID anhand von node.name (stabil über Reboots)."""
+    import subprocess, re
+    try:
+        out = subprocess.run(
+            ["pw-cli", "list-objects", "Node"],
+            capture_output=True, text=True, timeout=3
+        ).stdout
+        current_id = None
+        for line in out.splitlines():
+            id_m = re.search(r"id (\d+),", line)
+            if id_m:
+                current_id = id_m.group(1)
+            if "node.name" in line and "node.nick" not in line:
+                m = re.search(r'"(.+?)"', line)
+                if m and m.group(1) == node_name and current_id:
+                    return current_id
+    except Exception:
+        pass
+    # Fallback: wenn node_name schon numerisch ist (Legacy)
+    if node_name and node_name.isdigit():
+        return node_name
+    return None
+
+
 def _device_max_channels(device_str: str, kind: str) -> int:
-    """Return max channels for a device. Supports [pw:id] and [i] formats."""
+    """Return max channels for a device. Supports [pw:node.name] and [i] formats."""
     try:
         prefix = device_str.split("]")[0].replace("[", "").strip()
         if prefix.startswith("pw:"):
-            # PipeWire: die meisten Geräte sind Stereo (2 Kanäle)
-            import subprocess
-            pw_id = prefix.replace("pw:", "")
-            try:
-                out = subprocess.run(
-                    ["pw-cli", "info", pw_id],
-                    capture_output=True, text=True, timeout=2
-                ).stdout
-                # Suche nach channel count in den Properties
-                for line in out.splitlines():
-                    if "audio.channels" in line or "channels" in line.lower():
-                        import re
-                        m = re.search(r"(\d+)", line.split("=")[-1] if "=" in line else line.split(":")[-1])
-                        if m:
-                            return max(1, int(m.group(1)))
-            except Exception:
-                pass
+            pw_name = prefix.replace("pw:", "")
+            node_id = _pw_find_id_by_name(pw_name)
+            if node_id:
+                import subprocess, re
+                try:
+                    out = subprocess.run(
+                        ["pw-cli", "info", node_id],
+                        capture_output=True, text=True, timeout=2
+                    ).stdout
+                    for line in out.splitlines():
+                        if "audio.channels" in line or "channels" in line.lower():
+                            m = re.search(r"(\d+)", line.split("=")[-1] if "=" in line else line.split(":")[-1])
+                            if m:
+                                return max(1, int(m.group(1)))
+                except Exception:
+                    pass
             return 2
         else:
             import sounddevice as sd
@@ -1273,73 +1303,30 @@ class AudioSetupOverlay(QWidget):
                 return i
         return None
 
-    def _get_pw_id(self, combo_index):
-        """PipeWire Node-ID aus Combo-Text extrahieren."""
-        txt = self.device_combos[combo_index].currentText()
-        if "pw:" in txt:
-            return txt.split("]")[0].replace("[pw:", "").strip()
-        return None
-
-    def _get_pw_id_for(self, combo_index, direction):
-        """PipeWire Node-ID für eine bestimmte Richtung holen."""
-        import subprocess, re
-        txt = self.device_combos[combo_index].currentText()
-        if "pw:" not in txt:
-            return None
-
-        pw_id = txt.split("]")[0].replace("[pw:", "").strip()
-        # Gerätenamen extrahieren (ohne [pw:xx] und ohne (Eingang)/(Ausgabe))
-        dev_name = txt.split("]", 1)[1].strip()
-        dev_name = re.sub(r"\s*\((Eingang|Ausgabe)\)\s*$", "", dev_name)
-
-        # Prüfe ob die aktuelle ID schon die richtige Richtung hat
-        section = "Sinks" if direction == "output" else "Sources"
-        try:
-            out = subprocess.run(["wpctl", "status"], capture_output=True, text=True, timeout=3).stdout
-        except Exception:
-            return pw_id
-
-        in_section = False
-        in_audio = False
-        for line in out.splitlines():
-            if line.strip() == "Audio":
-                in_audio = True; continue
-            if line.strip() == "Video":
-                in_audio = False; continue
-            if not in_audio:
-                continue
-            clean = line.replace("│", "").strip()
-            if section + ":" in clean and "endpoint" not in clean.lower():
-                in_section = True; continue
-            elif ":" in clean and ("Sinks" in clean or "Sources" in clean or "Streams" in clean or "Devices" in clean or "endpoints" in clean):
-                in_section = False; continue
-            if not in_section:
-                continue
-            m = re.search(r"\*?\s*(\d+)\.\s+(.+?)(?:\s+\[vol:.*)?$", clean)
-            if m and dev_name in m.group(2):
-                return m.group(1)
-
-        return pw_id
-
     def _pw_node_name_for(self, combo_index):
-        """PipeWire node.name aus Combo-Text holen (für pw-play/pw-cat --target)."""
+        """PipeWire node.name direkt aus Combo-Text lesen.
+        Format: '[pw:alsa_output.usb-...] Display Name' → 'alsa_output.usb-...'
+        Legacy: '[pw:57]' → Fallback pw-cli lookup."""
         import subprocess, re
         txt = self.device_combos[combo_index].currentText()
-        m = re.search(r"\[pw:(\d+)\]", txt)
+        m = re.search(r"\[pw:([^\]]+)\]", txt)
         if not m:
             return None
-        pw_id = m.group(1)
+        pw_val = m.group(1)
+        if not pw_val.isdigit():
+            return pw_val
+        # Legacy: numerische ID → node.name auflösen
         try:
-            out = subprocess.run(["pw-cli", "info", pw_id],
+            out = subprocess.run(["pw-cli", "info", pw_val],
                 capture_output=True, text=True, timeout=2).stdout
             for line in out.splitlines():
-                if "node.name" in line:
+                if "node.name" in line and "node.nick" not in line:
                     nm = re.search(r'"(.+?)"', line)
                     if nm:
                         return nm.group(1)
         except Exception:
             pass
-        return pw_id
+        return pw_val
 
     def _wave_test(self):
         """WAV auf PC LAUTSPRECHER (Zeile 4, Index 3) abspielen."""

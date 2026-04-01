@@ -178,7 +178,7 @@ class FT991AWidget(QWidget):
     }
 
     # Modes die als Buttons angezeigt werden
-    _MODES = ["LSB", "USB", "CW", "FM", "AM"]
+    _MODES = ["LSB", "USB", "CW", "FM"]
     _DIGI_MODES = ["DATA", "RTTY"]
 
     # Tuning Steps in Hz
@@ -229,7 +229,7 @@ class FT991AWidget(QWidget):
         root.setSpacing(8)
 
         # ── 1. Frequency Display ──────────────────────────────────────
-        self.lbl_freq = QLabel("---.------ MHz")
+        self.lbl_freq = QLabel("---.---.--- MHz")
         self.lbl_freq.setAlignment(Qt.AlignCenter)
         self.lbl_freq.setFont(QFont("Roboto", 32, QFont.Bold))
         self.lbl_freq.setStyleSheet(_get_LABEL(T['text'], 32))
@@ -262,7 +262,7 @@ class FT991AWidget(QWidget):
         tune_row.addStretch(1)
 
         self.input_freq = QLineEdit()
-        self.input_freq.setPlaceholderText("Freq MHz")
+        self.input_freq.setPlaceholderText("14.200.000")
         self.input_freq.setMinimumWidth(100)
         self.input_freq.setStyleSheet(_INPUT)
         self.input_freq.setAlignment(Qt.AlignRight)
@@ -480,7 +480,7 @@ class FT991AWidget(QWidget):
 
     def _reset_display(self):
         """Alle Anzeigen auf Default zurücksetzen."""
-        self.lbl_freq.setText("---.------ MHz")
+        self.lbl_freq.setText("---.---.--- MHz")
         # Mode Labels werden über Button-Styles angezeigt
         self.lbl_smeter_info.setText("S-METER: --- (S0 | IPO)")
         self.lbl_tx_info.setText("TX: --- dBFS")
@@ -509,47 +509,50 @@ class FT991AWidget(QWidget):
 
     def _find_sd_index(self, device_name, need_input=False, need_output=False):
         """Finde sounddevice Device-Index anhand Name (aus Audio-Config).
-        Versucht PipeWire-Name, dann Nick (ALSA-Name)."""
+        Versucht PipeWire node.name, dann Display-Name, dann Nick."""
         if not device_name:
             return None
 
-        # "[pw:33] Family 17h/19h ... (Ausgabe)" → clean name + pw_id
-        pw_id = None
-        m = re.search(r"\[pw:(\d+)\]", device_name)
+        # "[pw:alsa_output.usb-...] Family 17h/19h ... (Ausgabe)" → node.name + clean
+        pw_node_name = None
+        m = re.search(r"\[pw:([^\]]+)\]", device_name)
         if m:
-            pw_id = m.group(1)
+            pw_node_name = m.group(1)
         clean = re.sub(r"^\[.*?\]\s*", "", device_name).strip()
         clean = re.sub(r"\s*\((Eingang|Ausgabe)\)\s*$", "", clean).strip().lower()
 
-        # Versuch 1: direkt matchen
+        # Versuch 1: Display-Name direkt matchen
         for i, d in enumerate(sd.query_devices()):
             if need_input and d["max_input_channels"] < 1: continue
             if need_output and d["max_output_channels"] < 1: continue
             if clean in d["name"].lower():
                 return i
 
-        # Versuch 2: PipeWire Nick (ALSA-Name) holen und matchen
-        if pw_id:
-            try:
-                import subprocess
-                out = subprocess.run(["pw-cli", "info", pw_id],
-                    capture_output=True, text=True, timeout=2).stdout
-                nick = None
-                for line in out.splitlines():
-                    if "node.nick" in line or "device.nick" in line:
-                        nm = re.search(r'"(.+?)"', line)
-                        if nm:
-                            nick = nm.group(1)
-                            break
-                if nick:
-                    nick_lower = nick.lower()
-                    for i, d in enumerate(sd.query_devices()):
-                        if need_input and d["max_input_channels"] < 1: continue
-                        if need_output and d["max_output_channels"] < 1: continue
-                        if nick_lower in d["name"].lower():
-                            return i
-            except Exception:
-                pass
+        # Versuch 2: PipeWire node.name → Nick holen und matchen
+        if pw_node_name:
+            from main_ui import _pw_find_id_by_name
+            node_id = _pw_find_id_by_name(pw_node_name)
+            if node_id:
+                try:
+                    import subprocess
+                    out = subprocess.run(["pw-cli", "info", node_id],
+                        capture_output=True, text=True, timeout=2).stdout
+                    nick = None
+                    for line in out.splitlines():
+                        if "node.nick" in line or "device.nick" in line:
+                            nm = re.search(r'"(.+?)"', line)
+                            if nm:
+                                nick = nm.group(1)
+                                break
+                    if nick:
+                        nick_lower = nick.lower()
+                        for i, d in enumerate(sd.query_devices()):
+                            if need_input and d["max_input_channels"] < 1: continue
+                            if need_output and d["max_output_channels"] < 1: continue
+                            if nick_lower in d["name"].lower():
+                                return i
+                except Exception:
+                    pass
 
         # Versuch 3: Fallback auf "pulse" (PipeWire/PulseAudio Default)
         for i, d in enumerate(sd.query_devices()):
@@ -561,30 +564,39 @@ class FT991AWidget(QWidget):
 
         return None
 
-    def _get_pw_id(self, device_str):
-        """PipeWire Node-ID aus Config-String extrahieren."""
-        m = re.search(r"\[pw:(\d+)\]", device_str)
-        return m.group(1) if m else None
-
     def _get_pw_node_name(self, device_str):
-        """PipeWire node.name für --target holen (node.name statt ID nötig)."""
-        pw_id = self._get_pw_id(device_str)
-        if not pw_id:
+        """PipeWire node.name direkt aus Config-String lesen.
+        Format: '[pw:alsa_output.usb-...] Display Name' → 'alsa_output.usb-...'
+        Legacy: '[pw:57]' (numerische ID) → Fallback pw-cli lookup."""
+        m = re.search(r"\[pw:([^\]]+)\]", device_str)
+        if not m:
             return None
+        pw_val = m.group(1)
+        # Neues Format: node.name direkt gespeichert (nicht-numerisch)
+        if not pw_val.isdigit():
+            return pw_val
+        # Legacy: numerische ID → node.name via pw-cli auflösen
         try:
-            out = subprocess.run(["pw-cli", "info", pw_id],
+            out = subprocess.run(["pw-cli", "info", pw_val],
                 capture_output=True, text=True, timeout=2).stdout
             for line in out.splitlines():
-                if "node.name" in line:
-                    m = re.search(r'"(.+?)"', line)
-                    if m:
-                        return m.group(1)
+                if "node.name" in line and "node.nick" not in line:
+                    nm = re.search(r'"(.+?)"', line)
+                    if nm:
+                        return nm.group(1)
         except Exception:
             pass
-        return pw_id  # Fallback auf ID
+        return pw_val
 
     def start_audio(self, config_path):
         """Audio-Streams öffnen basierend auf der Rig-Config."""
+        # Erst alle alten pw-cat Zombies killen
+        try:
+            subprocess.run(["pkill", "-9", "-f", "pw-cat"],
+                         capture_output=True, timeout=3)
+            import time; time.sleep(0.5)
+        except Exception:
+            pass
         self._disconnecting = False
         self._config_path = config_path
 
@@ -673,6 +685,7 @@ class FT991AWidget(QWidget):
                     stdin=subprocess.PIPE)
 
                 # TX: PC Mic → TRX Speaker
+                # Scarlett-Recording sofort starten (node.name verhindert Auto-Routing)
                 self._pw_tx_rec = subprocess.Popen(
                     ["pw-cat", "--record", "--target", pw_pc_mic,
                      "--format", "s16", "--rate", str(pc_mic_sr), "--channels", str(pc_mic_ch), "-"],
@@ -681,6 +694,10 @@ class FT991AWidget(QWidget):
                     ["pw-cat", "--playback", "--target", pw_trx_spk,
                      "--format", "s16", "--rate", str(trx_spk_sr), "--channels", str(trx_spk_ch), "-"],
                     stdin=subprocess.PIPE)
+                self._pw_pc_mic_target = pw_pc_mic
+                self._pw_pc_spk_target = pw_pc_spk
+                self._pc_mic_sr = pc_mic_sr
+                self._pc_mic_ch = pc_mic_ch
 
                 # Routing Threads
                 self._rx_thread = threading.Thread(target=self._rx_routing_loop, daemon=True)
@@ -691,6 +708,11 @@ class FT991AWidget(QWidget):
                 print(f"Audio gestartet (PipeWire):")
                 print(f"  TX: PC Mic [pw:{pw_pc_mic}] → TRX Spk [pw:{pw_trx_spk}]")
                 print(f"  RX: TRX Mic [pw:{pw_trx_mic}] → PC Spk [pw:{pw_pc_spk}]")
+
+                # PipeWire Echo-Fix: ungewollte Links von PC Mic → PC Speaker entfernen
+                import time as _t
+                _t.sleep(0.5)  # PipeWire braucht kurz zum Verbinden
+                self._fix_pw_echo(pw_pc_mic, pw_pc_spk)
             else:
                 # Windows/Mac: sounddevice direkt
                 idx_pc_mic  = self._find_sd_index(pc_mic.get("device", ""),  need_input=True)
@@ -725,45 +747,83 @@ class FT991AWidget(QWidget):
 
     _RX_GAIN = 5.0  # Verstärkung für RX Audio (TRX → PC Speaker)
 
+    def _fix_pw_echo(self, mic_name, spk_name):
+        """Entferne ungewollte PipeWire-Links von PC Mic → PC Speaker.
+        mic_name/spk_name sind node.name Werte (z.B. 'alsa_input.usb-Focusrite_...')."""
+        try:
+            result = subprocess.run(["pw-link", "-l"], capture_output=True, text=True, timeout=3)
+            lines = result.stdout.splitlines()
+
+            current_output = None
+            for line in lines:
+                stripped = line.strip()
+                if not stripped.startswith("|") and ":" in stripped:
+                    current_output = stripped.strip()
+                elif stripped.startswith("|->") and current_output:
+                    target = stripped.replace("|->", "").strip()
+                    # pw-link Format: "node.name:port_name"
+                    # Wenn PC Mic Output → PC Speaker Input: disconnecten
+                    out_node = current_output.split(":")[0] if ":" in current_output else ""
+                    in_node = target.split(":")[0] if ":" in target else ""
+                    if out_node == mic_name and in_node == spk_name:
+                        print(f"  Echo-Fix: Trenne {current_output} → {target}")
+                        subprocess.run(["pw-link", "-d", current_output, target],
+                                     capture_output=True, timeout=2)
+        except Exception as e:
+            print(f"  Echo-Fix Fehler: {e}")
+
     def _rx_routing_loop(self):
         """Thread: TRX Mic → PC Speaker (nur wenn nicht PTT)."""
         chunk = 1024 * 2  # s16 mono = 2 bytes/sample
+        silence = b'\x00' * chunk
         while not self._disconnecting:
             try:
                 data = self._pw_rx_rec.stdout.read(chunk)
                 if not data:
                     break
-                if not self._ptt_active and self._RX_GAIN > 0 and self._pw_rx_play and self._pw_rx_play.stdin:
-                    # Gain anwenden
-                    samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-                    samples *= self._RX_GAIN
-                    samples = np.clip(samples, -32768, 32767)
-                    amplified = samples.astype(np.int16).tobytes()
-                    self._pw_rx_play.stdin.write(amplified)
+                if self._pw_rx_play and self._pw_rx_play.stdin:
+                    if not self._ptt_active and self._RX_GAIN > 0:
+                        # Gain anwenden
+                        samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+                        samples *= self._RX_GAIN
+                        samples = np.clip(samples, -32768, 32767)
+                        amplified = samples.astype(np.int16).tobytes()
+                        self._pw_rx_play.stdin.write(amplified)
+                    else:
+                        # Stille senden damit PipeWire nichts anderes reinmischt
+                        self._pw_rx_play.stdin.write(silence)
                     self._pw_rx_play.stdin.flush()
             except Exception:
                 break
 
     def _tx_routing_loop(self):
-        """Thread: PC Mic → TRX Speaker (nur wenn PTT aktiv)."""
+        """Thread: PC Mic → TRX Speaker. Liest immer, sendet Audio oder Stille."""
         chunk = 1024 * 2  # s16 mono = 2 bytes/sample
+        silence = b'\x00' * chunk
         while not self._disconnecting:
             try:
+                if self._pw_tx_rec is None:
+                    import time; time.sleep(0.05)
+                    continue
+
                 data = self._pw_tx_rec.stdout.read(chunk)
                 if not data:
                     break
 
-                # TX-Meter berechnen
+                # TX-Meter immer berechnen (auch ohne PTT)
                 samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
                 rms = float(np.sqrt(np.mean(samples ** 2))) / 32768.0
                 self._tx_rms_db = max(-60.0, 20 * np.log10(max(rms, 1e-7)))
 
-                # Nur senden wenn PTT aktiv
-                if self._ptt_active and self._pw_tx_play and self._pw_tx_play.stdin:
-                    self._pw_tx_play.stdin.write(data)
+                if self._pw_tx_play and self._pw_tx_play.stdin:
+                    if self._ptt_active:
+                        self._pw_tx_play.stdin.write(data)
+                    else:
+                        self._pw_tx_play.stdin.write(silence)
                     self._pw_tx_play.stdin.flush()
             except Exception:
-                break
+                if self._disconnecting:
+                    break
 
     def stop_audio(self):
         """Alle Audio-Streams/Prozesse stoppen."""
@@ -778,11 +838,13 @@ class FT991AWidget(QWidget):
             except Exception: pass
         self._st_tx_in = self._st_tx_out = self._st_rx_in = self._st_rx_out = None
 
-        # pw-cat Prozesse
+        # pw-cat Prozesse hart beenden (SIGKILL)
         for p in ["_pw_rx_rec", "_pw_rx_play", "_pw_tx_rec", "_pw_tx_play"]:
             proc = getattr(self, p, None)
             if proc:
-                try: proc.terminate()
+                try: proc.kill()
+                except Exception: pass
+                try: proc.wait(timeout=2)
                 except Exception: pass
                 setattr(self, p, None)
 
@@ -835,12 +897,20 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
 
+        # Erster erfolgreicher Poll → Full Sync nachholen
+        self._poll_count += 1
+        if self._poll_count <= 3:
+            self._sync_rig_state()
+
         # Frequenz jedes Mal abfragen
         freq = self._cat.get_frequency()
         if freq is not None and freq != self._current_freq:
             self._current_freq = freq
-            mhz = freq / 1_000_000
-            self.lbl_freq.setText(f"{mhz:.6f} MHz")
+            # Format: 14.200.000 MHz
+            mhz_int = freq // 1_000_000
+            khz_part = (freq % 1_000_000) // 1_000
+            hz_part = freq % 1_000
+            self.lbl_freq.setText(f"{mhz_int}.{khz_part:03d}.{hz_part:03d} MHz")
 
         # S-Meter jedes Mal
         raw = self._cat.get_smeter()
@@ -887,6 +957,11 @@ class FT991AWidget(QWidget):
             elif mode == "RTTY-U":
                 self._current_mode = "USB"
                 self._digi_modifier = "RTTY"
+            elif mode == "AM":
+                # AM nicht supportet → auf USB umschalten
+                self._cat.set_mode("USB")
+                self._current_mode = "USB"
+                self._digi_modifier = None
             else:
                 self._current_mode = mode
                 self._digi_modifier = None
@@ -975,8 +1050,14 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         try:
-            mhz = float(self.input_freq.text().replace(",", "."))
-            hz = int(mhz * 1_000_000)
+            txt = self.input_freq.text().strip().replace(",", ".")
+            # Format: "14.200.000" (Punkt-getrennt) oder "14.2" (MHz Dezimal)
+            parts = txt.split(".")
+            if len(parts) == 3:
+                # 14.200.000 Format
+                hz = int(parts[0]) * 1_000_000 + int(parts[1]) * 1_000 + int(parts[2])
+            else:
+                hz = int(float(txt) * 1_000_000)
             self._cat.set_frequency(hz)
             self.input_freq.clear()
         except ValueError:
@@ -1161,6 +1242,11 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         self._ptt_active = True
+        # RX Playback stoppen (verhindert Echo)
+        if self._pw_rx_play:
+            try: self._pw_rx_play.kill()
+            except Exception: pass
+            self._pw_rx_play = None
         self.btn_ptt.setText("TX (SPACE)")
         self.btn_ptt.setStyleSheet(_get_BTN_PTT_TX())
         self._set_ptt_hardware(True)
@@ -1170,6 +1256,15 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         self._ptt_active = False
+        # RX Playback neu starten
+        if self._pw_rx_play is None and hasattr(self, '_pw_pc_spk_target'):
+            try:
+                self._pw_rx_play = subprocess.Popen(
+                    ["pw-cat", "--playback", "--target", self._pw_pc_spk_target,
+                     "--format", "s16", "--rate", "44100", "--channels", "1", "-"],
+                    stdin=subprocess.PIPE)
+            except Exception:
+                pass
         self.btn_ptt.setText("RX (SPACE)")
         self.btn_ptt.setStyleSheet(_get_BTN_PTT_RX())
         self._set_ptt_hardware(False)

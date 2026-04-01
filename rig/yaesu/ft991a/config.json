@@ -9,8 +9,8 @@
         "handshake": null
     },
     "ptt": {
-        "port": "/dev/ttyUSB0",
-        "method": "CAT",
+        "port": "/dev/ttyUSB1",
+        "method": "RTS",
         "invert": false
     },
     "rig": {
@@ -22,23 +22,23 @@
     },
     "audio": {
         "pc_mic": {
-            "device": "[pw:57] Scarlett 2i2 USB",
-            "rate": 44100,
+            "device": "[pw:alsa_input.usb-Focusrite_Scarlett_2i2_USB-00.analog-stereo] Focusrite Scarlett 2i2 Analoges Stereo (Eingang)",
+            "rate": 48000,
             "channels": 1
         },
         "trx_mic": {
-            "device": "[pw:58] USB Audio CODEC",
-            "rate": 44100,
+            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2903B Audio CODEC Analoges Stereo (Eingang)",
+            "rate": 48000,
             "channels": 1
         },
         "trx_speaker": {
-            "device": "[pw:92] USB Audio CODEC",
-            "rate": 44100,
+            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2903B Audio CODEC Analoges Stereo (Ausgabe)",
+            "rate": 48000,
             "channels": 1
         },
         "pc_speaker": {
-            "device": "[pw:33] Family 17h/19h HD Audio Controller Analoges Stereo (Ausgabe)",
-            "rate": 44100,
+            "device": "[pw:alsa_output.pci-0000_06_00.6.analog-stereo] Family 17h/19h HD Audio Controller Analoges Stereo (Ausgabe)",
+            "rate": 48000,
             "channels": 1
         }
     },
