@@ -1,24 +1,14 @@
 #!/bin/bash
-# TRX Cat Control V2 — Einmal-Setup (Linux/macOS)
-# Installiert alles, baut die App, kopiert an festen Ort.
+# TRX Cat Control V2 — Setup (Linux/macOS)
+# Einmal ausführen: chmod +x setup.sh && ./setup.sh
 
 cd "$(dirname "$0")"
-SOURCE_DIR="$(pwd)"
-APP_NAME="TRX_Cat_Control_V2"
-
-# Install-Verzeichnis
-if [ "$(uname)" = "Darwin" ]; then
-    INSTALL_DIR="$HOME/Applications/$APP_NAME"
-else
-    INSTALL_DIR="$HOME/.local/share/$APP_NAME"
-fi
+APP_DIR="$(pwd)"
 
 echo ""
 echo "=================================="
 echo "  TRX Cat Control V2 — Setup"
 echo "=================================="
-echo ""
-echo "  Installiert nach: $INSTALL_DIR"
 echo ""
 
 # Python prüfen
@@ -28,63 +18,44 @@ if ! command -v python3 &>/dev/null; then
     echo "  macOS:         brew install python3"
     exit 1
 fi
-
 echo "Python: $(python3 --version)"
 
-# venv erstellen
+# venv erstellen + Dependencies
 if [ ! -d "venv" ]; then
     echo "Erstelle virtuelle Umgebung..."
     python3 -m venv venv
 fi
-
 source venv/bin/activate
-
-# Dependencies installieren
 echo "Installiere Abhängigkeiten..."
 pip install --quiet --upgrade pip
-pip install --quiet PySide6 numpy sounddevice pyserial pyinstaller
+pip install --quiet PySide6 numpy sounddevice pyserial
 
-# App bauen
-echo ""
-echo "Baue App (kann etwas dauern)..."
-python build.py
-
-if [ $? -ne 0 ]; then
-    echo "Build fehlgeschlagen!"
-    exit 1
-fi
-
-# An festen Ort kopieren
-echo "Installiere nach $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-rm -rf "$INSTALL_DIR"/*
-cp -r "dist/$APP_NAME/"* "$INSTALL_DIR/"
-
-# Source-Pfad merken (für Auto-Updater)
-echo "$SOURCE_DIR" > "$INSTALL_DIR/_internal/source_path.txt"
-
-# Desktop Shortcut erstellen (Linux)
-if [ "$(uname)" != "Darwin" ]; then
-    DESKTOP_FILE="$HOME/.local/share/applications/$APP_NAME.desktop"
+# Desktop-Eintrag
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS: .command Datei auf Desktop
+    cat > "$HOME/Desktop/TRX Cat Control V2.command" << EOF
+#!/bin/bash
+cd "$APP_DIR"
+source venv/bin/activate
+python main.py
+EOF
+    chmod +x "$HOME/Desktop/TRX Cat Control V2.command"
+    echo "Desktop-Starter erstellt (macOS)"
+else
+    # Linux: .desktop Eintrag im App-Menü
     mkdir -p "$HOME/.local/share/applications"
-    cat > "$DESKTOP_FILE" << DESKTOP
+    cat > "$HOME/.local/share/applications/TRX_Cat_Control.desktop" << EOF
 [Desktop Entry]
 Name=TRX Cat Control V2
 Comment=Amateurfunk TRX-Steuerung
-Exec=$INSTALL_DIR/$APP_NAME
-Icon=$SOURCE_DIR/Logo.png
+Exec=bash -c 'cd "$APP_DIR" && source venv/bin/activate && python main.py'
+Icon=$APP_DIR/Logo.png
 Terminal=false
 Type=Application
 Categories=HamRadio;Audio;
-DESKTOP
-    chmod +x "$DESKTOP_FILE"
-    echo "Desktop-Eintrag erstellt: $DESKTOP_FILE"
-fi
-
-# macOS: Alias auf Desktop
-if [ "$(uname)" = "Darwin" ]; then
-    ln -sf "$INSTALL_DIR/$APP_NAME" "$HOME/Desktop/$APP_NAME"
-    echo "Desktop-Link erstellt"
+EOF
+    chmod +x "$HOME/.local/share/applications/TRX_Cat_Control.desktop"
+    echo "App-Menü Eintrag erstellt (Linux)"
 fi
 
 echo ""
@@ -92,9 +63,5 @@ echo "=================================="
 echo "  Setup fertig!"
 echo "=================================="
 echo ""
-echo "  App installiert: $INSTALL_DIR"
-echo "  Starten: $APP_NAME (im App-Menü oder Desktop)"
-echo ""
-echo "  Diesen Ordner kannst du jetzt löschen."
-echo "  (Für Updates behalten oder die App updated sich selbst)"
+echo "  Starten: ./start.sh oder über das App-Menü"
 echo ""

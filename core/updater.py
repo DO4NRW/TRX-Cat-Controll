@@ -1,6 +1,7 @@
 """
 Auto-Updater — prüft GitHub Releases auf neue Versionen.
-Vergleicht Versionsnummern (z.B. 2.0.0 vs 2.1.0).
+Lädt Source-Code, ersetzt .py Dateien, startet App neu.
+Kein PyInstaller nötig — App läuft direkt aus Source.
 """
 
 import os
@@ -15,35 +16,20 @@ import zipfile
 from PySide6.QtWidgets import QMessageBox, QProgressDialog, QApplication
 from PySide6.QtCore import Signal, QObject, Qt
 
-# Aktuelle Version der App
 CURRENT_VERSION = "2.0.1"
 
-# GitHub Repo
 REPO_OWNER = "DO4NRW"
 REPO_NAME = "TRX-Cat-Controll"
 RELEASES_API = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
 
 _PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Dateien die NICHT überschrieben werden (User-Daten)
-_KEEP = {"configs/user_themes.json", "configs/status_conf.json", "venv", "__pycache__",
-         ".git", "dist", "build", "Screenshot.png", "source_path.txt"}
-
-
-def _get_install_dir():
-    """Wo die App installiert ist."""
-    marker = os.path.join(_PROJECT_DIR, "source_path.txt")
-    if os.path.exists(marker):
-        return _PROJECT_DIR
-    if platform.system() == "Windows":
-        return os.path.join(os.environ.get("LOCALAPPDATA", ""), "TRX_Cat_Control_V2")
-    elif platform.system() == "Darwin":
-        return os.path.join(os.path.expanduser("~"), "Applications", "TRX_Cat_Control_V2")
-    return os.path.join(os.path.expanduser("~"), ".local", "share", "TRX_Cat_Control_V2")
+# Dateien/Ordner die NICHT überschrieben werden
+_KEEP = {"venv", "__pycache__", ".git", "dist", "build", "Screenshot.png",
+         "configs/user_themes.json", "configs/status_conf.json"}
 
 
 def _version_tuple(v):
-    """'2.1.0' → (2, 1, 0) für Vergleich."""
     try:
         return tuple(int(x) for x in v.strip().lstrip("v").split("."))
     except Exception:
@@ -51,9 +37,7 @@ def _version_tuple(v):
 
 
 class UpdateChecker(QObject):
-    """Prüft im Hintergrund ob ein neues Release auf GitHub verfügbar ist."""
-
-    update_available = Signal(str, str, str, str)  # (local_ver, remote_ver, changelog, zip_url)
+    update_available = Signal(str, str, str, str)  # local_ver, remote_ver, changelog, zip_url
     no_update = Signal()
     check_failed = Signal(str)
 
@@ -72,9 +56,7 @@ class UpdateChecker(QObject):
 
             remote_tag = data.get("tag_name", "")
             remote_ver = remote_tag.lstrip("v")
-            changelog = data.get("body", "").strip()[:200]
-
-            # ZIP URL aus dem Release (Source code)
+            changelog = data.get("body", "").strip()[:300]
             zip_url = data.get("zipball_url", "")
 
             if _version_tuple(remote_ver) > _version_tuple(CURRENT_VERSION):
@@ -87,14 +69,13 @@ class UpdateChecker(QObject):
 
 
 def _download_and_install(parent, zip_url):
-    """ZIP von GitHub Release laden, entpacken, Dateien ersetzen."""
+    """ZIP von GitHub laden, entpacken, Dateien im Projektordner ersetzen."""
     import urllib.request
 
     tmp_dir = tempfile.mkdtemp(prefix="trx_update_")
     zip_path = os.path.join(tmp_dir, "update.zip")
 
     try:
-        # 1. Download
         progress = QProgressDialog("Update wird heruntergeladen...", "Abbrechen", 0, 0, parent)
         progress.setWindowTitle("TRX Update")
         progress.setWindowModality(Qt.WindowModal)
@@ -105,17 +86,15 @@ def _download_and_install(parent, zip_url):
         urllib.request.urlretrieve(zip_url, zip_path)
 
         if progress.wasCanceled():
-            shutil.rmtree(tmp_dir, ignore_errors=True)
             return False, "Abgebrochen"
 
-        # 2. Entpacken
         progress.setLabelText("Update wird installiert...")
         QApplication.processEvents()
 
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(tmp_dir)
 
-        # GitHub ZIP enthält Ordner "REPO-main/" o.ä.
+        # GitHub ZIP enthält Ordner "REPO-main/"
         extracted = None
         for name in os.listdir(tmp_dir):
             full = os.path.join(tmp_dir, name)
@@ -126,19 +105,24 @@ def _download_and_install(parent, zip_url):
         if not extracted:
             return False, "ZIP-Inhalt nicht gefunden"
 
-        # 3. Dateien ins Install-Verzeichnis kopieren
-        install_dir = _get_install_dir()
-        internal_dir = os.path.join(install_dir, "_internal")
-
+        # Dateien im Projektordner ersetzen (User-Daten behalten)
         for item in os.listdir(extracted):
-            if item in _KEEP:
+            if item in _KEEP or item.startswith("."):
                 continue
 
             src = os.path.join(extracted, item)
-            if os.path.exists(internal_dir):
-                dst = os.path.join(internal_dir, item)
-            else:
-                dst = os.path.join(install_dir, item)
+            dst = os.path.join(_PROJECT_DIR, item)
+
+            # configs/ Ordner: nur neue Dateien, bestehende nicht überschreiben
+            if item == "configs" and os.path.isdir(src):
+                for cfg_file in os.listdir(src):
+                    cfg_src = os.path.join(src, cfg_file)
+                    cfg_dst = os.path.join(dst, cfg_file)
+                    # User-Daten nicht überschreiben
+                    if cfg_file in ("user_themes.json", "status_conf.json"):
+                        continue
+                    shutil.copy2(cfg_src, cfg_dst)
+                continue
 
             if os.path.isdir(src):
                 if os.path.exists(dst):
@@ -148,6 +132,21 @@ def _download_and_install(parent, zip_url):
                 shutil.copy2(src, dst)
 
         progress.close()
+
+        # Dependencies updaten (falls neue dazu kamen)
+        progress = QProgressDialog("Dependencies werden aktualisiert...", None, 0, 0, parent)
+        progress.setWindowTitle("TRX Update")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
+        QApplication.processEvents()
+
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet",
+             "PySide6", "numpy", "sounddevice", "pyserial"],
+            capture_output=True, timeout=120
+        )
+        progress.close()
+
         return True, "OK"
 
     except Exception as e:
@@ -157,34 +156,21 @@ def _download_and_install(parent, zip_url):
 
 
 def restart_app():
-    """App neu starten."""
-    install_dir = _get_install_dir()
-    app_name = "TRX_Cat_Control_V2"
-
-    if platform.system() == "Windows":
-        exe = os.path.join(install_dir, f"{app_name}.exe")
-    else:
-        exe = os.path.join(install_dir, app_name)
-
-    if os.path.exists(exe):
-        subprocess.Popen([exe])
-    else:
-        script = os.path.join(_PROJECT_DIR, "main.py")
-        subprocess.Popen([sys.executable, script])
-
+    """App neu starten aus Source."""
+    script = os.path.join(_PROJECT_DIR, "main.py")
+    subprocess.Popen([sys.executable, script], cwd=_PROJECT_DIR)
     QApplication.instance().quit()
     sys.exit(0)
 
 
 def show_update_dialog(parent, local_ver, remote_ver, changelog, zip_url):
-    """Zeigt Update-Dialog."""
     msg = QMessageBox(parent)
     msg.setWindowTitle("Update verfügbar")
     text = (f"Neue Version verfügbar!\n\n"
             f"Aktuell: v{local_ver}\n"
             f"Neu:     v{remote_ver}\n")
     if changelog:
-        text += f"\nÄnderungen:\n{changelog}\n"
+        text += f"\n{changelog[:200]}\n"
     text += "\nJetzt herunterladen und installieren?"
     msg.setText(text)
     msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
