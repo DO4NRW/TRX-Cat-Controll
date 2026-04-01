@@ -16,8 +16,8 @@ from PySide6.QtWidgets import QMessageBox, QProgressDialog, QApplication
 from PySide6.QtCore import Signal, QObject, Qt
 
 # Aktuelle Version (wird bei jedem Update überschrieben)
-VERSION_FILE = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "configs", "version.json")
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VERSION_FILE = os.path.join(_BASE_DIR, "configs", "version.json")
 
 # GitHub Repo
 REPO_OWNER = "DO4NRW"
@@ -47,7 +47,8 @@ _KEEP = {"configs/user_themes.json", "configs/status_conf.json", "venv", "__pyca
 
 
 def get_local_version():
-    """Lokale Version (commit hash) aus version.json lesen."""
+    """Lokale Version (commit hash) aus version.json lesen.
+    Sucht im aktuellen Verzeichnis (wo die App läuft)."""
     try:
         with open(VERSION_FILE) as f:
             return json.load(f).get("commit", "unknown")
@@ -56,10 +57,21 @@ def get_local_version():
 
 
 def save_local_version(commit_hash):
-    """Lokale Version in version.json speichern."""
+    """Lokale Version in version.json speichern — überall wo nötig."""
+    data = {"commit": commit_hash}
+    # Im Source-Ordner
     try:
         with open(VERSION_FILE, "w") as f:
-            json.dump({"commit": commit_hash}, f, indent=4)
+            json.dump(data, f, indent=4)
+    except Exception:
+        pass
+    # Im Install-Ordner (_internal/configs/)
+    try:
+        install_dir = _get_install_dir()
+        install_vf = os.path.join(install_dir, "_internal", "configs", "version.json")
+        if os.path.exists(os.path.dirname(install_vf)):
+            with open(install_vf, "w") as f:
+                json.dump(data, f, indent=4)
     except Exception:
         pass
 
@@ -193,22 +205,24 @@ def _download_and_install(parent):
 
 def restart_app():
     """App komplett neu starten — exe oder Source."""
+    install_dir = _get_install_dir()
     app_name = "TRX_Cat_Control_V2"
-    if platform.system() == "Windows":
-        exe = os.path.join(_PROJECT_DIR, "dist", app_name, f"{app_name}.exe")
-    elif platform.system() == "Darwin":
-        exe = os.path.join(_PROJECT_DIR, "dist", app_name, app_name)
-    else:
-        exe = os.path.join(_PROJECT_DIR, "dist", app_name, app_name)
 
-    QApplication.quit()
+    if platform.system() == "Windows":
+        exe = os.path.join(install_dir, f"{app_name}.exe")
+    else:
+        exe = os.path.join(install_dir, app_name)
+
     if os.path.exists(exe):
-        os.execv(exe, [exe])
+        subprocess.Popen([exe])
     else:
         # Fallback: aus Source starten
-        python = sys.executable
         script = os.path.join(_PROJECT_DIR, "main.py")
-        os.execv(python, [python, script])
+        subprocess.Popen([sys.executable, script])
+
+    # Aktuelle App beenden
+    QApplication.instance().quit()
+    sys.exit(0)
 
 
 def show_update_dialog(parent, local_hash, remote_hash, commit_msg):
