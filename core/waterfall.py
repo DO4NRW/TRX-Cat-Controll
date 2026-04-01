@@ -141,8 +141,9 @@ class WaterfallWidget(QWidget):
             p.end()
             return
 
-        spec_h = int(h * self._spectrum_frac)
-        wf_h = h - spec_h
+        freq_bar_h = 18  # Frequenz-Leiste Höhe
+        spec_h = int((h - freq_bar_h) * self._spectrum_frac)
+        wf_h = max(10, h - spec_h - freq_bar_h)
 
         # ── Spektrum-Hintergrund (etwas heller für Kontrast) ────────
         bg = QColor(18, 22, 30)
@@ -189,47 +190,45 @@ class WaterfallWidget(QWidget):
                 p.drawLine(line_points[i-1][0], line_points[i-1][1],
                           line_points[i][0], line_points[i][1])
 
-        # ── Trennlinie (dezent) ──────────────────────────────────────
+        # ── Frequenz-Leiste (zwischen Spektrum und Wasserfall) ────────
+        freq_y = spec_h
+        p.fillRect(0, freq_y, w, freq_bar_h, QColor(20, 25, 35))
+        # Obere + untere Linie
         p.setPen(QPen(QColor(40, 50, 60), 1))
-        p.drawLine(0, spec_h, w, spec_h)
+        p.drawLine(0, freq_y, w, freq_y)
+        p.drawLine(0, freq_y + freq_bar_h, w, freq_y + freq_bar_h)
 
-        # ── Wasserfall (Ring-Buffer) ─────────────────────────────────
-        wf_rect = self.rect()
-        wf_rect.setTop(spec_h + 1)
-
-        img_h = self._wf_lines
-        wr = self._wf_write_row
-
-        # Wasserfall: einfach das ganze Bild zeichnen (kein Ring-Buffer mehr)
-        from PySide6.QtCore import QRect
-        p.drawImage(QRect(0, spec_h + 1, w, wf_h), self._wf_image)
-
-        # ── Center-Marker + Frequenz-Labels ──────────────────────────
         if self._center_freq > 0 and self._span_hz > 0:
-            # Center-Marker (vertikale Linie über Spektrum + Wasserfall)
-            cx = w // 2
-            p.setPen(QPen(QColor(6, 198, 164, 80), 1))
-            p.drawLine(cx, 0, cx, h)
-
-            # Frequenz-Labels oben
-            p.setFont(QFont("Roboto", 8))
-            p.setPen(QColor(150, 160, 170))
             start_freq = self._center_freq - self._span_hz // 2
             end_freq = self._center_freq + self._span_hz // 2
 
+            p.setFont(QFont("Roboto", 8))
+            p.setPen(QColor(160, 170, 180))
             for i in range(6):
                 freq = start_freq + (end_freq - start_freq) * i / 5
                 x = int(w * i / 5)
                 mhz = freq / 1_000_000
                 label = f"{mhz:.3f}"
                 if i == 0:
-                    p.drawText(x + 2, 10, label)
+                    p.drawText(x + 3, freq_y + 13, label)
                 elif i == 5:
-                    p.drawText(x - 45, 10, label)
+                    p.drawText(x - 48, freq_y + 13, label)
                 else:
-                    p.drawText(x - 20, 10, label)
-                p.setPen(QColor(40, 50, 60))
-                p.drawLine(x, 0, x, 4)
-                p.setPen(QColor(150, 160, 170))
+                    p.drawText(x - 22, freq_y + 13, label)
+                # Tick-Linie
+                p.setPen(QColor(60, 70, 80))
+                p.drawLine(x, freq_y, x, freq_y + 4)
+                p.setPen(QColor(160, 170, 180))
+
+        # ── Wasserfall ───────────────────────────────────────────────
+        from PySide6.QtCore import QRect
+        wf_y = freq_y + freq_bar_h
+        p.drawImage(QRect(0, wf_y, w, wf_h), self._wf_image)
+
+        # ── Center-Marker (über alles) ───────────────────────────────
+        if self._center_freq > 0:
+            cx = w // 2
+            p.setPen(QPen(QColor(6, 198, 164, 60), 1))
+            p.drawLine(cx, 0, cx, h)
 
         p.end()

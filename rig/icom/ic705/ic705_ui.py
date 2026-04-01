@@ -400,6 +400,9 @@ class IC705Widget(QWidget):
                 khz_part = (freq % 1_000_000) // 1_000
                 hz_part = freq % 1_000
                 self.lbl_freq.setText(f"{mhz_int}.{khz_part:03d}.{hz_part:03d} MHz")
+                # Freq an Wasserfall für Labels
+                if hasattr(self, 'waterfall') and hasattr(self._cat, '_scope_span_hz'):
+                    self.waterfall.set_freq_info(freq, self._cat._scope_span_hz)
 
         # S-Meter nur jeden 3. Tick — Rest der Zeit geht Bandbreite an Scope
         raw = self._cat.get_smeter() if self._poll_count % 5 == 0 else None
