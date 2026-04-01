@@ -18,8 +18,16 @@ MODE_TO_CODE = {
     "DATA-FM":  "A",
     "FM-N":     "B",
     "DATA-U":   "C",
+    # Aliases für Button-Namen
+    "D-L":      "8",
+    "D-U":      "C",
+    "RTTY":     "6",
 }
-CODE_TO_MODE = {v: k for k, v in MODE_TO_CODE.items()}
+CODE_TO_MODE = {
+    "1": "LSB", "2": "USB", "3": "CW", "4": "FM", "5": "AM",
+    "6": "RTTY", "7": "CW-R", "8": "D-L", "9": "RTTY-U",
+    "A": "DATA-FM", "B": "FM-N", "C": "D-U",
+}
 
 
 class CatHandler:
@@ -169,10 +177,9 @@ class CatHandler:
 
     # ── PTT ───────────────────────────────────────────────────────────
 
-    def ptt_on(self, source=2):
-        """Activate TX via CAT.
-        source: 0=CAT, 1=Front Mic, 2=Rear Data"""
-        self._send(f"TX{source};")
+    def ptt_on(self):
+        """Activate TX via CAT. TX1 = TX via Front Mic (alle Modi)."""
+        self._send("TX1;")
 
     def ptt_off(self):
         """Return to RX via CAT."""

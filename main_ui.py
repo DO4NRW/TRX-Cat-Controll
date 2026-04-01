@@ -2495,7 +2495,6 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
-            # Nicht PTT wenn ein Textfeld fokussiert ist
             focus = QApplication.focusWidget()
             if isinstance(focus, QLineEdit):
                 super().keyPressEvent(event)

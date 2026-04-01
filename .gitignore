@@ -10,3 +10,5 @@ Screenshot.png
 dist/
 build/
 *.spec
+venv/
+debug_trx.py

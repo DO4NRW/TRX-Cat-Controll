@@ -179,6 +179,7 @@ class FT991AWidget(QWidget):
 
     # Modes die als Buttons angezeigt werden
     _MODES = ["LSB", "USB", "CW", "FM", "AM"]
+    _DIGI_MODES = ["DATA", "RTTY"]
 
     # Tuning Steps in Hz
     _STEPS = ["10","50","100","500","1000","2500","5000","6250",
@@ -277,22 +278,36 @@ class FT991AWidget(QWidget):
 
         root.addLayout(tune_row)
 
-        # ── 3. Mode Row ──────────────────────────────────────────────
+        # ── 3. Mode Row (Analog + Digital Modifier) ────────────────
+        self.mode_buttons = {}
+        self._digi_modifier = None  # "DATA" oder "RTTY" wenn aktiv
+
         mode_row = QHBoxLayout()
         mode_row.setSpacing(4)
-
-
-        self.mode_buttons = {}
         for mode in self._MODES:
             btn = QPushButton(mode)
-            btn.setMinimumHeight(32)
+            btn.setMinimumHeight(28)
             btn.setStyleSheet(_BTN_DARK)
             btn.setCheckable(True)
             btn.clicked.connect(lambda checked, m=mode: self._set_mode(m))
             mode_row.addWidget(btn, stretch=1)
             self.mode_buttons[mode] = btn
 
-        mode_row.addStretch()
+        # Separator
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFixedWidth(2)
+        mode_row.addWidget(sep)
+
+        # Digital Modifier Buttons
+        for digi in self._DIGI_MODES:
+            btn = QPushButton(digi)
+            btn.setMinimumHeight(28)
+            btn.setStyleSheet(_BTN_DARK)
+            btn.setCheckable(True)
+            btn.clicked.connect(lambda checked, d=digi: self._toggle_digi_mode(d))
+            mode_row.addWidget(btn, stretch=1)
+            self.mode_buttons[digi] = btn
 
         root.addLayout(mode_row)
 
@@ -303,7 +318,7 @@ class FT991AWidget(QWidget):
         self.dsp_buttons = {}
         for name in ["ATT", "NB", "DNR", "DNF", "NOTCH"]:
             btn = QPushButton(name)
-            btn.setMinimumHeight(32)
+            btn.setMinimumHeight(28)
             btn.setStyleSheet(_BTN_DARK)
             btn.setCheckable(True)
             btn.clicked.connect(lambda checked, n=name: self._toggle_dsp(n))
@@ -859,9 +874,31 @@ class FT991AWidget(QWidget):
 
         mode = self._cat.get_mode()
         if mode is not None:
-            self._current_mode = mode
-            for m, btn in self.mode_buttons.items():
-                btn.setStyleSheet(_get_BTN_ACTIVE() if m == mode else _get_BTN_DARK())
+            # Digi-Modes auf Base-Mode + Modifier aufteilen
+            if mode in ("D-L", "DATA-L"):
+                self._current_mode = "LSB"
+                self._digi_modifier = "DATA"
+            elif mode in ("D-U", "DATA-U"):
+                self._current_mode = "USB"
+                self._digi_modifier = "DATA"
+            elif mode in ("RTTY", "RTTY-L"):
+                self._current_mode = "LSB"
+                self._digi_modifier = "RTTY"
+            elif mode == "RTTY-U":
+                self._current_mode = "USB"
+                self._digi_modifier = "RTTY"
+            else:
+                self._current_mode = mode
+                self._digi_modifier = None
+            self._update_mode_buttons()
+            # Digi-Modifier Buttons updaten
+            for d in self._DIGI_MODES:
+                if d == self._digi_modifier:
+                    self.mode_buttons[d].setStyleSheet(_get_BTN_ACTIVE())
+                    self.mode_buttons[d].setChecked(True)
+                else:
+                    self.mode_buttons[d].setStyleSheet(_get_BTN_DARK())
+                    self.mode_buttons[d].setChecked(False)
 
         preamp = self._cat.get_preamp()
         if preamp is not None:
@@ -951,8 +988,70 @@ class FT991AWidget(QWidget):
     def _set_mode(self, mode):
         if not self._cat or not self._cat.connected:
             return
-        self._cat.set_mode(mode)
+        # Wenn Digi-Modifier aktiv: kombinieren
+        if self._digi_modifier and mode in ("LSB", "USB"):
+            if self._digi_modifier == "DATA":
+                combined = "D-L" if mode == "LSB" else "D-U"
+            else:  # RTTY
+                combined = "RTTY" if mode == "LSB" else "RTTY"
+                # RTTY-L = LSB, RTTY-U = USB
+                combined = "RTTY-L" if mode == "LSB" else "RTTY-U"
+            self._cat.set_mode(combined)
+        elif self._digi_modifier and mode not in ("LSB", "USB"):
+            # CW/FM/AM: Digi-Modifier deaktivieren
+            self._digi_modifier = None
+            for d in self._DIGI_MODES:
+                self.mode_buttons[d].setStyleSheet(_get_BTN_DARK())
+                self.mode_buttons[d].setChecked(False)
+            self._cat.set_mode(mode)
+        else:
+            self._cat.set_mode(mode)
         self._sync_rig_state()
+        self._update_mode_buttons()
+
+    def _toggle_digi_mode(self, digi):
+        """DATA oder RTTY Modifier an/aus schalten."""
+        if self._digi_modifier == digi:
+            # Ausschalten → zurück auf reinen Mode
+            self._digi_modifier = None
+            self.mode_buttons[digi].setStyleSheet(_get_BTN_DARK())
+            self.mode_buttons[digi].setChecked(False)
+            # Aktuellen Base-Mode neu setzen (LSB/USB)
+            base = self._current_mode
+            if base in ("LSB", "USB") and self._cat and self._cat.connected:
+                self._cat.set_mode(base)
+        else:
+            # Anderer Digi aus, diesen an
+            for d in self._DIGI_MODES:
+                self.mode_buttons[d].setStyleSheet(_get_BTN_DARK())
+                self.mode_buttons[d].setChecked(False)
+            self._digi_modifier = digi
+            self.mode_buttons[digi].setStyleSheet(_get_BTN_ACTIVE())
+            self.mode_buttons[digi].setChecked(True)
+            # Wenn LSB oder USB aktiv: sofort kombiniert senden
+            if self._current_mode in ("LSB", "USB") and self._cat and self._cat.connected:
+                self._set_mode(self._current_mode)
+                return
+            # Sonst: auf USB wechseln als Standard
+            if self._cat and self._cat.connected:
+                self._set_mode("USB")
+                return
+        self._update_mode_buttons()
+
+    def _update_mode_buttons(self):
+        """Mode-Buttons visuell aktualisieren."""
+        for m, btn in self.mode_buttons.items():
+            if m in self._DIGI_MODES:
+                continue  # Digi-Buttons separat
+            if m == self._current_mode:
+                btn.setStyleSheet(_get_BTN_ACTIVE())
+            else:
+                btn.setStyleSheet(_get_BTN_DARK())
+            # Bei Digi-Modifier: nur LSB/USB klickbar, sonst alles frei
+            if self._digi_modifier:
+                btn.setEnabled(m in ("LSB", "USB"))
+            else:
+                btn.setEnabled(True)
 
     def _toggle_dsp(self, name):
         if not self._cat or not self._cat.connected:

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QMessageBox, QProgressDialog, QApplication
 from PySide6.QtCore import Signal, QObject, Qt
 
 # Aktuelle Version der App
-CURRENT_VERSION = "2.0.0"
+CURRENT_VERSION = "2.0.1"
 
 # GitHub Repo
 REPO_OWNER = "DO4NRW"

@@ -9,8 +9,8 @@
         "handshake": null
     },
     "ptt": {
-        "port": "/dev/ttyUSB1",
-        "method": "RTS",
+        "port": "/dev/ttyUSB0",
+        "method": "CAT",
         "invert": false
     },
     "rig": {
