@@ -2244,9 +2244,13 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 640)
 
         # Fenster-Icon setzen
-        logo = os.path.join(os.path.dirname(__file__), "Logo.png")
-        if os.path.exists(logo):
-            self.setWindowIcon(QIcon(logo))
+        # SVG Logo für Fenster-Icon (PNG Fallback wenn vorhanden)
+        logo_svg = os.path.join(os.path.dirname(__file__), "PandaLogo.svg")
+        logo_png = os.path.join(os.path.dirname(__file__), "Logo.png")
+        if os.path.exists(logo_png):
+            self.setWindowIcon(QIcon(logo_png))
+        elif os.path.exists(logo_svg):
+            self.setWindowIcon(themed_icon(logo_svg))
 
         # Fenster-Background entkoppeln vom System-Theme
         self._apply_window_bg()
