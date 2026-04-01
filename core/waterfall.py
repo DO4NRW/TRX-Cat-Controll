@@ -31,7 +31,7 @@ class WaterfallWidget(QWidget):
         self._color_gain = 6.0     # Farbverstärkung
         self._black_level = 5      # Unter diesem Wert = schwarz
         self._spectrum_frac = 0.35  # 35% Spektrum, 65% Wasserfall
-        self._fill_alpha = 0.6
+        self._fill_alpha = 0.75
 
         # Farbpalette
         self._palette = self._build_palette()
@@ -105,8 +105,8 @@ class WaterfallWidget(QWidget):
         spec_h = int(h * self._spectrum_frac)
         wf_h = h - spec_h
 
-        # ── Spektrum-Hintergrund ─────────────────────────────────────
-        bg = QColor(10, 10, 20)
+        # ── Spektrum-Hintergrund (etwas heller für Kontrast) ────────
+        bg = QColor(18, 22, 30)
         p.fillRect(0, 0, w, spec_h, bg)
 
         # ── Grid ─────────────────────────────────────────────────────
@@ -119,55 +119,39 @@ class WaterfallWidget(QWidget):
             x = int(w * i / 8)
             p.drawLine(x, 0, x, spec_h)
 
-        # ── Spektrum-Linie + Fill ────────────────────────────────────
-        if self._spectrum.max() > 0:
-            accent = QColor(T.get('accent', '#06c6a4'))
+        # ── Spektrum (Balken + Linie) ────────────────────────────────
+        peak = float(self._spectrum.max())
+        if peak > 0:
+            accent = QColor(6, 198, 164)  # Teal direkt als RGB
             n = self._num_points
+            auto_scale = 0.85 / max(peak, 1)
 
-            # Spektrum-Pfad bauen
-            path = QPainterPath()
-            first = True
+            # Gefüllte Balken pro Spalte
+            fill_color = QColor(accent)
+            fill_color.setAlpha(120)
+            line_points = []
+
             for px in range(w):
                 idx = int(px * n / w)
                 if idx >= n:
                     idx = n - 1
                 val = self._spectrum[idx]
-                # Gain + Black Level
-                normed = max(0, (val - self._black_level) * self._color_gain / 255.0)
-                normed = min(1.0, normed)
+                normed = min(1.0, val * auto_scale)
                 y = int(spec_h * (1.0 - normed))
-                y = max(0, min(spec_h - 1, y))
-                if first:
-                    path.moveTo(px, y)
-                    first = False
-                else:
-                    path.lineTo(px, y)
+                y = max(1, min(spec_h - 1, y))
+                bar_h = spec_h - y
+                if bar_h > 0:
+                    p.fillRect(px, y, 1, bar_h, fill_color)
+                line_points.append((px, y))
 
-            # Fill-Pfad (geschlossen)
-            fill_path = QPainterPath(path)
-            fill_path.lineTo(w - 1, spec_h)
-            fill_path.lineTo(0, spec_h)
-            fill_path.closeSubpath()
-
-            # Gradient Fill
-            alpha_top = int(200 * self._fill_alpha)
-            alpha_bot = int(40 * self._fill_alpha)
-            top_color = QColor(accent)
-            top_color.setAlpha(alpha_top)
-            bot_color = accent.darker(300)
-            bot_color.setAlpha(alpha_bot)
-            grad = QLinearGradient(0, 0, 0, spec_h)
-            grad.setColorAt(0.0, top_color)
-            grad.setColorAt(1.0, bot_color)
-
-            p.setRenderHint(QPainter.Antialiasing, True)
-            p.fillPath(fill_path, grad)
-            p.setPen(QPen(accent, 1.5))
-            p.drawPath(path)
-            p.setRenderHint(QPainter.Antialiasing, False)
+            # Helle Linie obendrauf
+            p.setPen(QPen(accent, 2))
+            for i in range(1, len(line_points)):
+                p.drawLine(line_points[i-1][0], line_points[i-1][1],
+                          line_points[i][0], line_points[i][1])
 
         # ── Trennlinie ───────────────────────────────────────────────
-        p.setPen(QColor(25, 40, 55))
+        p.setPen(QPen(QColor(6, 198, 164), 1))
         p.drawLine(0, spec_h, w, spec_h)
 
         # ── Wasserfall (Ring-Buffer) ─────────────────────────────────

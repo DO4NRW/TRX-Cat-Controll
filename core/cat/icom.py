@@ -30,8 +30,13 @@ class IcomCat(CatBase):
         self._civ_addr = civ_address
         self._ctrl_addr = 0xE0  # Controller (PC) Adresse
         self._scope_buffer = []  # Gepufferte Scope-Frames
-        self._scope_spectrum = [0] * 475  # Aktuelles Spektrum (wird laufend gefüllt)
-        self._scope_complete = False  # True wenn ein voller Sweep da ist
+        self._scope_spectrum = [0] * 475
+        self._scope_complete = False
+        self._scope_thread = None
+        self._scope_running = False
+        self._scope_latest = None  # Letztes fertiges Spektrum (thread-safe)
+        import threading
+        self._scope_lock = threading.Lock()
 
     def _on_connect(self):
         pass
@@ -107,9 +112,10 @@ class IcomCat(CatBase):
                 for f in frames:
                     if len(f) < 5:
                         continue
-                    # Scope-Daten (0x27 0x00) separat puffern
+                    # Scope-Daten (0x27 0x00) separat puffern (thread-safe)
                     if len(f) >= 6 and f[2] == self._ctrl_addr and f[4] == 0x27 and f[5] == 0x00:
-                        self._scope_buffer.append(f)
+                        with self._scope_lock:
+                            self._scope_buffer.append(f)
                         continue
                     # Antwort auf unsere Query
                     if f[2] == self._ctrl_addr and result is None:
@@ -311,47 +317,155 @@ class IcomCat(CatBase):
             import time; time.sleep(0.05)
             self._civ_send(0x27, sub=0x11, data=bytes([0x01]))  # Wave output ON
 
-    def scope_read(self):
-        """Scope-Daten aus dem internen Buffer lesen.
-        Sammelt Divisionen und gibt Spektrum zurück wenn ein neuer Sweep beginnt."""
-        if not self._scope_buffer:
-            return self._scope_spectrum[:] if self._scope_complete else None
+    def _start_scope_thread(self):
+        """Scope-Lese-Thread starten."""
+        if self._scope_thread and self._scope_thread.is_alive():
+            return
+        import threading
+        self._scope_running = True
+        self._scope_thread = threading.Thread(target=self._scope_loop, daemon=True)
+        self._scope_thread.start()
 
+    def _stop_scope_thread(self):
+        self._scope_running = False
+
+    def _flush_scope_from_serial(self):
+        """Lese alle wartenden Daten vom Serial-Port und puffere Scope-Frames.
+        Wird vom Scope-Thread aufgerufen OHNE Query zu senden."""
+        with self._lock:
+            if not self._ser or not self._ser.is_open:
+                return
+            try:
+                if self._ser.in_waiting == 0:
+                    return
+                import time
+                buf = b""
+                while self._ser.in_waiting > 0:
+                    buf += self._ser.read(self._ser.in_waiting)
+                    time.sleep(0.003)
+                # Frames parsen
+                while True:
+                    start = buf.find(bytes([0xFE, 0xFE]))
+                    if start < 0:
+                        break
+                    end = buf.find(bytes([0xFD]), start)
+                    if end < 0:
+                        break
+                    f = buf[start:end + 1]
+                    buf = buf[end + 1:]
+                    if len(f) >= 6 and f[2] == self._ctrl_addr and f[4] == 0x27 and f[5] == 0x00:
+                        with self._scope_lock:
+                            self._scope_buffer.append(f)
+            except Exception:
+                pass
+
+    @staticmethod
+    def _bcd_byte(b):
+        """Ein BCD-Byte → Dezimalzahl (0x11 → 11, nicht 17)."""
+        return (b & 0x0F) + ((b >> 4) & 0x0F) * 10
+
+    def _scope_loop(self):
+        """Hintergrund-Thread: liest kontinuierlich Scope-Daten vom Serial-Port."""
+        import time
+        spectrum = [0] * 475
+        last_div = 0
+        while self._scope_running and self.connected:
+            try:
+                self._flush_scope_from_serial()
+
+                with self._scope_lock:
+                    frames = self._scope_buffer[:]
+                    self._scope_buffer.clear()
+
+                if not frames:
+                    time.sleep(0.01)
+                    continue
+
+                for frame in frames:
+                    if len(frame) < 10:
+                        continue
+
+                    # BCD-codierte Division-Nummern (wie wfview)
+                    div_order = self._bcd_byte(frame[7])
+                    div_max = self._bcd_byte(frame[8])
+
+                    if div_order == 1:
+                        # Neuer Sweep — altes Spektrum abliefern
+                        if last_div > 1:
+                            with self._scope_lock:
+                                self._scope_latest = spectrum[:]
+                        spectrum = [0] * 475
+                        last_div = 1
+                        continue
+
+                    if div_order <= last_div and last_div > 1:
+                        # Neuer Sweep ohne Div 1 Header
+                        with self._scope_lock:
+                            self._scope_latest = spectrum[:]
+                        spectrum = [0] * 475
+
+                    last_div = div_order
+
+                    # Waveform ab Byte 9 (nach 00, div, max Header)
+                    # Div 2+: 3 Bytes Mini-Header + Waveform
+                    wave_data = frame[9:-1]
+                    if not wave_data:
+                        continue
+
+                    # wfview Style: Division 1 hat Header, 2+ haben nur Waveform
+                    # Offset = (div-2) * Punkte pro Division
+                    points_per_div = len(wave_data)
+                    offset = (div_order - 2) * 50  # 50 Bytes pro Division
+
+                    for i, val in enumerate(wave_data):
+                        idx = offset + i
+                        if 0 <= idx < 475:
+                            spectrum[idx] = min(160, val)
+
+                    if div_order >= div_max:
+                        with self._scope_lock:
+                            self._scope_latest = spectrum[:]
+                        spectrum = [0] * 475
+                        last_div = 0
+
+            except Exception:
+                time.sleep(0.03)
+
+    def scope_read(self):
+        """Scope-Daten aus dem Buffer verarbeiten (wird vom Poll-Timer aufgerufen)."""
+        # Scope-Frames direkt verarbeiten (kein Thread nötig)
         frames = self._scope_buffer[:]
         self._scope_buffer.clear()
-        result = None
+
+        if not frames:
+            return self._scope_latest
 
         for frame in frames:
             if len(frame) < 10:
                 continue
 
-            div_order = frame[7]
-            div_max = frame[8]
+            div_order = self._bcd_byte(frame[7])
+            div_max = self._bcd_byte(frame[8])
 
-            # Division 01 = neuer Sweep → altes Spektrum abliefern
-            if div_order <= 1:
-                if self._scope_complete:
-                    result = self._scope_spectrum[:]
+            if div_order == 1:
+                # Neuer Sweep → altes Spektrum fertig
+                if any(v > 0 for v in self._scope_spectrum):
+                    self._scope_latest = self._scope_spectrum[:]
                 self._scope_spectrum = [0] * 475
-                self._scope_complete = False
                 continue
 
-            # Division 02+: Waveform ab Byte 9 bis vor FD
             wave_data = frame[9:-1]
             if not wave_data:
                 continue
 
-            # Offset: Division 2 → Byte 0, Division 3 → Byte 50, etc.
             offset = (div_order - 2) * 50
-
             for i, val in enumerate(wave_data):
                 idx = offset + i
                 if 0 <= idx < 475:
                     self._scope_spectrum[idx] = min(160, val)
 
-            # Letzte Division → Sweep komplett
             if div_order >= div_max:
-                self._scope_complete = True
-                result = self._scope_spectrum[:]
+                self._scope_latest = self._scope_spectrum[:]
+                self._scope_spectrum = [0] * 475
 
-        return result
+        return self._scope_latest

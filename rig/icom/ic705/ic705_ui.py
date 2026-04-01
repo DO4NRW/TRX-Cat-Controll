@@ -113,6 +113,27 @@ class IC705Widget(QWidget):
 
         # ── 0. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
+
+        # Span-Slider über dem Wasserfall
+        span_row = QHBoxLayout()
+        span_row.setSpacing(6)
+        self.lbl_span = QLabel("SPAN: 50 kHz")
+        self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
+        span_row.addWidget(self.lbl_span)
+        self.slider_span = QSlider(Qt.Horizontal)
+        self.slider_span.setRange(0, 7)  # Index in SPAN_VALUES
+        self.slider_span.setValue(3)  # Default 50kHz
+        self.slider_span.setStyleSheet(_SLIDER_STYLE())
+        self.slider_span.valueChanged.connect(self._set_span)
+        span_row.addWidget(self.slider_span, stretch=1)
+        root.addLayout(span_row)
+
+        self._SPAN_VALUES = [
+            (2500, "2.5 kHz"), (5000, "5 kHz"), (10000, "10 kHz"),
+            (50000, "50 kHz"), (100000, "100 kHz"), (250000, "250 kHz"),
+            (500000, "500 kHz"),
+        ]
+
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
         self.waterfall.setMinimumHeight(180)
         root.addWidget(self.waterfall, stretch=1)
@@ -313,8 +334,26 @@ class IC705Widget(QWidget):
             self._poll_timer = QTimer(self)
             self._poll_timer.timeout.connect(self._poll)
         self._poll_timer.start(150)
+        # Schneller Scope-Timer (50ms = ~20fps)
+        if not hasattr(self, '_scope_timer') or self._scope_timer is None:
+            self._scope_timer = QTimer(self)
+            self._scope_timer.timeout.connect(self._scope_poll)
+        self._scope_timer.start(50)
+
+    def _scope_poll(self):
+        """Schneller Scope-Poll — liest nur Scope-Daten, keine CAT-Queries."""
+        if not self._cat or not self._cat.connected:
+            return
+        if hasattr(self._cat, '_flush_scope_from_serial'):
+            self._cat._flush_scope_from_serial()
+        if hasattr(self._cat, 'scope_read') and hasattr(self, 'waterfall'):
+            spectrum = self._cat.scope_read()
+            if spectrum:
+                self.waterfall.update_spectrum(spectrum)
 
     def stop_polling(self):
+        if hasattr(self, '_scope_timer') and self._scope_timer:
+            self._scope_timer.stop()
         if self._poll_timer:
             self._poll_timer.stop()
         if self._cat and hasattr(self._cat, 'scope_enable'):
@@ -376,11 +415,7 @@ class IC705Widget(QWidget):
         self.update_tx_meter(self._tx_rms_db)
         self._vox_tick()
 
-        # Scope/Waterfall Daten lesen
-        if hasattr(self._cat, 'scope_read') and hasattr(self, 'waterfall'):
-            spectrum = self._cat.scope_read()
-            if spectrum:
-                self.waterfall.update_spectrum(spectrum)
+        # Scope wird vom schnellen _scope_timer gelesen
 
     def _sync_rig_state(self):
         if not self._cat:
@@ -554,6 +589,25 @@ class IC705Widget(QWidget):
         self._cat._civ_send(0x16, sub=0x02, data=bytes([codes[new_mode]]))
         self._current_preamp = new_mode
         self.btn_preamp.setText(f"P.AMP: {new_mode}")
+
+    def _set_span(self, idx):
+        """Scope Span ändern."""
+        if idx >= len(self._SPAN_VALUES):
+            return
+        span_hz, label = self._SPAN_VALUES[idx]
+        self.lbl_span.setText(f"SPAN: {label}")
+        if not self._cat or not self._cat.connected:
+            return
+        # CI-V 0x27 0x15: Span in BCD (6 Bytes, LSB first)
+        span_bcd = []
+        val = span_hz
+        for _ in range(6):
+            lo = val % 10
+            val //= 10
+            hi = val % 10
+            val //= 10
+            span_bcd.append((hi << 4) | lo)
+        self._cat._civ_send(0x27, sub=0x15, data=bytes(span_bcd))
 
     def _cycle_agc(self):
         if not self._cat or not self._cat.connected:
