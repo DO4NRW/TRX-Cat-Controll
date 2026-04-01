@@ -13,10 +13,12 @@ import platform
 import subprocess
 import threading
 import zipfile
-from PySide6.QtWidgets import QMessageBox, QProgressDialog, QApplication
+from PySide6.QtWidgets import (QMessageBox, QProgressDialog, QApplication,
+                               QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+                               QPushButton, QTextEdit)
 from PySide6.QtCore import Signal, QObject, Qt
 
-CURRENT_VERSION = "2.0.3"
+CURRENT_VERSION = "2.0.4"
 
 REPO_OWNER = "DO4NRW"
 REPO_NAME = "RigLink"
@@ -163,34 +165,132 @@ def restart_app():
     sys.exit(0)
 
 
-def show_update_dialog(parent, local_ver, remote_ver, changelog, zip_url):
-    msg = QMessageBox(parent)
-    msg.setWindowTitle("Update verfügbar")
-    text = (f"Neue Version verfügbar!\n\n"
-            f"Aktuell: v{local_ver}\n"
-            f"Neu:     v{remote_ver}\n")
-    if changelog:
-        text += f"\n{changelog[:200]}\n"
-    text += "\nJetzt herunterladen und installieren?"
-    msg.setText(text)
-    msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-    msg.setDefaultButton(QMessageBox.No)
-    msg.button(QMessageBox.Yes).setText("Ja, updaten")
-    msg.button(QMessageBox.No).setText("Nein, später")
+def _themed_dialog_style():
+    """Stylesheet für Update-Dialog im App-Theme."""
+    from core.theme import T
+    return f"""
+        QDialog {{
+            background-color: {T['bg_dark']};
+            border: 1px solid {T['border']};
+        }}
+        QLabel {{
+            color: {T['text']};
+        }}
+        QLabel#title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: {T['accent']};
+        }}
+        QLabel#versions {{
+            font-size: 13px;
+            color: {T['text_secondary']};
+        }}
+        QTextEdit {{
+            background-color: {T['bg_mid']};
+            color: {T['text_secondary']};
+            border: 1px solid {T['border']};
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 6px;
+        }}
+        QPushButton {{
+            background-color: {T['bg_button']};
+            color: {T['text']};
+            border: 1px solid {T['border']};
+            border-radius: 5px;
+            padding: 8px 20px;
+            font-size: 13px;
+        }}
+        QPushButton:hover {{
+            background-color: {T['bg_button_hover']};
+            border: 1px solid {T['border_hover']};
+        }}
+        QPushButton#primary {{
+            border: 2px solid {T['accent']};
+        }}
+        QPushButton#primary:hover {{
+            border: 2px solid {T['accent']};
+            background-color: {T['bg_light']};
+        }}
+    """
 
-    if msg.exec() == QMessageBox.Yes:
+
+def show_update_dialog(parent, local_ver, remote_ver, changelog, zip_url):
+    dlg = QDialog(parent)
+    dlg.setWindowTitle("Update verfügbar")
+    dlg.setFixedSize(420, 320)
+    dlg.setStyleSheet(_themed_dialog_style())
+
+    layout = QVBoxLayout(dlg)
+    layout.setSpacing(12)
+    layout.setContentsMargins(20, 20, 20, 20)
+
+    # Titel
+    lbl_title = QLabel("Update verfügbar")
+    lbl_title.setObjectName("title")
+    layout.addWidget(lbl_title)
+
+    # Versionen
+    lbl_ver = QLabel(f"Installiert: v{local_ver}  →  Neu: v{remote_ver}")
+    lbl_ver.setObjectName("versions")
+    layout.addWidget(lbl_ver)
+
+    # Changelog
+    if changelog:
+        txt_log = QTextEdit()
+        txt_log.setReadOnly(True)
+        txt_log.setPlainText(changelog[:500])
+        txt_log.setMaximumHeight(120)
+        layout.addWidget(txt_log)
+
+    layout.addStretch()
+
+    # Buttons
+    btn_row = QHBoxLayout()
+    btn_row.addStretch()
+
+    btn_skip = QPushButton("Später")
+    btn_skip.clicked.connect(dlg.reject)
+    btn_row.addWidget(btn_skip)
+
+    btn_update = QPushButton("Jetzt updaten")
+    btn_update.setObjectName("primary")
+    btn_row.addWidget(btn_update)
+
+    layout.addLayout(btn_row)
+
+    def _do_update():
+        dlg.accept()
         ok, output = _download_and_install(parent, zip_url)
         if ok:
-            restart_msg = QMessageBox(parent)
-            restart_msg.setWindowTitle("Update erfolgreich")
-            restart_msg.setText(f"Update auf v{remote_ver} installiert!\n\n"
-                               "App wird jetzt neu gestartet...")
-            restart_msg.setStandardButtons(QMessageBox.Ok)
-            restart_msg.exec()
+            done = QDialog(parent)
+            done.setWindowTitle("Update erfolgreich")
+            done.setFixedSize(350, 150)
+            done.setStyleSheet(_themed_dialog_style())
+            dl = QVBoxLayout(done)
+            dl.setContentsMargins(20, 20, 20, 20)
+            dl.addWidget(QLabel(f"Update auf v{remote_ver} installiert!"))
+            dl.addWidget(QLabel("App wird jetzt neu gestartet..."))
+            dl.addStretch()
+            btn_ok = QPushButton("OK")
+            btn_ok.setObjectName("primary")
+            btn_ok.clicked.connect(done.accept)
+            dl.addWidget(btn_ok)
+            done.exec()
             restart_app()
         else:
-            err_msg = QMessageBox(parent)
-            err_msg.setWindowTitle("Update fehlgeschlagen")
-            err_msg.setText(f"Fehler beim Update:\n\n{output}")
-            err_msg.setStandardButtons(QMessageBox.Ok)
-            err_msg.exec()
+            err = QDialog(parent)
+            err.setWindowTitle("Update fehlgeschlagen")
+            err.setFixedSize(350, 150)
+            err.setStyleSheet(_themed_dialog_style())
+            el = QVBoxLayout(err)
+            el.setContentsMargins(20, 20, 20, 20)
+            el.addWidget(QLabel(f"Fehler beim Update:\n{output}"))
+            el.addStretch()
+            btn_ok = QPushButton("OK")
+            btn_ok.clicked.connect(err.accept)
+            el.addWidget(btn_ok)
+            err.exec()
+
+    btn_update.clicked.connect(_do_update)
+    dlg.exec()

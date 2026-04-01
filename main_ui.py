@@ -2338,26 +2338,11 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addStretch()
 
-        # Status-Bar Container (durchgehender Balken)
-        self.status_bar_widget = QWidget()
-        self.status_bar_widget.setFixedHeight(30)
-        status_row = QHBoxLayout(self.status_bar_widget)
-        status_row.setContentsMargins(0, 0, 0, 0)
-        status_row.setSpacing(0)
-
         self.status_label = QLabel(" Status: Ready")
-        self.status_label.setStyleSheet("color: #ffffff; padding-left: 10px;")
-        status_row.addWidget(self.status_label)
-
-        from core.updater import CURRENT_VERSION
-        self.lbl_version = QLabel(f"v{CURRENT_VERSION}")
-        self.lbl_version.setStyleSheet("color: #888888; font-size: 11px; padding-right: 8px;")
-        self.lbl_version.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        status_row.addWidget(self.lbl_version)
-
+        self.status_label.setFixedHeight(30)
         self._update_status_styles()
-        self.status_bar_widget.setStyleSheet(self._STATUS_OFF)
-        self.main_layout.addWidget(self.status_bar_widget)
+        self.status_label.setStyleSheet(self._STATUS_OFF)
+        self.main_layout.addWidget(self.status_label)
 
         # ALLE interaktiven Widgets auf NoFocus — Leertaste nur für PTT
         import PySide6.QtWidgets as _qtw
@@ -2439,9 +2424,9 @@ class MainWindow(QMainWindow):
             QPushButton:hover {{ background-color: {T['bg_light']}; border: 2px solid {T['error']}; }}"""
 
     def _update_status_styles(self):
-        self._STATUS_OFF = f"background-color: {T['bg_dark']}; border-top: 1px solid {T['border']};"
-        self._STATUS_ON  = f"background-color: {T['bg_dark']}; border-top: 2px solid {T['accent']};"
-        self._STATUS_ERR = f"background-color: {T['bg_dark']}; border-top: 2px solid {T['error']};"
+        self._STATUS_OFF = f"background-color: {T['bg_dark']}; border-top: 1px solid {T['border']}; color: {T['text']}; padding-left: 10px;"
+        self._STATUS_ON  = f"background-color: {T['bg_dark']}; border-top: 2px solid {T['accent']}; color: {T['text']}; padding-left: 10px;"
+        self._STATUS_ERR = f"background-color: {T['bg_dark']}; border-top: 2px solid {T['error']}; color: {T['text']}; padding-left: 10px;"
 
     # ── Fenster-Hintergrund (entkoppelt vom System-Theme) ────────────
 
@@ -2509,7 +2494,7 @@ class MainWindow(QMainWindow):
         else:
             self.btn_mute.setStyleSheet(self._mute_style_on)
 
-        self.status_bar_widget.setStyleSheet(self._STATUS_ON if self._cat_connected else self._STATUS_OFF)
+        self.status_label.setStyleSheet(self._STATUS_ON if self._cat_connected else self._STATUS_OFF)
 
         # Alle ToggleButtons: Icons + Style neu laden
         for tb in self.findChildren(ToggleButton):
@@ -2569,10 +2554,10 @@ class MainWindow(QMainWindow):
         if not config_path or not os.path.exists(config_path):
             self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
             self.status_label.setText(" CAT: Keine Config gefunden")
-            self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
+            self.status_label.setStyleSheet(self._STATUS_ERR)
             QTimer.singleShot(2000, lambda: (
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
-                self.status_bar_widget.setStyleSheet(self._STATUS_OFF)))
+                self.status_label.setStyleSheet(self._STATUS_OFF)))
             return
 
         try:
@@ -2580,7 +2565,7 @@ class MainWindow(QMainWindow):
                 cfg = json.load(f)
         except Exception:
             self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
-            self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
+            self.status_label.setStyleSheet(self._STATUS_ERR)
             return
 
         cat_cfg = cfg.get("cat", {})
@@ -2601,7 +2586,7 @@ class MainWindow(QMainWindow):
                 self._cat_connected = True
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_ON)
                 self.status_label.setText(f" CAT: Verbunden ({port} @ {baud})")
-                self.status_bar_widget.setStyleSheet(self._STATUS_ON)
+                self.status_label.setStyleSheet(self._STATUS_ON)
 
                 # Rig-Widget mit CatHandler verbinden
                 if self.rig_widget and hasattr(self.rig_widget, "set_cat_handler"):
@@ -2620,18 +2605,18 @@ class MainWindow(QMainWindow):
                 self._cat_handler = None
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
                 self.status_label.setText(f" CAT: Verbindung fehlgeschlagen ({port})")
-                self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
+                self.status_label.setStyleSheet(self._STATUS_ERR)
                 QTimer.singleShot(3000, lambda: (
                     self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
-                    self.status_bar_widget.setStyleSheet(self._STATUS_OFF)))
+                    self.status_label.setStyleSheet(self._STATUS_OFF)))
 
         except Exception as e:
             self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
             self.status_label.setText(f" CAT Fehler: {e}")
-            self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
+            self.status_label.setStyleSheet(self._STATUS_ERR)
             QTimer.singleShot(3000, lambda: (
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
-                self.status_bar_widget.setStyleSheet(self._STATUS_OFF)))
+                self.status_label.setStyleSheet(self._STATUS_OFF)))
 
     def _disconnect_cat(self):
         """CAT-Verbindung trennen — sofort connected=False, Polling stop, dann Serial close."""
@@ -2659,7 +2644,7 @@ class MainWindow(QMainWindow):
         self._cat_connected = False
         self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF)
         self.status_label.setText(" CAT: Getrennt")
-        self.status_bar_widget.setStyleSheet(self._STATUS_OFF)
+        self.status_label.setStyleSheet(self._STATUS_OFF)
         self.tgl_vox.setChecked(False)
 
     def _on_rig_combo_changed(self, rig_name):
