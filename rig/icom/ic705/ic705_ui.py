@@ -111,6 +111,12 @@ class IC705Widget(QWidget):
         root.setContentsMargins(15, 10, 15, 10)
         root.setSpacing(8)
 
+        # ── 0. Waterfall / Spectrum ───────────────────────────────────
+        from core.waterfall import WaterfallWidget
+        self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
+        self.waterfall.setMinimumHeight(180)
+        root.addWidget(self.waterfall, stretch=1)
+
         # ── 1. Frequency Display ─────────────────────────────────────
         self.lbl_freq = QLabel("---.---.--- MHz")
         self.lbl_freq.setAlignment(Qt.AlignCenter)
@@ -281,8 +287,7 @@ class IC705Widget(QWidget):
             QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}""")
         root.addWidget(self.tx_bar)
 
-        # ── 8. PTT Button ────────────────────────────────────────────
-        root.addStretch()
+        # ── 9. PTT Button ────────────────────────────────────────────
 
         self.btn_ptt = QPushButton("RX (SPACE)")
         self.btn_ptt.setFixedHeight(50)
@@ -301,6 +306,9 @@ class IC705Widget(QWidget):
         self._cat = cat
         self._poll_count = 0
         self._sync_rig_state()
+        # Scope aktivieren (IC-705 CI-V)
+        if hasattr(cat, 'scope_enable'):
+            cat.scope_enable(True)
         if self._poll_timer is None:
             self._poll_timer = QTimer(self)
             self._poll_timer.timeout.connect(self._poll)
@@ -309,6 +317,11 @@ class IC705Widget(QWidget):
     def stop_polling(self):
         if self._poll_timer:
             self._poll_timer.stop()
+        if self._cat and hasattr(self._cat, 'scope_enable'):
+            try:
+                self._cat.scope_enable(False)
+            except Exception:
+                pass
         self._cat = None
         self.stop_audio()
         self._reset_display()
@@ -362,6 +375,12 @@ class IC705Widget(QWidget):
         # TX-Meter + VOX
         self.update_tx_meter(self._tx_rms_db)
         self._vox_tick()
+
+        # Scope/Waterfall Daten lesen
+        if hasattr(self._cat, 'scope_read') and hasattr(self, 'waterfall'):
+            spectrum = self._cat.scope_read()
+            if spectrum:
+                self.waterfall.update_spectrum(spectrum)
 
     def _sync_rig_state(self):
         if not self._cat:

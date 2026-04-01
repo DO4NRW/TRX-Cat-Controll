@@ -29,9 +29,12 @@ class IcomCat(CatBase):
         super().__init__(**kwargs)
         self._civ_addr = civ_address
         self._ctrl_addr = 0xE0  # Controller (PC) Adresse
+        self._scope_buffer = []  # Gepufferte Scope-Frames
+        self._scope_spectrum = [0] * 475  # Aktuelles Spektrum (wird laufend gefüllt)
+        self._scope_complete = False  # True wenn ein voller Sweep da ist
 
     def _on_connect(self):
-        pass  # Icom braucht keine Init-Befehle
+        pass
 
     # ── CI-V Frame ────────────────────────────────────────────────────
 
@@ -63,8 +66,33 @@ class IcomCat(CatBase):
         data = frame[5:-1]
         return cmd, data
 
+    def _read_all_frames(self):
+        """Alle CI-V Frames aus dem Serial-Buffer lesen und nach Typ sortieren."""
+        if not self._ser or not self._ser.is_open:
+            return []
+        import time
+        time.sleep(0.03)
+        buf = b""
+        while self._ser.in_waiting > 0:
+            buf += self._ser.read(self._ser.in_waiting)
+            time.sleep(0.005)
+        if not buf:
+            buf = self._ser.read(128)
+
+        frames = []
+        while True:
+            start = buf.find(bytes([0xFE, 0xFE]))
+            if start < 0:
+                break
+            end = buf.find(bytes([0xFD]), start)
+            if end < 0:
+                break
+            frames.append(buf[start:end + 1])
+            buf = buf[end + 1:]
+        return frames
+
     def _civ_query(self, cmd, sub=None, data=b""):
-        """CI-V Befehl senden und Antwort parsen."""
+        """CI-V Befehl senden und Antwort parsen. Scope-Frames werden gepuffert."""
         with self._lock:
             if not self._ser or not self._ser.is_open:
                 return None
@@ -72,33 +100,22 @@ class IcomCat(CatBase):
                 frame = self._build_frame(cmd, sub, data)
                 self._ser.reset_input_buffer()
                 self._ser.write(frame)
-                # Alles lesen was kommt (Echo + Antwort)
-                import time
-                time.sleep(0.03)  # 30ms warten auf Antwort
-                buf = b""
-                while self._ser.in_waiting > 0:
-                    buf += self._ser.read(self._ser.in_waiting)
-                    time.sleep(0.01)
-                if not buf:
-                    # Fallback: blockierend lesen
-                    buf = self._ser.read(64)
-                # Alle FD-terminierten Frames finden
-                frames = []
-                while True:
-                    start = buf.find(bytes([0xFE, 0xFE]))
-                    if start < 0:
-                        break
-                    end = buf.find(bytes([0xFD]), start)
-                    if end < 0:
-                        break
-                    frames.append(buf[start:end + 1])
-                    buf = buf[end + 1:]
-                # Letzter Frame = Antwort vom Rig (erster ist Echo)
-                for f in reversed(frames):
-                    # Antwort vom Rig hat unsere Adresse als Ziel
-                    if len(f) >= 5 and f[2] == self._ctrl_addr:
-                        return self._parse_response(f)
-                return None
+
+                frames = self._read_all_frames()
+
+                result = None
+                for f in frames:
+                    if len(f) < 5:
+                        continue
+                    # Scope-Daten (0x27 0x00) separat puffern
+                    if len(f) >= 6 and f[2] == self._ctrl_addr and f[4] == 0x27 and f[5] == 0x00:
+                        self._scope_buffer.append(f)
+                        continue
+                    # Antwort auf unsere Query
+                    if f[2] == self._ctrl_addr and result is None:
+                        result = self._parse_response(f)
+
+                return result
             except Exception:
                 return None
 
@@ -284,3 +301,57 @@ class IcomCat(CatBase):
 
     def set_dnf(self, on: bool):
         self._civ_send(0x16, sub=0x32, data=bytes([0x01 if on else 0x00]))
+
+    # ── Scope / Waterfall ─────────────────────────────────────────────
+
+    def scope_enable(self, on=True):
+        """Scope ein/ausschalten und Wave Data Output aktivieren."""
+        self._civ_send(0x27, sub=0x10, data=bytes([0x01 if on else 0x00]))
+        if on:
+            import time; time.sleep(0.05)
+            self._civ_send(0x27, sub=0x11, data=bytes([0x01]))  # Wave output ON
+
+    def scope_read(self):
+        """Scope-Daten aus dem internen Buffer lesen.
+        Sammelt Divisionen und gibt Spektrum zurück wenn ein neuer Sweep beginnt."""
+        if not self._scope_buffer:
+            return self._scope_spectrum[:] if self._scope_complete else None
+
+        frames = self._scope_buffer[:]
+        self._scope_buffer.clear()
+        result = None
+
+        for frame in frames:
+            if len(frame) < 10:
+                continue
+
+            div_order = frame[7]
+            div_max = frame[8]
+
+            # Division 01 = neuer Sweep → altes Spektrum abliefern
+            if div_order <= 1:
+                if self._scope_complete:
+                    result = self._scope_spectrum[:]
+                self._scope_spectrum = [0] * 475
+                self._scope_complete = False
+                continue
+
+            # Division 02+: Waveform ab Byte 9 bis vor FD
+            wave_data = frame[9:-1]
+            if not wave_data:
+                continue
+
+            # Offset: Division 2 → Byte 0, Division 3 → Byte 50, etc.
+            offset = (div_order - 2) * 50
+
+            for i, val in enumerate(wave_data):
+                idx = offset + i
+                if 0 <= idx < 475:
+                    self._scope_spectrum[idx] = min(160, val)
+
+            # Letzte Division → Sweep komplett
+            if div_order >= div_max:
+                self._scope_complete = True
+                result = self._scope_spectrum[:]
+
+        return result
