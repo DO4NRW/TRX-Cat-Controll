@@ -433,7 +433,7 @@ class FT991AWidget(QWidget):
         # ── 9. PTT Button ───────────────────────────────────────────
         root.addStretch()
 
-        self.btn_ptt = QPushButton("RX")
+        self.btn_ptt = QPushButton("RX (SPACE)")
         self.btn_ptt.setFixedHeight(50)
         self.btn_ptt.setFont(QFont("Roboto", 20, QFont.Bold))
         self.btn_ptt.setStyleSheet(_BTN_PTT_RX)
@@ -475,7 +475,7 @@ class FT991AWidget(QWidget):
         self._current_freq = 0
         self._current_mode = ""
         self._ptt_active = False
-        self.btn_ptt.setText("RX")
+        self.btn_ptt.setText("RX (SPACE)")
         self.btn_ptt.setStyleSheet(_get_BTN_PTT_RX())
         self.btn_preamp.setText("AMP: IPO")
         self._vox_enabled = False
@@ -944,6 +944,9 @@ class FT991AWidget(QWidget):
             self.input_freq.clear()
         except ValueError:
             pass
+        # Focus rausnehmen damit Leertaste wieder PTT ist
+        self.input_freq.clearFocus()
+        self.setFocus()
 
     def _set_mode(self, mode):
         if not self._cat or not self._cat.connected:
@@ -1059,7 +1062,7 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         self._ptt_active = True
-        self.btn_ptt.setText("TX")
+        self.btn_ptt.setText("TX (SPACE)")
         self.btn_ptt.setStyleSheet(_get_BTN_PTT_TX())
         self._set_ptt_hardware(True)
         self.ptt_changed.emit(True)
@@ -1068,7 +1071,7 @@ class FT991AWidget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         self._ptt_active = False
-        self.btn_ptt.setText("RX")
+        self.btn_ptt.setText("RX (SPACE)")
         self.btn_ptt.setStyleSheet(_get_BTN_PTT_RX())
         self._set_ptt_hardware(False)
         self.ptt_changed.emit(False)
