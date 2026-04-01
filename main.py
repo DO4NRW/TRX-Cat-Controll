@@ -24,8 +24,16 @@ def main():
     window.status_label.setStyleSheet(window.status_label.styleSheet() + f"color:{color}; padding-left: 10px; font-family: Consolas;")
 
 
-    window.show() #open window
-    sys.exit(app.exec()) #event loop
+    window.show()
+
+    # Auto-Update Check im Hintergrund
+    from core.updater import UpdateChecker, show_update_dialog
+    updater = UpdateChecker()
+    updater.update_available.connect(
+        lambda local, remote: show_update_dialog(window, local, remote))
+    updater.check()
+
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()
