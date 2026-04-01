@@ -93,6 +93,9 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ### Theme Editor
 ![Theme Editor](Screenshot3.png)
 
+### IC-705 Wasserfall / Spektrum
+![IC-705 Waterfall](Screenshot4.png)
+
 ---
 
 ## Installation
