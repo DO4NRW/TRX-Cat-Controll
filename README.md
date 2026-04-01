@@ -60,7 +60,14 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
-*Folgen in Kürze*
+### Radio Setup (CAT + PTT)
+![Radio Setup](Screenshot1.png)
+
+### Audio Matrix
+![Audio Matrix](Screenshot2.png)
+
+### Theme Editor
+![Theme Editor](Screenshot3.png)
 
 ---
 
