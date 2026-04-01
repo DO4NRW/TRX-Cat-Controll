@@ -1,0 +1,14 @@
+{
+    "theme": {
+        "status_ready": "#FFFFFF",
+        "status_connected": "#00ff00",
+        "status_error": "#ff4444"
+    },
+    "messages": {
+        "READY": "System Ready",
+        "CONNECTED": "CAT Connected",
+        "ERROR": "Connection Failed"
+    },
+    "last_rig": "Yaesu FT-991A",
+    "last_theme": "light"
+}

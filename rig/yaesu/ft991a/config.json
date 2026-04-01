@@ -1,0 +1,49 @@
+{
+    "cat": {
+        "port": "/dev/ttyUSB0",
+        "baud": 38400,
+        "data_bits": null,
+        "stop_bits": null,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": null
+    },
+    "ptt": {
+        "port": "/dev/ttyUSB1",
+        "method": "RTS",
+        "invert": false
+    },
+    "rig": {
+        "mode": "USB",
+        "tuning_step": 100,
+        "power": 50,
+        "preamp": "IPO",
+        "split": null
+    },
+    "audio": {
+        "pc_mic": {
+            "device": "[pw:57] Scarlett 2i2 USB",
+            "rate": 44100,
+            "channels": 1
+        },
+        "trx_mic": {
+            "device": "[pw:58] USB Audio CODEC",
+            "rate": 44100,
+            "channels": 1
+        },
+        "trx_speaker": {
+            "device": "[pw:92] USB Audio CODEC",
+            "rate": 44100,
+            "channels": 1
+        },
+        "pc_speaker": {
+            "device": "[pw:33] Family 17h/19h HD Audio Controller Analoges Stereo (Ausgabe)",
+            "rate": 44100,
+            "channels": 1
+        }
+    },
+    "vox": {
+        "threshold": -38.0,
+        "hold_ms": 700
+    }
+}
