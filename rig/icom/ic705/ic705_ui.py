@@ -124,8 +124,7 @@ class IC705Widget(QWidget):
         self.slider_span.setRange(0, 6)
         self.slider_span.setValue(3)
         self.slider_span.setStyleSheet(_SLIDER_STYLE())
-        self.slider_span.valueChanged.connect(self._update_span_label)
-        self.slider_span.sliderReleased.connect(self._apply_span)
+        self.slider_span.valueChanged.connect(self._set_span)
         span_row.addWidget(self.slider_span, stretch=1)
         root.addLayout(span_row)
 
@@ -372,17 +371,6 @@ class IC705Widget(QWidget):
             spectrum = self._cat.scope_read()
             if spectrum:
                 self.waterfall.update_spectrum(spectrum)
-                # Span aus Header syncen (einmalig beim Connect)
-                if self._poll_count <= 5 and hasattr(self._cat, '_scope_span_hz'):
-                    span_hz = self._cat._scope_span_hz
-                    if span_hz > 0:
-                        for i, (hz, _) in enumerate(self._SPAN_VALUES):
-                            if hz == span_hz:
-                                self.slider_span.blockSignals(True)
-                                self.slider_span.setValue(i)
-                                self.lbl_span.setText(f"SPAN: {self._SPAN_VALUES[i][1]}")
-                                self.slider_span.blockSignals(False)
-                                break
 
         # 2. Abwechselnd Freq oder S-Meter (nicht beides → schneller)
         if self._poll_count % 2 == 0:
@@ -592,34 +580,19 @@ class IC705Widget(QWidget):
         self._current_preamp = new_mode
         self.btn_preamp.setText(f"P.AMP: {new_mode}")
 
-    def _update_span_label(self, idx):
-        """Nur Label updaten beim Slider-Bewegen."""
-        if idx < len(self._SPAN_VALUES):
-            self.lbl_span.setText(f"SPAN: {self._SPAN_VALUES[idx][1]}")
-
-    def _apply_span(self):
-        """Span am TRX setzen wenn Slider losgelassen wird."""
-        idx = self.slider_span.value()
+    def _set_span(self, idx):
+        """Scope Span ändern via CI-V 0x27 0x15."""
         if idx >= len(self._SPAN_VALUES):
             return
-        span_hz = self._SPAN_VALUES[idx][0]
+        span_hz, label = self._SPAN_VALUES[idx]
+        self.lbl_span.setText(f"SPAN: {label}")
         if not self._cat or not self._cat.connected:
             return
-        import time
-        # Scope Output pausieren
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x00]))
-        time.sleep(0.1)
-        # Span setzen: Receiver(0x00) + 3 Bytes BCD
-        val = span_hz
-        bcd = []
-        for _ in range(3):
-            lo = val % 10; val //= 10
-            hi = val % 10; val //= 10
-            bcd.append((hi << 4) | lo)
-        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00] + bcd))
-        time.sleep(0.2)
-        # Scope Output wieder an
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
+        # Format: Receiver(0x00) + 3 Bytes BCD (LSB first: 10Hz, 1kHz, 100kHz)
+        b0 = ((span_hz // 10) % 10) << 4 | (span_hz % 10)
+        b1 = ((span_hz // 1000) % 10) << 4 | ((span_hz // 100) % 10)
+        b2 = ((span_hz // 100000) % 10) << 4 | ((span_hz // 10000) % 10)
+        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, b0, b1, b2]))
 
     def _cycle_agc(self):
         if not self._cat or not self._cat.connected:
