@@ -60,6 +60,9 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
+### Main GUI
+![Main GUI](Screenshot0.png)
+
 ### Radio Setup (CAT + PTT)
 ![Radio Setup](Screenshot1.png)
 
