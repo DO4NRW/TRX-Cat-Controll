@@ -30,11 +30,11 @@ class IcomCat(CatBase):
         self._civ_addr = civ_address
         self._ctrl_addr = 0xE0  # Controller (PC) Adresse
         self._scope_buffer = []  # Gepufferte Scope-Frames
-        self._scope_spectrum = [0] * 475
-        self._scope_complete = False
-        self._scope_thread = None
-        self._scope_running = False
-        self._scope_latest = None  # Letztes fertiges Spektrum (thread-safe)
+        self._scope_spectrum = []  # Akkumulierte Waveform-Bytes
+        self._scope_last_div = 0
+        self._scope_div_max = 11
+        self._scope_latest = None
+        self._scope_span_hz = 0
         import threading
         self._scope_lock = threading.Lock()
 
@@ -447,22 +447,34 @@ class IcomCat(CatBase):
             div_max = self._bcd_byte(frame[8])
 
             if div_order == 1:
-                # Neuer Sweep — zähle gefüllte Punkte im alten
-                filled = sum(1 for v in self._scope_spectrum if v > 0)
-                # Nur akzeptieren wenn >60% gefüllt (kompletter Sweep)
-                if filled > 280:
-                    self._scope_latest = self._scope_spectrum[:]
-                self._scope_spectrum = [0] * 475
+                # Neuer Sweep — altes fertig wenn genug Daten
+                if len(self._scope_spectrum) >= 400:
+                    # Auf 475 padden/trimmen
+                    padded = (self._scope_spectrum + [0] * 475)[:475]
+                    self._scope_latest = padded
+                self._scope_spectrum = []
+                self._scope_last_div = 1
+                self._scope_div_max = div_max
+                # Span aus Header parsen (frame[15:18] = 3 BCD bytes)
+                if len(frame) >= 18:
+                    self._scope_span_hz = self._bcd_to_int(frame[15:18])
                 continue
 
+            # Nur sequentielle Divisionen akzeptieren (wie wfview)
+            if div_order <= self._scope_last_div or div_order > self._scope_div_max:
+                continue
+            self._scope_last_div = div_order
+
+            # Waveform-Daten anhängen (nach 3 Header-Bytes: 00, div, max)
+            # frame[9:-1] = alles nach den 3 Header-Bytes bis vor FD
             wave_data = frame[9:-1]
-            if not wave_data:
-                continue
+            self._scope_spectrum.extend(wave_data)
 
-            offset = (div_order - 2) * 50
-            for i, val in enumerate(wave_data):
-                idx = offset + i
-                if 0 <= idx < 475:
-                    self._scope_spectrum[idx] = min(160, val)
+            # Letzte Division → fertig
+            if div_order >= div_max:
+                padded = (self._scope_spectrum + [0] * 475)[:475]
+                self._scope_latest = padded
+                self._scope_spectrum = []
+                self._scope_last_div = 0
 
         return self._scope_latest
