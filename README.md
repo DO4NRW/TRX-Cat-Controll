@@ -138,6 +138,10 @@ assets/
 
 ---
 
+## Built with AI
+
+Dieses Projekt wurde vollständig mit **Claude Code** (Anthropic) entwickelt — von der Architektur bis zum letzten Stylesheet.
+
 ## Lizenz
 
 Open Source — 73 de DO4NRW
