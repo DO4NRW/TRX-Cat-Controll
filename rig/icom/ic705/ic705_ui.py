@@ -409,8 +409,11 @@ class IC705Widget(QWidget):
                 if hasattr(self, 'waterfall') and hasattr(self._cat, '_scope_span_hz'):
                     bw = {"USB": 2700, "LSB": 2700, "CW": 500, "CW-R": 500,
                           "FM": 15000, "RTTY": 500, "RTTY-R": 500, "AM": 6000}
+                    side = {"USB": "upper", "LSB": "lower", "CW": "upper", "CW-R": "lower",
+                            "FM": "both", "RTTY": "lower", "RTTY-R": "upper", "AM": "both"}
                     fw = bw.get(self._current_mode, 2700)
-                    self.waterfall.set_freq_info(freq, self._cat._scope_span_hz, fw)
+                    fs = side.get(self._current_mode, "upper")
+                    self.waterfall.set_freq_info(freq, self._cat._scope_span_hz, fw, fs)
 
         # S-Meter nur jeden 3. Tick — Rest der Zeit geht Bandbreite an Scope
         raw = self._cat.get_smeter() if self._poll_count % 5 == 0 else None
