@@ -226,12 +226,11 @@ class IcomCat(CatBase):
                 hi = (data[1] >> 4) * 10 + (data[1] & 0x0F)
                 lo = (data[2] >> 4) * 10 + (data[2] & 0x0F)
                 raw = hi * 100 + lo
-                # Icom Skala: 0=S0, ~100=S9, 241=S9+60dB
-                # Korrigiert: S9 bei ~100 statt 120
-                if raw <= 100:
-                    return int(raw / 100 * 128)
+                # Icom Skala: 0=S0, ~80=S9, 241=S9+60dB
+                if raw <= 80:
+                    return int(raw / 80 * 128)
                 else:
-                    return int(128 + (raw - 100) / 141 * 127)
+                    return int(128 + (raw - 80) / 161 * 127)
         return None
 
     # ── PTT ───────────────────────────────────────────────────────────

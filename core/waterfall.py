@@ -115,11 +115,15 @@ class WaterfallWidget(QWidget):
         self._last_spectrum = new
 
     def _write_row(self, spectrum):
-        """Eine Zeile in den Wasserfall Ring-Buffer schreiben."""
+        """Bild eine Zeile nach unten schieben, neue Zeile oben rein."""
+        # Alles eine Zeile runter kopieren
+        for y in range(self._wf_lines - 1, 0, -1):
+            for x in range(self._num_points):
+                self._wf_image.setPixel(x, y, self._wf_image.pixel(x, y - 1))
+        # Neue Zeile oben (y=0)
         for col in range(self._num_points):
             idx = self._amp_to_color_idx(int(spectrum[col]))
-            self._wf_image.setPixel(col, self._wf_write_row, self._palette[idx])
-        self._wf_write_row = (self._wf_write_row + 1) % self._wf_lines
+            self._wf_image.setPixel(col, 0, self._palette[idx])
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -189,30 +193,8 @@ class WaterfallWidget(QWidget):
         img_h = self._wf_lines
         wr = self._wf_write_row
 
-        # Ring-Buffer zeichnen: älteste oben, neueste unten
-        # [wr..end] = älteste (oben), [0..wr) = neueste (unten)
+        # Wasserfall: einfach das ganze Bild zeichnen (kein Ring-Buffer mehr)
         from PySide6.QtCore import QRect
-        old_rows = img_h - wr  # [wr..end] = ältere
-        new_rows = wr           # [0..wr) = neuere
-
-        if old_rows >= img_h:
-            p.drawImage(wf_rect, self._wf_image)
-        else:
-            scale = wf_h / img_h if img_h > 0 else 1
-            old_h = int(old_rows * scale)
-            new_h = wf_h - old_h
-
-            # Oben: ältere Zeilen [wr..end]
-            if old_rows > 0 and old_h > 0:
-                p.drawImage(
-                    QRect(0, spec_h + 1, w, old_h),
-                    self._wf_image,
-                    QRect(0, wr, self._num_points, old_rows))
-            # Unten: neuere Zeilen [0..wr)
-            if new_rows > 0 and new_h > 0:
-                p.drawImage(
-                    QRect(0, spec_h + 1 + old_h, w, new_h),
-                    self._wf_image,
-                    QRect(0, 0, self._num_points, new_rows))
+        p.drawImage(QRect(0, spec_h + 1, w, wf_h), self._wf_image)
 
         p.end()
