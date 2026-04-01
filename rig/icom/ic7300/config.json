@@ -4,7 +4,8 @@
         "baud": 38400,
         "data_bits": null,
         "stop_bits": null,
-        "handshake": null
+        "handshake": null,
+        "protocol": "icom"
     },
     "ptt": {
         "method": "RTS",

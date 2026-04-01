@@ -1,0 +1,29 @@
+{
+    "cat": {
+        "port": "/dev/ttyACM0",
+        "baud": 115200,
+        "data_bits": 8,
+        "stop_bits": 2,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": "None",
+        "protocol": "icom"
+    },
+    "ptt": {
+        "port": "/dev/ttyACM1",
+        "method": "CAT",
+        "invert": false
+    },
+    "rig": {
+        "mode": "Data/Pkt",
+        "tuning_step": 100,
+        "power": 50,
+        "preamp": "IPO",
+        "split": "Fake It"
+    },
+    "audio": {},
+    "vox": {
+        "threshold": -25.0,
+        "hold_ms": 700
+    }
+}

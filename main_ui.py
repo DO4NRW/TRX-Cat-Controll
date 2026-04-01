@@ -20,25 +20,35 @@ _RIG_DIR = os.path.join(os.path.dirname(__file__), "rig")
 
 
 def _scan_rigs():
-    """Scanne rig/ Ordner und gib Liste von Rig-Namen zurück.
-    Format: 'Hersteller Modell' (z.B. 'Yaesu FT-991A') aus Ordnerstruktur."""
+    """Scanne rig/ Ordner → flat list 'Hersteller Modell' (Kompatibilität)."""
+    rig_map = _scan_rigs_map()
     rigs = []
+    for maker, models in rig_map.items():
+        for model in models:
+            rigs.append(f"{maker} {model}")
+    return rigs or ["(kein Rig gefunden)"]
+
+
+def _scan_rigs_map():
+    """Scanne rig/ Ordner → Dict: {'Yaesu': ['FT-991A'], 'Icom': ['IC-7300']}."""
+    rig_map = {}
     if not os.path.isdir(_RIG_DIR):
-        return rigs
+        return rig_map
     for maker in sorted(os.listdir(_RIG_DIR)):
         maker_path = os.path.join(_RIG_DIR, maker)
         if not os.path.isdir(maker_path) or maker.startswith(("_", ".")):
             continue
+        models = []
         for model in sorted(os.listdir(maker_path)):
             model_path = os.path.join(maker_path, model)
             if not os.path.isdir(model_path) or model.startswith(("_", ".")):
                 continue
-            # Nur Ordner mit config.json
             if os.path.exists(os.path.join(model_path, "config.json")):
-                # "yaesu" + "ft991a" → "Yaesu FT-991A"
-                display = f"{maker.capitalize()} {model.upper().replace('FT', 'FT-').replace('IC', 'IC-').replace('TS', 'TS-')}"
-                rigs.append(display)
-    return rigs or ["(kein Rig gefunden)"]
+                display = model.upper().replace("FT", "FT-").replace("IC", "IC-").replace("TS", "TS-")
+                models.append(display)
+        if models:
+            rig_map[maker.capitalize()] = models
+    return rig_map
 
 
 def _list_serial_ports():
@@ -246,13 +256,43 @@ class RadioSetupOverlay(QWidget):
         root.setContentsMargins(20, 16, 20, 16)
         root.setSpacing(14)
 
-        # ── Rig row with save button ──────────────────────────────────
+        # ── Rig row: Hersteller + Modell + Buttons ─────────────────────
+        self._rig_map = _scan_rigs_map()
         rig_row = QHBoxLayout()
-        rig_lbl = QLabel("Rig:")
-        rig_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 13px; border: none; min-width: 30px;")
-        rig_row.addWidget(rig_lbl)
-        self.combo_rig = _combo(_scan_rigs())
-        rig_row.addWidget(self.combo_rig, stretch=1)
+
+        maker_lbl = QLabel("Hersteller:")
+        maker_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 13px; border: none;")
+        rig_row.addWidget(maker_lbl)
+        self.combo_manufacturer = _combo(sorted(self._rig_map.keys()))
+        rig_row.addWidget(self.combo_manufacturer, stretch=1)
+
+        model_lbl = QLabel("Modell:")
+        model_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 13px; border: none;")
+        rig_row.addWidget(model_lbl)
+        self.combo_model = _combo([])
+        rig_row.addWidget(self.combo_model, stretch=1)
+
+        # Kompatibilität: combo_rig gibt "Hersteller Modell" zurück
+        class _RigProxy:
+            """Proxy der combo_manufacturer + combo_model als 'Hersteller Modell' zusammenfasst."""
+            def __init__(self, manufacturer, model):
+                self._mfr = manufacturer
+                self._mdl = model
+            def currentText(self):
+                m = self._mfr.currentText()
+                d = self._mdl.currentText()
+                return f"{m} {d}" if m and d else ""
+            def setCurrentText(self, txt):
+                parts = txt.split(" ", 1)
+                if len(parts) == 2:
+                    self._mfr.setCurrentText(parts[0])
+                    self._mdl.setCurrentText(parts[1])
+            def findText(self, txt):
+                parts = txt.split(" ", 1)
+                if len(parts) == 2:
+                    return self._mfr.findText(parts[0])
+                return -1
+        self.combo_rig = _RigProxy(self.combo_manufacturer, self.combo_model)
 
         self.btn_save = QPushButton()
         self.btn_save.setFixedSize(40, 40)
@@ -358,6 +398,12 @@ class RadioSetupOverlay(QWidget):
         cols.addWidget(self._ptt_card, stretch=1)
         root.addLayout(cols)
 
+        # Erstes Modell laden
+        if self.combo_manufacturer.count() > 0:
+            first_maker = self.combo_manufacturer.currentText()
+            models = self._rig_map.get(first_maker, [])
+            self.combo_model.addItems(models)
+
         # Signals direkt verbinden — alle Widgets existieren jetzt
         self._connect_signals()
 
@@ -410,28 +456,49 @@ class RadioSetupOverlay(QWidget):
 
     def _connect_signals(self):
         self.btn_save.clicked.connect(self.save_to_config)
-        self.combo_rig.currentTextChanged.connect(lambda _: self.load_from_config())
+        self.combo_manufacturer.currentTextChanged.connect(self._on_manufacturer_changed)
+        self.combo_model.currentTextChanged.connect(lambda _: self.load_from_config())
         self.btn_test_cat.clicked.connect(self._test_cat)
         self.btn_test_ptt.clicked.connect(self._test_ptt)
         self._cat_result_sig.connect(self._cat_result)
         self._ptt_result_sig.connect(self._ptt_result)
+
+    def _on_manufacturer_changed(self, manufacturer):
+        """Modell-Dropdown updaten wenn Hersteller wechselt."""
+        self.combo_model.blockSignals(True)
+        self.combo_model.clear()
+        models = self._rig_map.get(manufacturer, [])
+        self.combo_model.addItems(models)
+        self.combo_model.blockSignals(False)
+        if models:
+            self.load_from_config()
 
     # ── Test CAT ──────────────────────────────────────────────────────
 
     def _test_cat(self):
         port = self.combo_cat_port.currentText()
         baud = int(self.combo_baud.currentText())
+        # Protokoll aus aktuell gewähltem Rig lesen
+        manufacturer = self.combo_manufacturer.currentText().lower()
+        protocol_map = {"yaesu": "yaesu", "icom": "icom", "kenwood": "kenwood", "elecraft": "kenwood"}
+        protocol = protocol_map.get(manufacturer, "yaesu")
+        # Modell für Icom CI-V Adresse
+        model_key = self.combo_model.currentText().lower().replace("-", "") if hasattr(self, "combo_model") else ""
         self.btn_test_cat.setEnabled(False)
 
         def run():
             ok = False
             try:
-                import serial
-                with serial.Serial(port, baud, timeout=1.0,
-                                   rtscts=False, dsrdtr=False) as s:
-                    s.write(b"FA;")
-                    resp = s.read_until(b";")
-                    ok = resp.startswith(b"FA") and len(resp) >= 3
+                from core.cat import create_cat_handler
+                kwargs = {"port": port, "baud": baud, "timeout": 1.0}
+                if protocol == "icom":
+                    from core.cat.icom import RIG_ADDRESSES
+                    kwargs["civ_address"] = RIG_ADDRESSES.get(model_key, 0x94)
+                handler = create_cat_handler(protocol, **kwargs)
+                if handler.connect():
+                    freq = handler.get_frequency()
+                    ok = freq is not None
+                    handler.disconnect()
             except Exception:
                 pass
             self._cat_result_sig.emit(ok)
@@ -2584,17 +2651,33 @@ class MainWindow(QMainWindow):
             return
 
         cat_cfg = cfg.get("cat", {})
-        port = cat_cfg.get("port", "/dev/ttyUSB0")
-        baud = cat_cfg.get("baud", 38400)
+        protocol = cat_cfg.get("protocol", "yaesu")
 
-        # CatHandler importieren und verbinden
+        # Live-Werte aus Radio Settings Dropdowns lesen (nicht gespeicherte Config)
+        rs = self.radio_setup_overlay
+        port = rs.combo_cat_port.currentText() if hasattr(rs, "combo_cat_port") else cat_cfg.get("port", "/dev/ttyUSB0")
+        baud = int(rs.combo_baud.currentText()) if hasattr(rs, "combo_baud") else cat_cfg.get("baud", 38400)
+
+        # Globalen CAT-Handler nach Protokoll erstellen
         try:
-            if rig_name == "Yaesu FT-991A":
-                from rig.yaesu.ft991a.cat_handler import CatHandler
-            else:
-                raise ImportError(f"Kein CatHandler für {rig_name}")
+            from core.cat import create_cat_handler
+            handler_kwargs = {
+                "port": port,
+                "baud": baud,
+                "data_bits": cat_cfg.get("data_bits", 8),
+                "stop_bits": cat_cfg.get("stop_bits", 1),
+                "parity": cat_cfg.get("parity", "N"),
+                "timeout": cat_cfg.get("timeout", 0.5),
+                "handshake": cat_cfg.get("handshake"),
+            }
+            # Icom CI-V Adresse aus Modell ableiten
+            if protocol == "icom":
+                from core.cat.icom import RIG_ADDRESSES
+                parts = rig_name.split(" ", 1)
+                model_key = parts[1].lower().replace("-", "") if len(parts) == 2 else ""
+                handler_kwargs["civ_address"] = RIG_ADDRESSES.get(model_key, 0x94)
 
-            self._cat_handler = CatHandler(port=port, baud=baud)
+            self._cat_handler = create_cat_handler(protocol, **handler_kwargs)
             ok = self._cat_handler.connect()
 
             if ok:

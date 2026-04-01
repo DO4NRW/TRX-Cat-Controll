@@ -6,7 +6,8 @@
         "stop_bits": null,
         "parity": "N",
         "timeout": 0.5,
-        "handshake": null
+        "handshake": null,
+        "protocol": "yaesu"
     },
     "ptt": {
         "port": "/dev/ttyUSB1",

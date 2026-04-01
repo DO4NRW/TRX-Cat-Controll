@@ -1,0 +1,29 @@
+{
+    "cat": {
+        "port": "/dev/ttyUSB0",
+        "baud": 38400,
+        "data_bits": 8,
+        "stop_bits": 2,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": "RTS/CTS",
+        "protocol": "yaesu"
+    },
+    "ptt": {
+        "port": "/dev/ttyUSB0",
+        "method": "CAT",
+        "invert": false
+    },
+    "rig": {
+        "mode": "USB",
+        "tuning_step": 100,
+        "power": 50,
+        "preamp": "IPO",
+        "split": null
+    },
+    "audio": {},
+    "vox": {
+        "threshold": -25.0,
+        "hold_ms": 700
+    }
+}
