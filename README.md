@@ -5,7 +5,7 @@
 Ziel: Über **CAT** und die **eingebaute Soundkarte / USB-FT8-Schnittstelle** dein TRX steuern und darüber funken – **ohne** zusätzliche Adapter-Hardware. So kannst du direkt über die FT8/USB-Audio-Schnittstelle senden/empfangen und gleichzeitig per CAT (Frequenz/Mode/PTT) steuern.
 
 > **V2** ist ein kompletter Rewrite von CustomTkinter → **PySide6/Qt** mit neuem Theme-System und modularer Rig-Architektur.
-> Die alte V1 (CustomTkinter + Windows .exe) findest du unter [Releases → v1.0-customtkinter](https://github.com/DO4NRW/TRX-Cat-Controll/releases/tag/v1.0-customtkinter).
+> Die alte V1 (CustomTkinter + Windows .exe) findest du unter [Releases → v1.0-customtkinter](https://github.com/DO4NRW/RigLink/releases/tag/v1.0-customtkinter).
 
 ---
 
@@ -82,8 +82,8 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 # → Download unter Releases: RigLink_Linux.zip
 
 # Oder aus Source:
-git clone https://github.com/DO4NRW/TRX-Cat-Controll.git
-cd TRX-Cat-Controll
+git clone https://github.com/DO4NRW/RigLink.git
+cd RigLink
 python3 -m venv venv
 source venv/bin/activate
 pip install PySide6 numpy sounddevice pyserial
@@ -92,8 +92,8 @@ python main.py
 
 ### Windows / macOS
 ```bash
-git clone https://github.com/DO4NRW/TRX-Cat-Controll.git
-cd TRX-Cat-Controll
+git clone https://github.com/DO4NRW/RigLink.git
+cd RigLink
 pip install PySide6 numpy sounddevice pyserial
 python main.py
 ```

@@ -71,4 +71,4 @@ core/status.py                   — StatusManager
 - **Theme live anwenden:** `load_theme()` Funktion die alle Styles aus `configs/theme.json` generiert, `apply_theme()` die nach Speichern im Theme Editor alle Widgets refresht. Aktuell werden Farben nur gespeichert aber nicht live gesetzt — braucht App-Neustart. Alle hardcodierten Farben in Stylesheets durch theme.json Werte ersetzen.
 
 ## Git Referenz
-Alte Version (CustomTkinter): https://github.com/DO4NRW/TRX-Cat-Controll
+Repo: https://github.com/DO4NRW/RigLink

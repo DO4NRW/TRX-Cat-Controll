@@ -19,7 +19,7 @@ from PySide6.QtCore import Signal, QObject, Qt
 CURRENT_VERSION = "2.0.1"
 
 REPO_OWNER = "DO4NRW"
-REPO_NAME = "TRX-Cat-Controll"
+REPO_NAME = "RigLink"
 RELEASES_API = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
 
 _PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
