@@ -1,6 +1,8 @@
 #!/bin/bash
-# TRX Cat Control V2 — Linux/macOS Setup
-# Verwendung: chmod +x setup.sh && ./setup.sh
+# TRX Cat Control V2 — Einmal-Setup (Linux/macOS)
+# Installiert alles und baut die App.
+
+cd "$(dirname "$0")"
 
 echo ""
 echo "=================================="
@@ -24,21 +26,23 @@ if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
 
-# Aktivieren
 source venv/bin/activate
 
 # Dependencies installieren
 echo "Installiere Abhängigkeiten..."
 pip install --quiet --upgrade pip
-pip install --quiet PySide6 numpy sounddevice pyserial
+pip install --quiet PySide6 numpy sounddevice pyserial pyinstaller
+
+# App bauen
+echo ""
+echo "Baue App (kann etwas dauern)..."
+python build.py
 
 echo ""
-echo "Setup fertig!"
+echo "=================================="
+echo "  Setup fertig!"
+echo "=================================="
 echo ""
-echo "Starten mit:"
-echo "  source venv/bin/activate"
-echo "  python main.py"
-echo ""
-echo "Oder direkt:"
-echo "  ./start.sh"
+echo "  Starte die App mit:"
+echo "  ./dist/TRX_Cat_Control_V2/TRX_Cat_Control_V2"
 echo ""

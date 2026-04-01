@@ -1,6 +1,8 @@
 @echo off
-REM TRX Cat Control V2 — Windows Setup
-REM Verwendung: Doppelklick oder setup.bat in CMD
+REM TRX Cat Control V2 — Einmal-Setup (Windows)
+REM Installiert alles und baut die App.
+
+cd /d "%~dp0"
 
 echo.
 echo ==================================
@@ -18,23 +20,30 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Python gefunden.
-
 REM venv erstellen
 if not exist "venv" (
     echo Erstelle virtuelle Umgebung...
     python -m venv venv
 )
 
-REM Aktivieren + Dependencies
 call venv\Scripts\activate.bat
+
+REM Dependencies installieren
 echo Installiere Abhängigkeiten...
 pip install --quiet --upgrade pip
-pip install --quiet PySide6 numpy sounddevice pyserial
+pip install --quiet PySide6 numpy sounddevice pyserial pyinstaller
+
+REM App bauen
+echo.
+echo Baue App (kann etwas dauern)...
+python build.py
 
 echo.
-echo Setup fertig!
+echo ==================================
+echo   Setup fertig!
+echo ==================================
 echo.
-echo Starten mit: start.bat
+echo   Die App findest du unter:
+echo   dist\TRX_Cat_Control_V2\TRX_Cat_Control_V2.exe
 echo.
 pause

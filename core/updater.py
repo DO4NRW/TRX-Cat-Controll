@@ -143,9 +143,22 @@ def _download_and_install(parent):
         progress.close()
 
         # 4. Dependencies updaten
+        progress.setLabelText("Dependencies werden aktualisiert...")
+        QApplication.processEvents()
         pip_cmd = [sys.executable, "-m", "pip", "install", "--quiet",
-                   "PySide6", "numpy", "sounddevice", "pyserial"]
-        subprocess.run(pip_cmd, capture_output=True, timeout=60)
+                   "PySide6", "numpy", "sounddevice", "pyserial", "pyinstaller"]
+        subprocess.run(pip_cmd, capture_output=True, timeout=120)
+
+        # 5. Binary neu bauen
+        build_script = os.path.join(_PROJECT_DIR, "build.py")
+        if os.path.exists(build_script):
+            progress.setLabelText("App wird neu gebaut...")
+            QApplication.processEvents()
+            subprocess.run(
+                [sys.executable, build_script],
+                capture_output=True, timeout=300,
+                cwd=_PROJECT_DIR
+            )
 
         return True, "OK"
 
@@ -157,11 +170,23 @@ def _download_and_install(parent):
 
 
 def restart_app():
-    """App komplett neu starten."""
-    python = sys.executable
-    script = os.path.join(_PROJECT_DIR, "main.py")
+    """App komplett neu starten — exe oder Source."""
+    app_name = "TRX_Cat_Control_V2"
+    if platform.system() == "Windows":
+        exe = os.path.join(_PROJECT_DIR, "dist", app_name, f"{app_name}.exe")
+    elif platform.system() == "Darwin":
+        exe = os.path.join(_PROJECT_DIR, "dist", app_name, app_name)
+    else:
+        exe = os.path.join(_PROJECT_DIR, "dist", app_name, app_name)
+
     QApplication.quit()
-    os.execv(python, [python, script])
+    if os.path.exists(exe):
+        os.execv(exe, [exe])
+    else:
+        # Fallback: aus Source starten
+        python = sys.executable
+        script = os.path.join(_PROJECT_DIR, "main.py")
+        os.execv(python, [python, script])
 
 
 def show_update_dialog(parent, local_hash, remote_hash, commit_msg):
