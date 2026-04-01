@@ -432,8 +432,7 @@ class IcomCat(CatBase):
                 time.sleep(0.03)
 
     def scope_read(self):
-        """Scope-Daten aus dem Buffer verarbeiten (wird vom Poll-Timer aufgerufen)."""
-        # Scope-Frames direkt verarbeiten (kein Thread nötig)
+        """Scope-Daten aus dem Buffer verarbeiten. Nur komplette Sweeps zurückgeben."""
         frames = self._scope_buffer[:]
         self._scope_buffer.clear()
 
@@ -448,8 +447,10 @@ class IcomCat(CatBase):
             div_max = self._bcd_byte(frame[8])
 
             if div_order == 1:
-                # Neuer Sweep → altes Spektrum fertig
-                if any(v > 0 for v in self._scope_spectrum):
+                # Neuer Sweep — zähle gefüllte Punkte im alten
+                filled = sum(1 for v in self._scope_spectrum if v > 0)
+                # Nur akzeptieren wenn >60% gefüllt (kompletter Sweep)
+                if filled > 280:
                     self._scope_latest = self._scope_spectrum[:]
                 self._scope_spectrum = [0] * 475
                 continue
@@ -463,9 +464,5 @@ class IcomCat(CatBase):
                 idx = offset + i
                 if 0 <= idx < 475:
                     self._scope_spectrum[idx] = min(160, val)
-
-            if div_order >= div_max:
-                self._scope_latest = self._scope_spectrum[:]
-                self._scope_spectrum = [0] * 475
 
         return self._scope_latest

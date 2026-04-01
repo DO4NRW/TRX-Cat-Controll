@@ -23,9 +23,9 @@ class WaterfallWidget(QWidget):
         self._wf_lines = 200
         self._wf_write_row = 0
 
-        # Wasserfall als QImage (Ring-Buffer)
+        # Wasserfall als QImage (Ring-Buffer) — dunkelblauer Hintergrund wie Icom
         self._wf_image = QImage(num_points, self._wf_lines, QImage.Format_RGB32)
-        self._wf_image.fill(QColor(10, 10, 20))
+        self._wf_image.fill(QColor(8, 12, 35))
 
         # Display Settings
         self._color_gain = 6.0     # Farbverstärkung
@@ -43,8 +43,8 @@ class WaterfallWidget(QWidget):
         """SDR-Style Farbpalette: schwarz → blau → cyan → grün → gelb → rot → weiß."""
         palette = []
         stops = [
-            (0.00, (10, 10, 20)),
-            (0.05, (0, 0, 60)),
+            (0.00, (8, 12, 35)),
+            (0.05, (10, 20, 70)),
             (0.15, (0, 40, 160)),
             (0.30, (0, 150, 180)),
             (0.45, (0, 220, 100)),
@@ -150,8 +150,8 @@ class WaterfallWidget(QWidget):
                 p.drawLine(line_points[i-1][0], line_points[i-1][1],
                           line_points[i][0], line_points[i][1])
 
-        # ── Trennlinie ───────────────────────────────────────────────
-        p.setPen(QPen(QColor(6, 198, 164), 1))
+        # ── Trennlinie (dezent) ──────────────────────────────────────
+        p.setPen(QPen(QColor(40, 50, 60), 1))
         p.drawLine(0, spec_h, w, spec_h)
 
         # ── Wasserfall (Ring-Buffer) ─────────────────────────────────
