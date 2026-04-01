@@ -1,13 +1,17 @@
 @echo off
 REM TRX Cat Control V2 — Einmal-Setup (Windows)
-REM Installiert alles und baut die App.
+REM Installiert alles, baut die App, kopiert an festen Ort.
 
 cd /d "%~dp0"
+set APP_NAME=TRX_Cat_Control_V2
+set INSTALL_DIR=%LOCALAPPDATA%\%APP_NAME%
 
 echo.
 echo ==================================
 echo   TRX Cat Control V2 — Setup
 echo ==================================
+echo.
+echo   Installiert nach: %INSTALL_DIR%
 echo.
 
 REM Python prüfen
@@ -38,12 +42,35 @@ echo.
 echo Baue App (kann etwas dauern)...
 python build.py
 
+if errorlevel 1 (
+    echo Build fehlgeschlagen!
+    pause
+    exit /b 1
+)
+
+REM An festen Ort kopieren
+echo Installiere nach %INSTALL_DIR%...
+if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
+mkdir "%INSTALL_DIR%"
+xcopy /s /e /q "dist\%APP_NAME%\*" "%INSTALL_DIR%\" >nul
+
+REM Source-Pfad merken (für Auto-Updater)
+echo %~dp0> "%INSTALL_DIR%\_internal\source_path.txt"
+
+REM Desktop Shortcut erstellen
+set SHORTCUT=%USERPROFILE%\Desktop\TRX Cat Control V2.lnk
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%INSTALL_DIR%\%APP_NAME%.exe'; $s.WorkingDirectory = '%INSTALL_DIR%'; $s.Description = 'TRX Cat Control V2'; $s.Save()"
+echo Desktop-Verknüpfung erstellt.
+
 echo.
 echo ==================================
 echo   Setup fertig!
 echo ==================================
 echo.
-echo   Die App findest du unter:
-echo   dist\TRX_Cat_Control_V2\TRX_Cat_Control_V2.exe
+echo   App installiert: %INSTALL_DIR%
+echo   Desktop-Verknüpfung: TRX Cat Control V2
+echo.
+echo   Diesen Ordner kannst du jetzt loeschen.
+echo   (Fuer Updates behalten oder die App updated sich selbst)
 echo.
 pause

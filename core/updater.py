@@ -27,9 +27,23 @@ ZIP_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/archive/refs/heads/main.
 
 _PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Install-Verzeichnis ermitteln
+def _get_install_dir():
+    """Wo die App installiert ist (aus source_path.txt oder Fallback)."""
+    marker = os.path.join(_PROJECT_DIR, "source_path.txt")
+    if os.path.exists(marker):
+        # Wir laufen aus dem Install-Ordner
+        return _PROJECT_DIR
+    # Wir laufen aus dem Source-Ordner
+    if platform.system() == "Windows":
+        return os.path.join(os.environ.get("LOCALAPPDATA", ""), "TRX_Cat_Control_V2")
+    elif platform.system() == "Darwin":
+        return os.path.join(os.path.expanduser("~"), "Applications", "TRX_Cat_Control_V2")
+    return os.path.join(os.path.expanduser("~"), ".local", "share", "TRX_Cat_Control_V2")
+
 # Dateien/Ordner die NICHT überschrieben werden (User-Daten)
 _KEEP = {"configs/user_themes.json", "configs/status_conf.json", "venv", "__pycache__",
-         ".git", "dist", "build", "Screenshot.png"}
+         ".git", "dist", "build", "Screenshot.png", "source_path.txt"}
 
 
 def get_local_version():
@@ -125,13 +139,21 @@ def _download_and_install(parent):
         if not extracted:
             return False, "ZIP-Inhalt nicht gefunden"
 
-        # 3. Dateien ersetzen (User-Daten behalten)
+        # 3. Dateien ins Install-Verzeichnis kopieren (User-Daten behalten)
+        install_dir = _get_install_dir()
+        internal_dir = os.path.join(install_dir, "_internal")
+
         for item in os.listdir(extracted):
             if item in _KEEP:
                 continue
 
             src = os.path.join(extracted, item)
-            dst = os.path.join(_PROJECT_DIR, item)
+
+            # In _internal des Install-Ordners kopieren (da liegen die App-Dateien)
+            if os.path.exists(internal_dir):
+                dst = os.path.join(internal_dir, item)
+            else:
+                dst = os.path.join(install_dir, item)
 
             if os.path.isdir(src):
                 if os.path.exists(dst):
