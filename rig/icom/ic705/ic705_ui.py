@@ -693,7 +693,7 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP Status auslesen via CI-V (hardcodiert — funktioniert zuverlässig)
+        # DSP Status auslesen via CI-V
         dsp_queries = {
             "NB":    (0x16, 0x22),
             "NR":    (0x16, 0x40),
@@ -704,18 +704,24 @@ class IC705Widget(QWidget):
             if name not in self.dsp_buttons:
                 continue
             result = self._cat._civ_query(cmd, sub=sub)
+            on = False
             if result:
-                _, data = result
+                c, data = result
+                print(f"[DSP SYNC] {name}: cmd=0x{c:02x} data={data.hex(' ')} len={len(data)}", flush=True)
                 on = len(data) >= 2 and data[0] == sub and data[1] > 0
-                self.dsp_buttons[name].setChecked(on)
-                self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+            else:
+                print(f"[DSP SYNC] {name}: KEINE ANTWORT", flush=True)
+            self.dsp_buttons[name].setChecked(on)
+            self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
 
         att = self._cat.get_att()
+        print(f"[DSP SYNC] ATT: {att}", flush=True)
         if att is not None and "ATT" in self.dsp_buttons:
             self.dsp_buttons["ATT"].setChecked(att)
             self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
 
         agc = self._cat.get_agc()
+        print(f"[DSP SYNC] AGC: {agc}", flush=True)
         if agc and hasattr(self, 'btn_agc'):
             self.btn_agc.setText(f"AGC: {agc}")
 
