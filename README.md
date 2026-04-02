@@ -70,10 +70,18 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 - Neues Rig = Ordner + config.json anlegen, App scannt automatisch
 
 ### Unterstützte Rigs
+
+**Getestet:**
 | Hersteller | Modelle |
 |---|---|
-| Yaesu | FT-991A, FT-891, FT-710, FT-DX101D/MP, FT-DX10, FT-950, FT-2000, FT-450, FT-857, FT-818 |
-| Icom | IC-705, IC-7300, IC-7610, IC-9700, IC-7100 |
+| Yaesu | FT-991A |
+| Icom | IC-705 |
+
+**Experimentell (ungetestet):**
+| Hersteller | Modelle |
+|---|---|
+| Yaesu | FT-891, FT-710, FT-DX101D/MP, FT-DX10, FT-950, FT-2000, FT-450, FT-857, FT-818 |
+| Icom | IC-7300, IC-7610, IC-9700, IC-7100 |
 | Kenwood | TS-890S, TS-2000, TS-590SG, TS-480 |
 | Elecraft | K3, K3S, KX2, KX3 |
 
