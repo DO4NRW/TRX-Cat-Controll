@@ -748,8 +748,8 @@ let frameSkip = 0;
 function tick() {
     frameSkip++;
     if (!connected) {
-        // Demo-Mode: echte aufgenommene Daten oder Simulation
-        if (frameSkip % 2 === 0) playDemoFrame();
+        // Demo-Mode: echte aufgenommene Daten (alle 3 Frames = ~80ms wie App)
+        if (frameSkip % 3 === 0) playDemoFrame();
         drawWaterfall();
     } else {
         if (frameSkip % 3 === 0) drawWaterfall();
