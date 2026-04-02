@@ -143,9 +143,17 @@
             <input type="range" id="span-slider" min="0" max="6" value="3">
         </div>
 
-        <!-- ═══ Waterfall / Spectrum ═══ -->
-        <div class="waterfall-container">
-            <canvas id="waterfall"></canvas>
+        <!-- ═══ Waterfall / Spectrum + Slider ═══ -->
+        <div class="waterfall-row">
+            <div class="waterfall-container">
+                <canvas id="waterfall"></canvas>
+            </div>
+            <div class="wf-sliders">
+                <span class="wf-slider-label">SIG</span>
+                <input type="range" class="wf-vslider" id="slider-sig" orient="vertical" min="10" max="60" value="30">
+                <span class="wf-slider-label">NF</span>
+                <input type="range" class="wf-vslider" id="slider-nf" orient="vertical" min="0" max="30" value="3">
+            </div>
         </div>
 
         <!-- ═══ Frequency Row ═══ -->

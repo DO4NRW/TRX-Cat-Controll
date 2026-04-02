@@ -127,8 +127,34 @@ input[type="range"]::-moz-range-progress {
 .span-row input[type="range"] { flex: 1; min-width: 0; }
 
 /* ═══ Waterfall ═══ */
-.waterfall-container { flex: 1; min-height: 120px; overflow: hidden; }
+.waterfall-row { display: flex; flex: 1; min-height: 120px; gap: 4px; }
+.waterfall-container { flex: 1; overflow: hidden; }
 #waterfall { width: 100%; height: 100%; display: block; }
+.wf-sliders {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    width: 24px; flex-shrink: 0;
+}
+.wf-slider-label {
+    color: var(--text-muted, #aaa); font-size: 8px; writing-mode: horizontal-tb;
+}
+.wf-vslider {
+    -webkit-appearance: slider-vertical; appearance: slider-vertical;
+    width: 16px; flex: 1; cursor: pointer;
+}
+.wf-vslider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    background: var(--slider-handle, #06c6a4); border-radius: 50%;
+}
+.wf-vslider::-webkit-slider-runnable-track {
+    width: 4px; background: var(--slider-groove, #888); border-radius: 2px;
+}
+.wf-vslider::-moz-range-thumb {
+    width: 12px; height: 12px; background: var(--slider-handle, #06c6a4);
+    border-radius: 50%; border: none;
+}
+.wf-vslider::-moz-range-track {
+    width: 4px; background: var(--slider-groove, #888); border-radius: 2px;
+}
 
 /* ═══ Buttons (wie PySide6 QPushButton) ═══ */
 .btn {

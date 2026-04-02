@@ -310,8 +310,7 @@ function drawWaterfall() {
         const val0 = displaySpectrum[idx0] || 0;
         const val1 = displaySpectrum[idx1] || 0;
         let val = val0 + t * (val1 - val0);
-        // 1:1 aus waterfall.py: black_level=3, color_gain=3.0
-        val = Math.max(0, (val - 3) * 3.0);
+        val = Math.max(0, (val - wfBlackLevel) * wfColorGain);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
         const off = x * 4;
@@ -703,6 +702,25 @@ function setupSpan() {
     });
 }
 
+// Waterfall SIG/NF Slider
+let wfColorGain = 3.0;
+let wfBlackLevel = 3;
+
+function setupWfSliders() {
+    const sigSlider = document.getElementById('slider-sig');
+    const nfSlider = document.getElementById('slider-nf');
+    if (sigSlider) {
+        sigSlider.addEventListener('input', () => {
+            wfColorGain = parseInt(sigSlider.value) / 10.0;
+        });
+    }
+    if (nfSlider) {
+        nfSlider.addEventListener('input', () => {
+            wfBlackLevel = parseInt(nfSlider.value);
+        });
+    }
+}
+
 // Power slider
 function setupPower() {
     const slider = document.getElementById('pwr-slider');
@@ -901,6 +919,7 @@ async function init() {
     setupConnect();
     setupStepButtons();
     setupSpan();
+    setupWfSliders();
     setupPower();
     setupWaterfallClick();
     // Kontaktformular
