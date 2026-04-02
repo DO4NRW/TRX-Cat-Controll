@@ -810,6 +810,11 @@ async function init() {
     await loadTheme();
     await loadDemoData();
     updateFreqDisplay();
+    // VOX Toggle
+    document.getElementById('tgl-vox').addEventListener('click', function() {
+        this.classList.toggle('active');
+    });
+
     setupSettings();
     setupModeButtons();
     setupDSPButtons();

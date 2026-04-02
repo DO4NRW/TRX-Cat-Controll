@@ -47,8 +47,39 @@ body {
 .connect-btn.connected { border-color: var(--accent, #06c6a4); }
 
 .vox-controls, .vol-controls { display: flex; align-items: center; gap: 4px; }
-.toggle-label { color: var(--text-secondary, #ccc); font-size: 13px; }
 .slider-label { color: var(--text, #fff); font-size: 10px; min-width: 38px; }
+
+/* Toggle Switch (wie PySide6 ToggleButton) */
+.toggle-switch {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 4px 6px; user-select: none;
+}
+.toggle-switch:hover .toggle-text { color: var(--text, #fff); }
+.toggle-text { color: var(--text-secondary, #ccc); font-size: 13px; }
+.toggle-switch.active .toggle-text { color: var(--text, #fff); }
+.toggle-track {
+    width: 40px; height: 20px;
+    background: var(--bg-mid, #2a2a2a);
+    border: 1px solid var(--border, #555);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+}
+.toggle-switch.active .toggle-track {
+    background: var(--accent, #06c6a4);
+    border-color: var(--accent, #06c6a4);
+}
+.toggle-thumb {
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 1px; left: 2px;
+    transition: left 0.2s;
+}
+.toggle-switch.active .toggle-thumb {
+    left: 21px;
+}
 .vol-label { color: var(--text, #fff); font-size: 11px; font-weight: bold; }
 
 /* ═══ Sliders (wie PySide6 QSlider) ═══ */
