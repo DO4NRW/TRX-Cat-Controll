@@ -342,7 +342,8 @@ class IcomCat(CatBase):
         self._civ_send(0x16, sub=0x40, data=bytes([0x01 if on else 0x00]))
 
     def set_dnf(self, on: bool):
-        self._civ_send(0x16, sub=0x32, data=bytes([0x01 if on else 0x00]))
+        """Auto Notch (0x16 0x41). APF wäre 0x16 0x32."""
+        self._civ_send(0x16, sub=0x41, data=bytes([0x01 if on else 0x00]))
 
     # ── AGC ───────────────────────────────────────────────────────────
 
