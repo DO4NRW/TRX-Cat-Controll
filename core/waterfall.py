@@ -40,7 +40,7 @@ class WaterfallWidget(QWidget):
         # Display Settings
         self._color_gain = 3.0
         self._black_level = 3
-        self._spectrum_frac = 0.35
+        self._spectrum_frac = 0.25
         self._fill_alpha = 0.75
 
         # Farbpalette als numpy Array (256 x 3)
