@@ -252,32 +252,36 @@ function drawWaterfall() {
     // Waterfall
     const wfY = freqY + freqBarH;
 
-    // Waterfall-Buffer (persistent offscreen canvas)
+    // Offscreen Wasserfall-Canvas (gleiche Größe wie Zielbereich)
     if (!window._wfCanvas || window._wfCanvas.width !== w || window._wfCanvas.height !== wfH) {
         window._wfCanvas = document.createElement('canvas');
         window._wfCanvas.width = w;
         window._wfCanvas.height = Math.max(1, wfH);
-        const wfCtx = window._wfCanvas.getContext('2d');
-        wfCtx.fillStyle = 'rgb(8, 12, 35)';
-        wfCtx.fillRect(0, 0, w, wfH);
+        const wc = window._wfCanvas.getContext('2d');
+        wc.fillStyle = 'rgb(8, 12, 35)';
+        wc.fillRect(0, 0, w, wfH);
     }
     const wfCtx = window._wfCanvas.getContext('2d');
 
-    // Shift down: copy everything 1px lower
+    // Shift alles 1px nach unten
     wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfH - 1, 0, 1, w, wfH - 1);
 
-    // New line at top
-    for (let px = 0; px < w; px++) {
-        const idx = Math.min(474, Math.floor(px * 475 / w));
+    // Neue Zeile oben via ImageData (schnell!)
+    const lineData = wfCtx.createImageData(w, 1);
+    const px = lineData.data;
+    for (let x = 0; x < w; x++) {
+        const idx = Math.min(474, Math.floor(x * 475 / w));
         let val = spectrum[idx];
-        val = Math.max(0, (val - 3) * 3);
+        // Gleiche Berechnung wie Python: black_level=3, color_gain=2.0
+        val = Math.max(0, (val - 3) * 2.0);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
-        wfCtx.fillStyle = `rgb(${r},${g},${b})`;
-        wfCtx.fillRect(px, 0, 1, 1);
+        const off = x * 4;
+        px[off] = r; px[off + 1] = g; px[off + 2] = b; px[off + 3] = 255;
     }
+    wfCtx.putImageData(lineData, 0, 0);
 
-    // Draw waterfall buffer to main canvas
+    // Wasserfall auf Main Canvas zeichnen
     ctx.drawImage(window._wfCanvas, 0, wfY);
 
     // Center marker + passband
