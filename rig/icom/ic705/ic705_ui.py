@@ -642,32 +642,16 @@ class IC705Widget(QWidget):
             self.slider_pwr.blockSignals(False)
             self.lbl_pwr.setText(f"PWR: {raw * 10 / 255:.1f}W")
 
-        # DSP Status auslesen via CI-V
-        dsp_queries = {
-            "NB":    (0x16, 0x22),
-            "NR":    (0x16, 0x40),
-            "NOTCH": (0x16, 0x41),
-            "COMP":  (0x16, 0x44),
-        }
-        for name, (cmd, sub) in dsp_queries.items():
-            if name not in self.dsp_buttons:
-                continue
-            result = self._cat._civ_query(cmd, sub=sub)
-            if result:
-                _, data = result
-                on = len(data) >= 2 and data[1] > 0
-                self.dsp_buttons[name].setChecked(on)
-                self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+        # DSP Status auslesen (generisch über Handler)
+        comp = self._cat.get_comp()
+        if comp is not None and "COMP" in self.dsp_buttons:
+            self.dsp_buttons["COMP"].setChecked(comp)
+            self.dsp_buttons["COMP"].setStyleSheet(_BTN_ACTIVE() if comp else _BTN_DARK())
 
         # AGC auslesen
-        if hasattr(self, 'btn_agc'):
-            result = self._cat._civ_query(0x16, sub=0x12)
-            if result:
-                _, data = result
-                if len(data) >= 2:
-                    agc_map = {0x01: "SLOW", 0x02: "MID", 0x03: "FAST"}
-                    agc = agc_map.get(data[1], "SLOW")
-                    self.btn_agc.setText(f"AGC: {agc}")
+        agc = self._cat.get_agc()
+        if agc and hasattr(self, 'btn_agc'):
+            self.btn_agc.setText(f"AGC: {agc}")
 
     def _update_s_labels(self, active_idx):
         for i, lbl in enumerate(self.s_labels):
@@ -735,29 +719,29 @@ class IC705Widget(QWidget):
             return
         btn = self.dsp_buttons[name]
         on = btn.isChecked()
-        # IC-705 CI-V Commands
+        # Generische Handler-Aufrufe (funktioniert mit jedem Rig)
         if name == "ATT":
             self._cat.set_att(on)
         elif name == "NB":
-            self._cat._civ_send(0x16, sub=0x22, data=bytes([0x01 if on else 0x00]))
+            self._cat.set_nb(on)
         elif name == "NR":
-            self._cat._civ_send(0x16, sub=0x40, data=bytes([0x01 if on else 0x00]))
+            self._cat.set_dnr(on)
         elif name == "NOTCH":
-            self._cat._civ_send(0x16, sub=0x41, data=bytes([0x01 if on else 0x00]))
+            self._cat.set_dnf(on)
         elif name == "COMP":
-            self._cat._civ_send(0x16, sub=0x44, data=bytes([0x01 if on else 0x00]))
+            self._cat.set_comp(on)
         btn.setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
 
     def _cycle_preamp(self):
         if not self._cat or not self._cat.connected:
             return
         current = self.btn_preamp.text().replace("P.AMP: ", "")
-        cycle = {"OFF": "P1", "P1": "OFF"}
-        codes = {"OFF": 0x00, "P1": 0x01}
+        cycle = {"OFF": "AMP1", "AMP1": "OFF"}
         new_mode = cycle.get(current, "OFF")
-        self._cat._civ_send(0x16, sub=0x02, data=bytes([codes[new_mode]]))
+        self._cat.set_preamp(new_mode)
         self._current_preamp = new_mode
-        self.btn_preamp.setText(f"P.AMP: {new_mode}")
+        pamp_map = {"OFF": "OFF", "AMP1": "P1", "AMP2": "P2"}
+        self.btn_preamp.setText(f"P.AMP: {pamp_map.get(new_mode, new_mode)}")
 
     def _update_span_label(self, idx):
         """Nur Label updaten beim Slider-Bewegen."""
@@ -798,9 +782,8 @@ class IC705Widget(QWidget):
             return
         current = self.btn_agc.text().replace("AGC: ", "")
         cycle = {"SLOW": "MID", "MID": "FAST", "FAST": "SLOW"}
-        codes = {"SLOW": 0x01, "MID": 0x02, "FAST": 0x03}
         new_mode = cycle.get(current, "SLOW")
-        self._cat._civ_send(0x16, sub=0x12, data=bytes([codes[new_mode]]))
+        self._cat.set_agc(new_mode)
         self.btn_agc.setText(f"AGC: {new_mode}")
 
     def _apply_power(self):
