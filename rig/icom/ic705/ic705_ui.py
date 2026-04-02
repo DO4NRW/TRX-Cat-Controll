@@ -894,9 +894,11 @@ class IC705Widget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         import time
-        # Scope Output pausieren
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x00]))
-        time.sleep(0.1)
+        # Scope Output pausieren + Buffer leeren
+        self._cat._civ_query(0x27, sub=0x11, data=bytes([0x00]))
+        time.sleep(0.2)
+        if self._cat._ser and self._cat._ser.is_open:
+            self._cat._ser.reset_input_buffer()
         # Span setzen: Receiver(0x00) + 3 Bytes BCD (Hz)
         val = span_hz
         bcd = []
@@ -904,10 +906,11 @@ class IC705Widget(QWidget):
             lo = val % 10; val //= 10
             hi = val % 10; val //= 10
             bcd.append((hi << 4) | lo)
-        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00] + bcd))
-        time.sleep(0.2)
+        result = self._cat._civ_query(0x27, sub=0x15, data=bytes([0x00] + bcd))
+        print(f"[SPAN] Set {span_hz} Hz → result={result}", flush=True)
+        time.sleep(0.3)
         # Scope Output wieder an
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
+        self._cat._civ_query(0x27, sub=0x11, data=bytes([0x01]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
             try:
