@@ -19,3 +19,4 @@ source/
 logs/session.log
 logs/session_state.json
 configs/report_token.txt
+configs/tokens.txt

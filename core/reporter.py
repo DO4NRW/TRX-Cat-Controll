@@ -15,18 +15,8 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt
 from core.session_logger import get_session_log, get_system_info, clear_old_log
 
-REPORT_REPO = "DO4NRW/RigLink"
-REPORT_API = f"https://api.github.com/repos/{REPORT_REPO}/issues"
-
-# Report-Token aus lokaler Datei (gitignored, wird nie committed)
-import os as _os
-_TOKEN_PATH = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
-                            "configs", "report_token.txt")
-try:
-    with open(_TOKEN_PATH) as _f:
-        _TOKEN = _f.read().strip()
-except FileNotFoundError:
-    _TOKEN = ""
+REPORT_SERVER = "http://45.81.232.138:8090"
+REPORT_API = f"{REPORT_SERVER}/api/report"
 
 # HMAC Secret für Verifizierung (nur RigLink kennt diesen Salt)
 import base64 as _b64
@@ -94,33 +84,30 @@ def _themed_report_style():
 
 
 def _send_issue(title, body):
-    """GitHub Issue erstellen. Gibt (ok, message, url) zurück."""
-    if not _TOKEN:
-        return False, "Kein Report-Token gefunden. Bitte RigLink neu installieren.", ""
-    # HMAC-Signatur anhängen (unsichtbar im Markdown)
+    """Report an den RigLink-Server senden. Gibt (ok, message, url) zurück."""
     ts, sig = _sign_report(body)
-    body += f"\n\n<!-- riglink-verify ts={ts} sig={sig} -->"
-    data = json.dumps({"title": title, "body": body, "labels": ["bug-report"]}).encode("utf-8")
-    req = urllib.request.Request(REPORT_API, data=data, method="POST")
-    req.add_header("Authorization", f"token {_TOKEN}")
-    req.add_header("Accept", "application/vnd.github.v3+json")
-    req.add_header("User-Agent", "RigLink-Reporter")
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "ts": ts,
+        "sig": sig
+    }).encode("utf-8")
+    req = urllib.request.Request(REPORT_API, data=payload, method="POST")
     req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", "RigLink-Reporter")
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read().decode())
-            url = result.get("html_url", "")
-            return True, f"Report #{result.get('number', '?')} erstellt", url
+            if result.get("ok"):
+                url = result.get("url", "")
+                return True, f"Report #{result.get('number', '?')} erstellt", url
+            return False, "Server-Fehler", ""
     except urllib.error.HTTPError as e:
-        if e.code == 401:
-            return False, "Report-Token ungültig — bitte RigLink updaten.", ""
-        elif e.code == 403:
-            return False, "Zugriff verweigert — bitte RigLink updaten.", ""
-        elif e.code == 404:
-            return False, "Report-Server nicht erreichbar.", ""
+        if e.code == 403:
+            return False, "Ungültige Signatur — bitte RigLink updaten.", ""
         else:
-            return False, f"Fehler: {e.code} {e.reason}", ""
+            return False, f"Server-Fehler: {e.code}", ""
     except Exception as e:
         return False, f"Verbindungsfehler: {e}", ""
 
