@@ -171,16 +171,4 @@ class SMeterGauge(QWidget):
             p.setBrush(QColor(255, 160, 0, 150))
             p.drawEllipse(pp, 3, 3)
 
-        # ── S-Wert Text (Mitte oben) ────────────────────────────────
-        s_num = min(13, int(frac * 13))
-        if s_num <= 9:
-            s_text = f"S{s_num}"
-        else:
-            s_text = f"S9+{(s_num - 9) * 10}"
-
-        p.setFont(QFont("Consolas", font_size + 2, QFont.Bold))
-        p.setPen(accent_c)
-        tw = p.fontMetrics().horizontalAdvance(s_text)
-        p.drawText(int(cx - tw / 2), int(h * 0.25), s_text)
-
         p.end()
