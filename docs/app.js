@@ -458,28 +458,76 @@ function setupConnect() {
 
 let liveScope = false;
 
-// Settings overlay
+// Menu + Overlays
 function setupSettings() {
-    const overlay = document.getElementById('settings-overlay');
     const menuBtn = document.querySelector('.menu-btn');
-    const closeBtn = document.getElementById('btn-settings-close');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const audioOverlay = document.getElementById('audio-overlay');
+    const themeOverlay = document.getElementById('theme-overlay');
     const rigSelect = document.getElementById('cfg-rig');
     const civInput = document.getElementById('cfg-civ');
 
+    // Menü toggle
     menuBtn.addEventListener('click', () => {
-        overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+        menuOverlay.style.display = menuOverlay.style.display === 'none' ? 'flex' : 'none';
     });
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.style.display = 'none';
+    menuOverlay.addEventListener('click', (e) => {
+        if (e.target === menuOverlay) menuOverlay.style.display = 'none';
     });
 
-    // Rig-Auswahl → CI-V Adresse updaten
+    // Menü-Items → Overlays
+    function openOverlay(overlay) {
+        menuOverlay.style.display = 'none';
+        overlay.style.display = 'flex';
+    }
+    document.getElementById('menu-radio').addEventListener('click', () => openOverlay(settingsOverlay));
+    document.getElementById('menu-audio').addEventListener('click', () => openOverlay(audioOverlay));
+    document.getElementById('menu-theme').addEventListener('click', () => openOverlay(themeOverlay));
+    document.getElementById('menu-report').addEventListener('click', () => {
+        menuOverlay.style.display = 'none';
+        document.getElementById('contact-overlay').style.display = 'flex';
+    });
+
+    // Close Buttons
+    document.getElementById('btn-settings-close').addEventListener('click', () => settingsOverlay.style.display = 'none');
+    document.getElementById('btn-audio-close').addEventListener('click', () => audioOverlay.style.display = 'none');
+    document.getElementById('btn-theme-close').addEventListener('click', () => themeOverlay.style.display = 'none');
+
+    // Overlay schließen bei Klick außerhalb
+    [settingsOverlay, audioOverlay, themeOverlay].forEach(ov => {
+        ov.addEventListener('click', (e) => { if (e.target === ov) ov.style.display = 'none'; });
+    });
+
+    // Rig-Auswahl → CI-V Adresse
     rigSelect.addEventListener('change', () => {
         const addr = IcomCIV.RIG_ADDRESSES[rigSelect.value] || 0xA4;
         civInput.value = '0x' + addr.toString(16).toUpperCase();
+    });
+
+    // Theme-Wechsel live
+    document.getElementById('cfg-theme').addEventListener('change', async (e) => {
+        const themeName = e.target.value;
+        const url = `https://raw.githubusercontent.com/DO4NRW/RigLink/main/configs/theme.json`;
+        // Lade alle Presets aus theme.py? Nein — wir nutzen die theme.json + Override
+        // Für die Demo: Theme-Name als Query an die URL oder hardcoded Presets
+        try {
+            const resp = await fetch(`https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py`);
+            const text = await resp.text();
+            // Parse das Preset aus dem Python-Code (quick & dirty)
+            const presetMatch = text.match(new RegExp(`"${themeName}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
+            if (presetMatch) {
+                const block = presetMatch[1];
+                const root = document.documentElement;
+                const pairs = block.matchAll(/"(\w+)":\s*"(rgba\([^)]+\))"/g);
+                for (const m of pairs) {
+                    const cssKey = '--' + m[1].replace(/_/g, '-');
+                    root.style.setProperty(cssKey, m[2]);
+                }
+            }
+        } catch (err) {
+            console.warn('Theme laden fehlgeschlagen:', err);
+        }
     });
 }
 

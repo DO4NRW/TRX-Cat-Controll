@@ -290,6 +290,37 @@ input[type="range"]::-moz-range-thumb {
 .legal-footer a:hover { color: var(--accent, #06c6a4); }
 .legal-sep { margin: 0 6px; }
 
+/* Menu Dropdown */
+.menu-dropdown {
+    position: absolute;
+    top: 55px; left: 12px;
+    background: var(--bg-mid, #2a2a2a);
+    border: 1px solid var(--border, #555);
+    border-radius: 12px;
+    padding: 5px;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 101;
+}
+.menu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    color: var(--text-muted, #aaa);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.menu-item:hover {
+    background: var(--bg-light, #3a3a3a);
+    color: var(--text, #fff);
+}
+.menu-item .material-symbols-outlined { font-size: 20px; }
+.menu-sep {
+    height: 1px;
+    background: var(--border, #555);
+    margin: 4px 8px;
+}
+
 /* Settings Overlay */
 .overlay {
     position: fixed;

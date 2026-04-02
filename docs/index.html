@@ -9,7 +9,18 @@
 </head>
 <body>
     <div id="app">
-        <!-- Settings Overlay -->
+        <!-- Menu Dropdown -->
+        <div class="overlay" id="menu-overlay" style="display:none;">
+            <div class="menu-dropdown">
+                <div class="menu-item" id="menu-radio"><span class="material-symbols-outlined">radio</span> Radio Setup</div>
+                <div class="menu-item" id="menu-audio"><span class="material-symbols-outlined">volume_up</span> Audio Setup</div>
+                <div class="menu-item" id="menu-theme"><span class="material-symbols-outlined">palette</span> Theme</div>
+                <div class="menu-sep"></div>
+                <div class="menu-item" id="menu-report"><span class="material-symbols-outlined">bug_report</span> Bug Report</div>
+            </div>
+        </div>
+
+        <!-- Radio Setup Overlay -->
         <div class="overlay" id="settings-overlay" style="display:none;">
             <div class="overlay-panel">
                 <h3>Radio Setup</h3>
@@ -49,6 +60,44 @@
 
                 <div class="overlay-buttons">
                     <button class="btn" id="btn-settings-close">Schließen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Info Overlay -->
+        <div class="overlay" id="audio-overlay" style="display:none;">
+            <div class="overlay-panel">
+                <h3>Audio Setup</h3>
+                <div class="overlay-info">
+                    <p>Audio-Routing ist nur in der <b>Desktop-App</b> verfügbar.</p>
+                    <p>Die Web-Demo unterstützt nur CAT-Steuerung (Read-Only).</p>
+                    <p><a href="https://github.com/DO4NRW/RigLink/releases" style="color:var(--accent)">RigLink herunterladen</a></p>
+                </div>
+                <div class="overlay-buttons">
+                    <button class="btn" id="btn-audio-close">Schließen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Overlay -->
+        <div class="overlay" id="theme-overlay" style="display:none;">
+            <div class="overlay-panel">
+                <h3>Theme</h3>
+                <label>Preset</label>
+                <select id="cfg-theme">
+                    <option value="dark" selected>Dunkel (Standard)</option>
+                    <option value="light">Hell</option>
+                    <option value="discord">Blurple Night</option>
+                    <option value="nord">Nord</option>
+                    <option value="dracula">Dracula</option>
+                    <option value="monokai">Monokai</option>
+                </select>
+                <div class="overlay-info" style="margin-top:12px;">
+                    <p>Theme wird live angewendet.</p>
+                    <p>In der Desktop-App: eigene Themes erstellen + speichern.</p>
+                </div>
+                <div class="overlay-buttons">
+                    <button class="btn" id="btn-theme-close">Schließen</button>
                 </div>
             </div>
         </div>
