@@ -509,16 +509,10 @@ function setupConnect() {
             return;
         }
 
-        const host = document.getElementById('cfg-server-host')?.value.trim();
-        if (host) {
-            // WebSocket zum RigLink Server
-            status.textContent = `Verbinde mit ${host}...`;
-            connectWebSocket(host);
-        } else {
-            // Kein Server → Demo bleibt aktiv, kein Connect nötig
-            status.textContent = 'Demo-Modus (kein Server konfiguriert)';
-            setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 2000);
-        }
+        // Automatisch zum Server verbinden (gleicher Host wie die Seite)
+        const host = document.getElementById('cfg-server-host')?.value.trim() || window.location.host;
+        status.textContent = `Verbinde mit ${host}...`;
+        connectWebSocket(host);
     });
 }
 
@@ -874,7 +868,8 @@ function playDemoFrame() {
 function tick() {
     const now = performance.now();
 
-    if (!connected) {
+    // Demo-Daten NUR wenn NICHT verbunden
+    if (!connected && !rigSocket) {
         playDemoFrame();
     }
 
