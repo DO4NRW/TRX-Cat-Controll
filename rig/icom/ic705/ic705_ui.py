@@ -189,7 +189,13 @@ class IC705Widget(QWidget):
         root.setContentsMargins(15, 10, 15, 10)
         root.setSpacing(8)
 
-        # ── 0. Waterfall / Spectrum ───────────────────────────────────
+        # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
+        from core.smeter_gauge import SMeterGauge
+        self.smeter_gauge = SMeterGauge(self)
+        self.smeter_gauge.setFixedHeight(90)
+        root.addWidget(self.smeter_gauge)
+
+        # ── 1. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
 
         # Span-Slider
@@ -617,6 +623,8 @@ class IC705Widget(QWidget):
             s_val = min(12, int(frac * 13))
             bar_val = int(frac * 1000)
             self.smeter_bar.setValue(min(1000, bar_val))
+            if hasattr(self, 'smeter_gauge'):
+                self.smeter_gauge.setValue(min(1000, bar_val))
             preamp = self._current_preamp or "OFF"
             self.lbl_smeter_info.setText(f"S-METER: {s_str} | {preamp}")
             self._update_s_labels(s_val)
@@ -1012,6 +1020,7 @@ class IC705Widget(QWidget):
                 dsp[name] = btn.isChecked()
             if hasattr(self, 'btn_agc'):
                 dsp["AGC"] = self.btn_agc.text().replace("AGC: ", "")
+            dsp["PREAMP"] = self._current_preamp
             cfg["dsp_state"] = dsp
             with open(path, "w") as f:
                 json.dump(cfg, f, indent=4)
@@ -1033,6 +1042,12 @@ class IC705Widget(QWidget):
                 if name == "AGC":
                     if hasattr(self, 'btn_agc'):
                         self.btn_agc.setText(f"AGC: {on}")
+                    continue
+                if name == "PREAMP":
+                    self._current_preamp = on
+                    if hasattr(self, 'btn_preamp'):
+                        pamp_map = {"OFF": "OFF", "AMP1": "P1", "AMP2": "P2"}
+                        self.btn_preamp.setText(f"P.AMP: {pamp_map.get(on, on)}")
                     continue
                 if name in self.dsp_buttons:
                     self.dsp_buttons[name].setChecked(on)
