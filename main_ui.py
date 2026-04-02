@@ -2333,18 +2333,9 @@ class MainWindow(QMainWindow):
         self.top_layout.addStretch()
 
         # ── REC Button (Demo-Aufnahme) ───────────────────────────────
-        self.btn_rec = QPushButton("REC")
-        self.btn_rec.setFixedSize(50, 30)
-        self.btn_rec.setFocusPolicy(Qt.NoFocus)
-        self.btn_rec.setCursor(Qt.PointingHandCursor)
-        self._rec_off_style = f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
-            border: 1px solid {T['border']}; border-radius: 4px; font-size: 11px; font-weight: bold; }}
-            QPushButton:hover {{ border-color: {T['error']}; }}"""
-        self._rec_on_style = f"""QPushButton {{ background-color: {T['error']}; color: {T['text']};
-            border: 2px solid {T['error']}; border-radius: 4px; font-size: 11px; font-weight: bold; }}"""
-        self.btn_rec.setStyleSheet(self._rec_off_style)
-        self.btn_rec.clicked.connect(self._toggle_demo_rec)
-        self.top_layout.addWidget(self.btn_rec)
+        self.tgl_demo_rec = ToggleButton("REC")
+        self.tgl_demo_rec.toggled.connect(self._toggle_demo_rec)
+        self.top_layout.addWidget(self.tgl_demo_rec)
 
         # ── VOX Controls ─────────────────────────────────────────────
         self.tgl_vox = ToggleButton("VOX")
@@ -2841,17 +2832,13 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _toggle_demo_rec(self):
+    def _toggle_demo_rec(self, checked):
         if not self.rig_widget or not hasattr(self.rig_widget, '_demo_recording'):
             return
-        if self.rig_widget._demo_recording:
-            self.rig_widget.stop_demo_recording()
-            self.btn_rec.setStyleSheet(self._rec_off_style)
-            self.btn_rec.setText("REC")
-        else:
+        if checked:
             self.rig_widget.start_demo_recording()
-            self.btn_rec.setStyleSheet(self._rec_on_style)
-            self.btn_rec.setText("⬛ STOP")
+        else:
+            self.rig_widget.stop_demo_recording()
 
     def _toggle_vox(self, checked):
         log_action(f"VOX {'aktiviert' if checked else 'deaktiviert'}")
