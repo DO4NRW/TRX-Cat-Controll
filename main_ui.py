@@ -2843,12 +2843,27 @@ class MainWindow(QMainWindow):
             pass
 
     def _on_rig_combo_changed(self, rig_name):
-        """Top-Bar Rig-Combo geändert → Radio Setup synchronisieren."""
+        """Top-Bar Rig-Combo geändert → Radio Setup sync + Rig-Widget laden."""
         if self._rig_switching or not rig_name:
             return
         # Radio Setup Combo synchronisieren
         if hasattr(self, 'radio_setup_overlay'):
+            self._rig_switching = True
             self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
+            self._rig_switching = False
+        # Rig-Widget sofort laden (GUI wechseln)
+        self._load_rig_widget(rig_name)
+        # last_rig speichern
+        try:
+            cfg = {}
+            if os.path.exists(self._status_conf_path):
+                with open(self._status_conf_path) as f:
+                    cfg = json.load(f)
+            cfg["last_rig"] = rig_name
+            with open(self._status_conf_path, "w") as f:
+                json.dump(cfg, f, indent=4)
+        except Exception:
+            pass
 
     def _toggle_demo_rec(self, checked):
         if not self.rig_widget or not hasattr(self.rig_widget, '_demo_recording'):
