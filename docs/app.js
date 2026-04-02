@@ -806,9 +806,9 @@ function playDemoFrame() {
         return;
     }
 
-    // Nur 1 Frame alle 120ms (langsamer als App, sieht besser aus auf GitHub Pages)
+    // 1 Frame alle 80ms (gleiche Geschwindigkeit wie App scroll_timer)
     const now = performance.now();
-    if (now - lastDemoTick < 120) return;
+    if (now - lastDemoTick < 80) return;
     lastDemoTick = now;
 
     // Nächsten Frame abspielen
