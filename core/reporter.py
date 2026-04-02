@@ -17,7 +17,7 @@ REPORT_API = f"https://api.github.com/repos/{REPORT_REPO}/issues"
 
 # Report-Token (nur Issues erstellen auf DO4NRW/RigLink, sonst keine Rechte)
 import base64 as _b64
-_TOKEN = _b64.b64decode("Z2l0aHViX3BhdF8xMUI3TUQyVVkwUWcwVmNSV0F6NzVNX2NYTklFaVY2MlVmQUJQNDdIaWQ5Y1hGVVYyaUFYZkNIOFhFekhKMUczczRFSFQyUVVMN1pvSnJWSmdY").decode()
+_TOKEN = _b64.b64decode("Z2l0aHViX3BhdF8xMUI3TUQyVVkwTG5RdTR0M1pkUXdaX0l2UHlXRURvNkRzQ0U0Qk1DQlppME9nelM4UTZPSTJsRzliOGE3Mk9UVjQ2VExZQjZSTkREZnRVazls").decode()
 
 
 def _themed_report_style():
