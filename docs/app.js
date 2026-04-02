@@ -64,6 +64,8 @@ const WF_LINES = 200;
 let demoData = null;
 let demoIndex = 0;
 let demoPlaying = true;
+let demoStartTime = 0;
+let demoBaseTime = 0;
 
 // Waterfall Palette (SDR-Style)
 const PALETTE_STOPS = [
@@ -795,15 +797,36 @@ async function loadDemoData() {
     }
 }
 
-// Demo-Frame abspielen
+// Demo-Frame abspielen (zeitgesteuert wie echte App)
 function playDemoFrame() {
     if (!demoData || demoData.length === 0) {
         generateSpectrum();
         return;
     }
 
-    const frame = demoData[demoIndex];
-    demoIndex = (demoIndex + 1) % demoData.length;
+    // Echtzeit-Playback basierend auf Timestamps
+    if (demoStartTime === 0) {
+        demoStartTime = performance.now();
+        demoBaseTime = demoData[0].t || 0;
+        demoIndex = 0;
+    }
+
+    const elapsed = (performance.now() - demoStartTime) / 1000;
+    const targetTime = demoBaseTime + elapsed;
+
+    // Frames bis zum aktuellen Zeitpunkt abspielen
+    while (demoIndex < demoData.length && (demoData[demoIndex].t || 0) <= targetTime) {
+        demoIndex++;
+    }
+    if (demoIndex >= demoData.length) {
+        // Loop
+        demoStartTime = performance.now();
+        demoBaseTime = demoData[0].t || 0;
+        demoIndex = 0;
+    }
+    if (demoIndex === 0) return;
+
+    const frame = demoData[demoIndex - 1];
 
     if (frame.sp) {
         // Blend — etwas stärker als Python damit die Daten nicht zu verwaschen sind
@@ -841,18 +864,13 @@ function playDemoFrame() {
 }
 
 // Main loop
-let frameSkip = 0;
 function tick() {
-    frameSkip++;
     if (!connected) {
-        // Demo-Mode: echte aufgenommene Daten (alle 3 Frames = ~80ms wie App)
-        if (frameSkip % 3 === 0) playDemoFrame();
-        drawWaterfall();
-    } else {
-        if (frameSkip % 3 === 0) drawWaterfall();
+        playDemoFrame();
     }
+    drawWaterfall();
     updateSMeter();
-    if (frameSkip % 2 === 0) updateTXMeter();
+    updateTXMeter();
     requestAnimationFrame(tick);
 }
 
