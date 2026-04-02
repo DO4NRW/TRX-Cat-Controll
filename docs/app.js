@@ -262,39 +262,43 @@ function drawWaterfall() {
     // Waterfall
     const wfY = freqY + freqBarH;
 
-    // Offscreen Wasserfall in Scope-Auflösung (475 x 200)
-    const WF_W = 475;
-    const WF_H = 200;
-    if (!window._wfCanvas) {
+    // Offscreen Wasserfall in Canvas-Breite (kein Zoom-Artefakt)
+    if (!window._wfCanvas || window._wfCanvas.width !== w) {
         window._wfCanvas = document.createElement('canvas');
-        window._wfCanvas.width = WF_W;
-        window._wfCanvas.height = WF_H;
+        window._wfCanvas.width = w;
+        window._wfCanvas.height = 200;
         const wc = window._wfCanvas.getContext('2d');
         wc.fillStyle = 'rgb(8, 12, 35)';
-        wc.fillRect(0, 0, WF_W, WF_H);
+        wc.fillRect(0, 0, w, 200);
     }
     const wfCtx = window._wfCanvas.getContext('2d');
+    const wfBufH = 200;
 
-    // Shift alles 1px nach unten (in nativer Auflösung)
-    wfCtx.drawImage(window._wfCanvas, 0, 0, WF_W, WF_H - 1, 0, 1, WF_W, WF_H - 1);
+    // Shift alles 1px nach unten
+    wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfBufH - 1, 0, 1, w, wfBufH - 1);
 
-    // Neue Zeile oben — 1 Pixel pro Scope-Punkt (475px breit)
-    const lineData = wfCtx.createImageData(WF_W, 1);
+    // Neue Zeile oben — interpoliert auf Canvas-Breite
+    const lineData = wfCtx.createImageData(w, 1);
     const px = lineData.data;
-    for (let i = 0; i < WF_W; i++) {
-        let val = spectrum[i] || 0;
+    for (let x = 0; x < w; x++) {
+        // Lineare Interpolation zwischen Scope-Punkten
+        const fIdx = x * 474 / w;
+        const idx0 = Math.floor(fIdx);
+        const idx1 = Math.min(474, idx0 + 1);
+        const t = fIdx - idx0;
+        const val0 = spectrum[idx0] || 0;
+        const val1 = spectrum[idx1] || 0;
+        let val = val0 + t * (val1 - val0);
         val = Math.max(0, (val - 3) * 3.0);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
-        const off = i * 4;
+        const off = x * 4;
         px[off] = r; px[off + 1] = g; px[off + 2] = b; px[off + 3] = 255;
     }
     wfCtx.putImageData(lineData, 0, 0);
 
-    // Skaliert auf Canvas blitten (Browser interpoliert smooth)
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(window._wfCanvas, 0, 0, WF_W, WF_H, 0, wfY, w, wfH);
+    // Wasserfall auf Zielbereich skalieren (nur Höhe)
+    ctx.drawImage(window._wfCanvas, 0, 0, w, wfBufH, 0, wfY, w, wfH);
 
     // Center marker + passband
     const cx = Math.floor(w / 2);
