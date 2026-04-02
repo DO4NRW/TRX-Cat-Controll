@@ -16,7 +16,9 @@
         "Icom IC-705"
     ],
     "sliders": {
-        "volume": 1
+        "volume": 1,
+        "signal_gain": 39,
+        "noise_floor": 6
     },
     "dsp_state": {
         "ATT": false,
