@@ -484,10 +484,12 @@ class IC705Widget(QWidget):
     def set_cat_handler(self, cat):
         self._cat = cat
         self._poll_count = 0
-        self._sync_rig_state()
-        # DSP Buttons nochmal forcieren aus gespeichertem State
-        self._load_dsp_state()
-        # Scope aktivieren (IC-705 CI-V)
+
+        # Alles syncen BEVOR Scope angeht (saubere CI-V Queries)
+        self._sync_rig_basics()
+        self._read_dsp_from_trx()
+
+        # Scope erst JETZT aktivieren
         if hasattr(cat, 'scope_enable'):
             cat.scope_enable(True)
         # Wasserfall Scroll starten
@@ -697,20 +699,11 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-    def _sync_rig_state(self):
-        """Einmal bei Connect: DSP-States vom TRX lesen (Scope wird pausiert)."""
+    def _read_dsp_from_trx(self):
+        """Einmal bei Connect: DSP-States direkt vom TRX lesen (kein Scope aktiv!)."""
         if not self._cat:
             return
-        # Basics zuerst (Mode, Preamp, Power, PBT)
-        self._sync_rig_basics()
-
-        # DSP-States: Scope pausieren + Buffer leeren für saubere CI-V Queries
-        if hasattr(self._cat, 'scope_enable'):
-            self._cat.scope_enable(False)
-        import time; time.sleep(0.3)
-        # Serial Buffer komplett leeren
-        if hasattr(self._cat, '_ser') and self._cat._ser and self._cat._ser.is_open:
-            self._cat._ser.reset_input_buffer()
+        import time
 
         dsp_queries = {
             "NB":    (0x16, 0x22),
@@ -722,28 +715,28 @@ class IC705Widget(QWidget):
             if name not in self.dsp_buttons:
                 continue
             result = self._cat._civ_query(cmd, sub=sub)
+            on = False
             if result:
                 _, data = result
                 on = len(data) >= 2 and data[0] == sub and data[1] > 0
-                self.dsp_buttons[name].setChecked(on)
-                self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+            self.dsp_buttons[name].setChecked(on)
+            self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+            print(f"  DSP {name}: {'AN' if on else 'AUS'} (raw={result})")
             time.sleep(0.05)
 
         att = self._cat.get_att()
         if att is not None and "ATT" in self.dsp_buttons:
             self.dsp_buttons["ATT"].setChecked(att)
             self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
+            print(f"  DSP ATT: {'AN' if att else 'AUS'}")
 
         agc = self._cat.get_agc()
         if agc and hasattr(self, 'btn_agc'):
             self.btn_agc.setText(f"AGC: {agc}")
+            print(f"  AGC: {agc}")
 
-        # Scope wieder einschalten
-        if hasattr(self._cat, 'scope_enable'):
-            self._cat.scope_enable(True)
-
-        # States speichern
         self._save_dsp_state()
+        print("  DSP Sync fertig.")
 
     def _update_s_labels(self, active_idx):
         for i, lbl in enumerate(self.s_labels):
