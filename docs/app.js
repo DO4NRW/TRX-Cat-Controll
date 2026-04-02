@@ -186,8 +186,8 @@ function drawWaterfall() {
     if (w <= 0 || h <= 0) return;
     ctx.imageSmoothingEnabled = true;
 
-    const specFrac = 0.30;
-    const freqBarH = 20;
+    const specFrac = 0.35;  // aus waterfall.py
+    const freqBarH = 18;   // aus waterfall.py
     const specH = Math.floor((h - freqBarH) * specFrac);
     const wfH = h - specH - freqBarH;
 
@@ -213,8 +213,8 @@ function drawWaterfall() {
         const scale = 0.85 / Math.max(peak, 1);
         const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#06c6a4';
 
-        // Fill
-        ctx.fillStyle = accent + '30';
+        // Fill (alpha 30/255 ≈ 0.12 — waterfall.py nutzt 30 nach Theme-Fix)
+        ctx.fillStyle = accent + '1e';
         ctx.beginPath();
         ctx.moveTo(0, specH);
         for (let px = 0; px < w; px++) {
@@ -289,8 +289,8 @@ function drawWaterfall() {
         const val0 = spectrum[idx0] || 0;
         const val1 = spectrum[idx1] || 0;
         let val = val0 + t * (val1 - val0);
-        // black_level=5, color_gain=2.5 (dunkler Hintergrund wie Original)
-        val = Math.max(0, (val - 5) * 2.5);
+        // 1:1 aus waterfall.py: black_level=3, color_gain=3.0
+        val = Math.max(0, (val - 3) * 3.0);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
         const off = x * 4;
