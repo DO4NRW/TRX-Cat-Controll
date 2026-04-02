@@ -1,41 +1,41 @@
 """
-Analog S-Meter Gauge — inspiriert von AetherSDR/FlexRadio.
-Bogen mit Nadel, S-Stufen, Peak-Hold.
+Analog S-Meter Gauge — Portiert von AetherSDR SMeterWidget.
+Flacher Bogen, Nadel von unten, Peak-Hold.
 """
 
 import math
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QPointF, QRectF
-from PySide6.QtGui import QPainter, QColor, QPen, QFont, QConicalGradient
+from PySide6.QtGui import QPainter, QColor, QPen, QFont
 
 from core.theme import T, rgba_parts
 
+# Konstanten (wie AetherSDR)
+ARC_START_DEG = 25.0   # rechtes Ende
+ARC_END_DEG = 155.0    # linkes Ende
+S9_FRAC = 0.6          # S9 bei 60% des Bogens
+
 
 class SMeterGauge(QWidget):
-    """Analog S-Meter mit Bogen-Skala und Nadel."""
-
-    _S_LABELS = ["S1", "S3", "S5", "S7", "S9", "+20", "+40", "+60"]
-    _S_FRACTIONS = [1/13, 3/13, 5/13, 7/13, 9/13, 11/13, 12/13, 1.0]
+    """Analog S-Meter mit flachem Bogen und Nadel."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._value = 0       # 0-1000
-        self._peak = 0        # Peak-Hold
-        self._peak_decay = 0  # Decay-Counter
-        self.setMinimumHeight(80)
-        self.setMinimumWidth(200)
+        self._peak = 0
+        self._peak_decay = 0
+        self._s_text = "S0"
+        self.setMinimumHeight(70)
 
     def setValue(self, val):
-        """Wert setzen (0-1000)."""
         self._value = max(0, min(1000, val))
-        # Peak-Hold
         if val > self._peak:
             self._peak = val
-            self._peak_decay = 60  # ~3 Sekunden bei 20fps
+            self._peak_decay = 80
         elif self._peak_decay > 0:
             self._peak_decay -= 1
         else:
-            self._peak = max(0, self._peak - 8)  # Langsam abfallen
+            self._peak = max(0, self._peak - 5)
         self.update()
 
     def value(self):
@@ -51,96 +51,136 @@ class SMeterGauge(QWidget):
         r, g, b, a = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
         p.fillRect(0, 0, w, h, QColor(r, g, b, a))
 
-        # Arc Geometrie — flacher Bogen wie bei analogen Messgeräten
+        # Arc Geometrie (wie AetherSDR: großer Radius, Zentrum unter Widget)
         cx = w * 0.5
-        radius = w * 0.38
-        cy = h * 0.95  # Bogen-Zentrum weit unten
+        radius = w * 0.85
+        cy = h + radius - h * 0.65
+        needle_cy = h + 6.0  # Nadel-Ursprung knapp unter Widget
 
-        arc_start = 210  # Grad (links)
-        arc_end = 330    # Grad (rechts)
-        arc_span = arc_end - arc_start
+        arc_start_rad = math.radians(ARC_START_DEG)
+        arc_end_rad = math.radians(ARC_END_DEG)
+        arc_span_rad = arc_end_rad - arc_start_rad
 
         def frac_to_angle(frac):
-            """Fraction 0-1 → Winkel in Grad (links=0, rechts=1)."""
-            return arc_end - frac * arc_span
+            """0=links, 1=rechts → Winkel in Radians."""
+            return arc_end_rad - frac * arc_span_rad
 
-        def angle_to_point(angle_deg, r):
-            """Winkel → Punkt auf dem Bogen."""
-            rad = math.radians(angle_deg)
-            return QPointF(cx + r * math.cos(rad), cy - r * math.sin(rad))
+        def arc_point(angle_rad, r):
+            return QPointF(cx + r * math.cos(angle_rad), cy - r * math.sin(angle_rad))
 
-        # ── Skala-Bogen zeichnen ──────────────────────────────────────
-        ar, ag, ab, _ = rgba_parts(T.get('text', 'rgba(255,255,255,255)'))
-        acr, acg, acb, _ = rgba_parts(T.get('error', 'rgba(255,68,68,255)'))
-        s9_frac = 9 / 13
+        def needle_dir(angle_rad):
+            ax = cx + radius * math.cos(angle_rad)
+            ay = cy - radius * math.sin(angle_rad)
+            dx = ax - cx
+            dy = ay - needle_cy
+            length = math.sqrt(dx * dx + dy * dy)
+            if length < 0.001:
+                return 0, -1
+            return dx / length, dy / length
 
-        # Bogen Stück für Stück zeichnen (S0→S9 weiß, S9→S9+60 rot)
-        steps = 50
+        # Farben
+        tr, tg, tb, _ = rgba_parts(T.get('text', 'rgba(255,255,255,255)'))
+        white_c = QColor(tr, tg, tb, 200)
+        er, eg, eb, _ = rgba_parts(T.get('error', 'rgba(255,68,68,255)'))
+        red_c = QColor(er, eg, eb)
+        ar, ag, ab, _ = rgba_parts(T.get('accent', 'rgba(6,198,164,255)'))
+        accent_c = QColor(ar, ag, ab)
+
+        # ── Outer Arc (S-Meter Skala) ────────────────────────────────
+        # S0→S9: weiß
+        s9_angle = frac_to_angle(S9_FRAC)
+        steps = 40
         for i in range(steps):
             f1 = i / steps
             f2 = (i + 1) / steps
             a1 = frac_to_angle(f1)
             a2 = frac_to_angle(f2)
-            p1 = angle_to_point(a1, radius)
-            p2 = angle_to_point(a2, radius)
-            color = QColor(acr, acg, acb) if f1 >= s9_frac else QColor(ar, ag, ab, 180)
-            p.setPen(QPen(color, 2))
+            p1 = arc_point(a1, radius)
+            p2 = arc_point(a2, radius)
+            color = red_c if f1 >= S9_FRAC else white_c
+            p.setPen(QPen(color, 2.5))
             p.drawLine(p1, p2)
 
-        # ── Tick-Marks + Labels ──────────────────────────────────────
-        p.setFont(QFont("Consolas", 7))
-        tr, tg, tb, _ = rgba_parts(T.get('text_secondary', 'rgba(204,204,204,255)'))
+        # ── Ticks + Labels ───────────────────────────────────────────
+        font_size = max(8, h // 10)
+        p.setFont(QFont("Consolas", font_size, QFont.Bold))
 
-        for i, (label, frac) in enumerate(zip(self._S_LABELS, self._S_FRACTIONS)):
+        # S-Units: S1, S3, S5, S7, S9
+        s_ticks = [(1, "1"), (3, "3"), (5, "5"), (7, "7"), (9, "9")]
+        for s_num, label in s_ticks:
+            frac = s_num / 13.0
             angle = frac_to_angle(frac)
-            # Tick
-            p1 = angle_to_point(angle, radius - 4)
-            p2 = angle_to_point(angle, radius + 4)
-            color = QColor(acr, acg, acb) if frac > s9_frac else QColor(ar, ag, ab)
-            p.setPen(QPen(color, 1))
-            p.drawLine(p1, p2)
+            ux, uy = needle_dir(angle)
+            ax = cx + radius * math.cos(angle)
+            ay = cy - radius * math.sin(angle)
+
+            # Tick-Linie (nach außen)
+            inner = QPointF(ax + 2 * ux, ay + 2 * uy)
+            outer = QPointF(ax + 12 * ux, ay + 12 * uy)
+            p.setPen(QPen(white_c, 1.5))
+            p.drawLine(inner, outer)
+
             # Label
-            lp = angle_to_point(angle, radius + 14)
-            p.setPen(QColor(tr, tg, tb))
-            p.drawText(int(lp.x()) - 8, int(lp.y()) + 3, label)
+            lp = QPointF(ax + 22 * ux, ay + 22 * uy)
+            p.setPen(white_c)
+            p.drawText(int(lp.x()) - 4, int(lp.y()) + 4, label)
+
+        # S9+ Ticks: +20, +40, +60
+        for db_over, label in [(20, "+20"), (40, "+40"), (60, "+60")]:
+            frac = (9 + db_over / 60 * 4) / 13.0
+            angle = frac_to_angle(frac)
+            ux, uy = needle_dir(angle)
+            ax = cx + radius * math.cos(angle)
+            ay = cy - radius * math.sin(angle)
+
+            inner = QPointF(ax + 2 * ux, ay + 2 * uy)
+            outer = QPointF(ax + 12 * ux, ay + 12 * uy)
+            p.setPen(QPen(red_c, 1.5))
+            p.drawLine(inner, outer)
+
+            lp = QPointF(ax + 22 * ux, ay + 22 * uy)
+            p.setPen(red_c)
+            p.drawText(int(lp.x()) - 8, int(lp.y()) + 4, label)
 
         # ── Nadel ────────────────────────────────────────────────────
         frac = self._value / 1000.0
         needle_angle = frac_to_angle(frac)
-        needle_tip = angle_to_point(needle_angle, radius - 8)
+        ux, uy = needle_dir(needle_angle)
+        needle_len = radius * 0.95
+        tip = QPointF(cx + needle_len * ux, needle_cy + needle_len * uy)
 
-        # Nadel-Schatten
-        p.setPen(QPen(QColor(0, 0, 0, 80), 3))
-        p.drawLine(QPointF(cx + 1, cy + 1), QPointF(needle_tip.x() + 1, needle_tip.y() + 1))
+        # Schatten
+        p.setPen(QPen(QColor(0, 0, 0, 60), 2))
+        p.drawLine(QPointF(cx + 1, needle_cy + 1), QPointF(tip.x() + 1, tip.y() + 1))
 
         # Nadel
-        accent_r, accent_g, accent_b, _ = rgba_parts(T.get('accent', 'rgba(6,198,164,255)'))
-        p.setPen(QPen(QColor(accent_r, accent_g, accent_b), 2))
-        p.drawLine(QPointF(cx, cy), needle_tip)
+        p.setPen(QPen(accent_c, 2))
+        p.drawLine(QPointF(cx, needle_cy), tip)
 
-        # Nadel-Punkt (Zentrum)
-        p.setBrush(QColor(accent_r, accent_g, accent_b))
+        # Nadel-Punkt
+        p.setBrush(accent_c)
         p.setPen(Qt.NoPen)
-        p.drawEllipse(QPointF(cx, cy), 4, 4)
+        p.drawEllipse(QPointF(cx, needle_cy), 5, 5)
 
-        # ── Peak-Hold Marker ─────────────────────────────────────────
-        if self._peak > 0:
+        # ── Peak Hold ────────────────────────────────────────────────
+        if self._peak > 10:
             peak_frac = self._peak / 1000.0
             peak_angle = frac_to_angle(peak_frac)
-            peak_p = angle_to_point(peak_angle, radius - 2)
-            p.setPen(QPen(QColor(255, 160, 0, 180), 2))
-            p.setBrush(QColor(255, 160, 0, 180))
-            p.drawEllipse(peak_p, 3, 3)
+            pp = arc_point(peak_angle, radius - 6)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(255, 160, 0, 150))
+            p.drawEllipse(pp, 3, 3)
 
-        # ── Wert-Text ────────────────────────────────────────────────
-        p.setFont(QFont("Consolas", 10, QFont.Bold))
-        p.setPen(QColor(accent_r, accent_g, accent_b))
-        # S-Stufe berechnen
-        s_num = min(9, int(frac * 13))
+        # ── S-Wert Text (Mitte oben) ────────────────────────────────
+        s_num = min(13, int(frac * 13))
         if s_num <= 9:
             s_text = f"S{s_num}"
         else:
             s_text = f"S9+{(s_num - 9) * 10}"
-        p.drawText(int(cx) - 15, int(cy) - 8, s_text)
+
+        p.setFont(QFont("Consolas", font_size + 2, QFont.Bold))
+        p.setPen(accent_c)
+        tw = p.fontMetrics().horizontalAdvance(s_text)
+        p.drawText(int(cx - tw / 2), int(h * 0.25), s_text)
 
         p.end()
