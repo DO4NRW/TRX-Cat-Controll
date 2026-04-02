@@ -498,83 +498,86 @@ function setupConnect() {
     btn.addEventListener('click', async () => {
         if (connected) {
             // Disconnect
-            if (civ) await civ.disconnect();
+            if (rigSocket) { rigSocket.close(); rigSocket = null; }
             connected = false;
+            liveScope = false;
             btn.classList.remove('connected');
             bar.classList.remove('connected');
             status.textContent = 'SYSTEM READY';
+            // Demo-Playback zurücksetzen
+            demoStartTime = 0;
             return;
         }
 
-        if (hasWebSerial) {
-            // Echte Serial-Verbindung
-            const cfg = getSerialConfig();
-            status.textContent = `Verbinde (${cfg.baud} baud)...`;
-            civ = new IcomCIV();
-            civ.civAddress = cfg.civAddress;
-
-            civ.onFrequency = (hz) => {
-                currentFreq = hz;
-                updateFreqDisplay();
-            };
-            civ.onMode = (mode) => {
-                currentMode = mode;
-                document.querySelectorAll('.mode-btn').forEach(b => {
-                    b.classList.toggle('active', b.dataset.mode === mode);
-                });
-            };
-            civ.onSMeter = (raw) => {
-                smeterValue = smeterValue * 0.8 + raw * 0.2; // Smoothing wie App
-            };
-            civ.onPower = (raw) => {
-                const slider = document.getElementById('pwr-slider');
-                const label = document.getElementById('pwr-label');
-                slider.value = raw;
-                label.textContent = `PWR: ${(raw * 10 / 255).toFixed(1)}W`;
-            };
-            civ.onSpectrum = (data, center, span) => {
-                // Echte Scope-Daten statt simulierte
-                for (let i = 0; i < 475; i++) spectrum[i] = data[i];
-                if (center > 0) currentFreq = center;
-                liveScope = true;
-            };
-            civ.onConnect = () => {
-                connected = true;
-                btn.classList.add('connected');
-                bar.classList.add('connected');
-                status.textContent = 'CAT: Verbunden (Web Serial) — READ ONLY';
-            };
-            civ.onDisconnect = () => {
-                connected = false;
-                liveScope = false;
-                btn.classList.remove('connected');
-                bar.classList.remove('connected');
-                status.textContent = 'SYSTEM READY';
-
-                // Errors während der Session? Automatisch reporten
-                if (errorLog.length > 0) {
-                    const body = `## Web Demo Fehler\n\n## Browser\n\`\`\`\n${getBrowserInfo()}\n\`\`\`\n\n## Errors\n\`\`\`\n${errorLog.join('\n')}\n\`\`\``;
-                    sendWebReport('[WEB] Fehler in Browser-Demo', body);
-                    errorLog = [];
-                }
-            };
-
-            const ok = await civ.connect(cfg.baud, cfg.stopBits);
-            if (!ok) {
-                status.textContent = 'Verbindung fehlgeschlagen';
-                setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 3000);
-            }
+        const host = document.getElementById('cfg-server-host')?.value.trim();
+        if (host) {
+            // WebSocket zum RigLink Server
+            status.textContent = `Verbinde mit ${host}...`;
+            connectWebSocket(host);
         } else {
-            // Demo-Mode (kein Web Serial)
-            connected = !connected;
-            btn.classList.toggle('connected', connected);
-            bar.classList.toggle('connected', connected);
-            status.textContent = connected ? 'DEMO MODE (kein Web Serial)' : 'SYSTEM READY';
+            // Kein Server → Demo bleibt aktiv, kein Connect nötig
+            status.textContent = 'Demo-Modus (kein Server konfiguriert)';
+            setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 2000);
         }
     });
 }
 
 let liveScope = false;
+let rigSocket = null;
+
+// WebSocket Verbindung zum RigLink Server
+function connectWebSocket(host) {
+    const wsUrl = `ws://${host}/ws`;
+    rigSocket = new WebSocket(wsUrl);
+
+    rigSocket.onopen = () => {
+        console.log('WebSocket connected to', wsUrl);
+        connected = true;
+        liveScope = true;
+        document.getElementById('btn-connect').classList.add('connected');
+        document.querySelector('.status-bar').classList.add('connected');
+        document.getElementById('status-text').textContent = `CAT: Verbunden (${host})`;
+    };
+
+    rigSocket.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.freq) { currentFreq = data.freq; updateFreqDisplay(); }
+            if (data.mode) {
+                currentMode = data.mode;
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.mode === data.mode);
+                });
+            }
+            if (data.smeter !== undefined) {
+                smeterValue = smeterValue * 0.8 + data.smeter * 0.2;
+            }
+            if (data.power !== undefined) {
+                const slider = document.getElementById('pwr-slider');
+                const label = document.getElementById('pwr-label');
+                if (slider) slider.value = data.power;
+                if (label) label.textContent = `PWR: ${(data.power * 10 / 255).toFixed(1)}W`;
+            }
+            if (data.spectrum && data.spectrum.length === 475) {
+                for (let i = 0; i < 475; i++) spectrum[i] = data.spectrum[i];
+            }
+            if (data.scope_center > 0) currentFreq = data.scope_center;
+            if (data.scope_span > 0) currentSpanHz = data.scope_span;
+        } catch (err) {}
+    };
+
+    rigSocket.onclose = () => {
+        connected = false;
+        liveScope = false;
+        rigSocket = null;
+        document.getElementById('btn-connect').classList.remove('connected');
+        document.querySelector('.status-bar').classList.remove('connected');
+        document.getElementById('status-text').textContent = 'Verbindung verloren';
+        setTimeout(() => {
+            document.getElementById('status-text').textContent = 'SYSTEM READY';
+        }, 3000);
+    };
+}
 
 // Menu + Overlays
 function setupSettings() {

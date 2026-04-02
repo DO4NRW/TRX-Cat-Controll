@@ -42,9 +42,13 @@
                 <select id="cfg-stopbits"><option>1</option><option selected>2</option></select>
                 <label>CI-V Adresse</label>
                 <input type="text" id="cfg-civ" value="0xA4" readonly>
+                <label>Server Adresse (für Remote-Betrieb)</label>
+                <input type="text" id="cfg-server-host" placeholder="raspi.local:8080">
+
                 <div class="overlay-info">
-                    <p>Nur <b>Chrome / Edge</b> unterstützen Web Serial.</p>
-                    <p>Read-Only: Frequenz, Mode, S-Meter, Wasserfall.</p>
+                    <p><b>Ohne Server:</b> Demo-Daten werden abgespielt</p>
+                    <p><b>Mit Server:</b> RigLink Server auf Raspi/PC streamt CAT + Audio über WebSocket</p>
+                    <p><code>python server/rig_server.py --auto-connect</code></p>
                 </div>
                 <div class="overlay-buttons"><button class="btn" id="btn-settings-close">Schließen</button></div>
             </div>
