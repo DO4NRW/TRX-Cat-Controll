@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt
 from core.session_logger import get_session_log, get_system_info, clear_old_log
 
-REPORT_SERVER = "http://45.81.232.138:8090"
+REPORT_SERVER = "http://raport.pcore.de"
 REPORT_API = f"{REPORT_SERVER}/api/report"
 
 # HMAC Secret für Verifizierung (nur RigLink kennt diesen Salt)
