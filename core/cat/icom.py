@@ -119,8 +119,12 @@ class IcomCat(CatBase):
                         with self._scope_lock:
                             self._scope_buffer.append(f)
                         continue
-                    # Antwort auf unsere Query
-                    if f[2] == self._ctrl_addr and result is None:
+                    # ACK/NAK
+                    if f[2] == self._ctrl_addr and f[4] in (0xFB, 0xFA):
+                        result = self._parse_response(f)
+                        continue
+                    # Antwort muss zum gesendeten Command passen
+                    if f[2] == self._ctrl_addr and f[4] == cmd and result is None:
                         result = self._parse_response(f)
 
                 return result
