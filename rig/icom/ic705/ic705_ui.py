@@ -894,21 +894,9 @@ class IC705Widget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         import time
-        # Span setzen OHNE Scope zu pausieren
-        frame = self._cat._build_frame(0x27, 0x15, bytes([0x00, idx]))
-        print(f"[SPAN] Frame: {frame.hex(' ')}", flush=True)
-        result = self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, idx]))
-        print(f"[SPAN] idx={idx} ({span_hz} Hz) → result={result}", flush=True)
-        if result and result[0] == 0xFA:
-            # NAK — versuche mit BCD
-            val = span_hz
-            bcd = []
-            for _ in range(3):
-                lo = val % 10; val //= 10
-                hi = val % 10; val //= 10
-                bcd.append((hi << 4) | lo)
-            result2 = self._cat._civ_query(0x27, sub=0x15, data=bytes([0x00] + bcd))
-            print(f"[SPAN] BCD Fallback → result={result2}", flush=True)
+        # Span setzen: 5-Byte BCD LSB-first (wie Frequenz!) — aus wfview Source
+        bcd = self._cat._int_to_bcd(span_hz, 5)  # 5 Bytes wie makeFreqPayload
+        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00]) + bcd)
         time.sleep(0.3)
         # Scope Output wieder an
         self._cat._civ_query(0x27, sub=0x11, data=bytes([0x01]))
