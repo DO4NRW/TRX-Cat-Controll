@@ -1,0 +1,105 @@
+name: Verify Bug Report
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  verify:
+    if: contains(github.event.issue.labels.*.name, 'bug-report')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check HMAC signature
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const crypto = require('crypto');
+            const body = context.payload.issue.body || '';
+
+            // Signatur aus dem Issue-Body extrahieren
+            const match = body.match(/<!-- riglink-verify ts=(\d+) sig=([a-f0-9]+) -->/);
+            if (!match) {
+              // Keine Signatur → Spam
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['spam']
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ Dieses Issue wurde nicht über RigLink gesendet und wird geschlossen.'
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed'
+              });
+              return;
+            }
+
+            const ts = match[1];
+            const sig = match[2];
+            const secret = process.env.HMAC_SECRET;
+
+            // Body ohne Signatur-Zeile
+            const cleanBody = body.replace(/\n\n<!-- riglink-verify ts=\d+ sig=[a-f0-9]+ -->/, '');
+
+            // HMAC verifizieren
+            const expected = crypto.createHmac('sha256', secret)
+              .update(`${ts}:${cleanBody}`)
+              .digest('hex')
+              .substring(0, 16);
+
+            if (sig !== expected) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['spam']
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ Ungültige Signatur — Issue wird geschlossen.'
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed'
+              });
+              return;
+            }
+
+            // Timestamp prüfen (max 1 Stunde alt)
+            const age = Math.floor(Date.now() / 1000) - parseInt(ts);
+            if (age > 3600) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ Report ist älter als 1 Stunde — bitte erneut senden.'
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed'
+              });
+              return;
+            }
+
+            // Alles OK → Label setzen
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['verified']
+            });
+        env:
+          HMAC_SECRET: ${{ secrets.REPORT_HMAC_SECRET }}

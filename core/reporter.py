@@ -5,6 +5,9 @@ Nach dem Senden bekommt er den Link zum Issue (kann Status verfolgen).
 """
 
 import json
+import hmac
+import hashlib
+import time
 import urllib.request
 import urllib.error
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -18,6 +21,16 @@ REPORT_API = f"https://api.github.com/repos/{REPORT_REPO}/issues"
 # Report-Token (nur Issues erstellen auf DO4NRW/RigLink, sonst keine Rechte)
 import base64 as _b64
 _TOKEN = _b64.b64decode("Z2l0aHViX3BhdF8xMUI3TUQyVVkwTG5RdTR0M1pkUXdaX0l2UHlXRURvNkRzQ0U0Qk1DQlppME9nelM4UTZPSTJsRzliOGE3Mk9UVjQ2VExZQjZSTkREZnRVazls").decode()
+
+# HMAC Secret für Verifizierung (nur RigLink kennt diesen Salt)
+_HMAC_SECRET = _b64.b64decode("UmlnTGlua19SZXBvcnRfVjJfRE80TlJX").decode()
+
+
+def _sign_report(body):
+    """HMAC-SHA256 Signatur für den Report-Body erstellen."""
+    ts = str(int(time.time()))
+    sig = hmac.new(_HMAC_SECRET.encode(), f"{ts}:{body}".encode(), hashlib.sha256).hexdigest()[:16]
+    return ts, sig
 
 
 def _themed_report_style():
@@ -75,6 +88,9 @@ def _themed_report_style():
 
 def _send_issue(title, body):
     """GitHub Issue erstellen. Gibt (ok, message, url) zurück."""
+    # HMAC-Signatur anhängen (unsichtbar im Markdown)
+    ts, sig = _sign_report(body)
+    body += f"\n\n<!-- riglink-verify ts={ts} sig={sig} -->"
     data = json.dumps({"title": title, "body": body, "labels": ["bug-report"]}).encode("utf-8")
     req = urllib.request.Request(REPORT_API, data=data, method="POST")
     req.add_header("Authorization", f"token {_TOKEN}")
