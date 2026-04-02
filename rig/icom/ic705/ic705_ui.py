@@ -290,10 +290,10 @@ class IC705Widget(QWidget):
         slider_col.addWidget(self.slider_noise, stretch=1)
 
         # Span Slider (vertikal, unter NF)
-        slider_col.addWidget(self.lbl_span)
         self.slider_span.setStyleSheet(_vslider_style)
         self.slider_span.setFocusPolicy(Qt.NoFocus)
         slider_col.addWidget(self.slider_span, stretch=1)
+        slider_col.addWidget(self.lbl_span)  # Label unten
 
         wf_row.addLayout(slider_col)
 
@@ -900,7 +900,7 @@ class IC705Widget(QWidget):
         self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
-            self.waterfall._wf_image.fill(QColor(8, 12, 35))
+            self.waterfall._wf_data[:] = [8, 12, 35]
             self.waterfall._display_spectrum[:] = 0
             self.waterfall._last_spectrum[:] = 0
 
