@@ -51,11 +51,11 @@ class SMeterGauge(QWidget):
         r, g, b, a = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
         p.fillRect(0, 0, w, h, QColor(r, g, b, a))
 
-        # Arc Geometrie (wie AetherSDR: großer Radius, Zentrum unter Widget)
+        # Arc Geometrie — flacher Bogen, volle Breite
         cx = w * 0.5
-        radius = w * 0.85
-        cy = h + radius - h * 0.65
-        needle_cy = h + 6.0  # Nadel-Ursprung knapp unter Widget
+        radius = min(w * 0.48, h * 3.0)  # Begrenzt bei kleiner Höhe
+        cy = h + radius * 0.4
+        needle_cy = h + 4.0
 
         arc_start_rad = math.radians(ARC_START_DEG)
         arc_end_rad = math.radians(ARC_END_DEG)

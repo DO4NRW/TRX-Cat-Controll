@@ -192,14 +192,8 @@ class IC705Widget(QWidget):
         # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
         from core.smeter_gauge import SMeterGauge
         self.smeter_gauge = SMeterGauge(self)
-        self.smeter_gauge.setFixedHeight(65)
-        self.smeter_gauge.setMaximumWidth(400)
-        # Zentriert
-        gauge_row = QHBoxLayout()
-        gauge_row.addStretch()
-        gauge_row.addWidget(self.smeter_gauge)
-        gauge_row.addStretch()
-        root.addLayout(gauge_row)
+        self.smeter_gauge.setFixedHeight(55)
+        root.addWidget(self.smeter_gauge)
 
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
