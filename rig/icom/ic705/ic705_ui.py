@@ -885,7 +885,7 @@ class IC705Widget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         current = self.btn_preamp.text().replace("P.AMP: ", "")
-        cycle = {"OFF": "AMP1", "AMP1": "OFF"}
+        cycle = {"OFF": "AMP1", "AMP1": "AMP2", "AMP2": "OFF", "P1": "AMP2", "P2": "OFF"}
         new_mode = cycle.get(current, "OFF")
         self._cat.set_preamp(new_mode)
         self._current_preamp = new_mode
