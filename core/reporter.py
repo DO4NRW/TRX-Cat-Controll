@@ -116,7 +116,7 @@ def show_report_dialog(parent, is_crash=False):
     """Report-Dialog anzeigen. is_crash=True zeigt Crash-Hinweis."""
     dlg = QDialog(parent)
     dlg.setWindowTitle("Crash Report" if is_crash else "Bug Report")
-    dlg.setFixedSize(520, 460)
+    dlg.setFixedSize(560, 520)
     dlg.setStyleSheet(_themed_report_style())
 
     layout = QVBoxLayout(dlg)
@@ -144,14 +144,18 @@ def show_report_dialog(parent, is_crash=False):
     txt_desc.setMaximumHeight(80)
     layout.addWidget(txt_desc)
 
-    # Session Log Vorschau
-    lbl_log = QLabel("Session-Log:")
+    # Komplette Vorschau (System-Info + Session-Log)
+    lbl_log = QLabel("Diese Daten werden gesendet:")
     layout.addWidget(lbl_log)
+
+    sys_info = get_system_info()
+    session_log = get_session_log()
+    preview = f"── System ──\n{sys_info}\n\n── Session-Log ──\n"
+    preview += session_log if session_log else "(Kein Session-Log vorhanden)"
 
     txt_log = QTextEdit()
     txt_log.setReadOnly(True)
-    session_log = get_session_log()
-    txt_log.setPlainText(session_log if session_log else "(Kein Session-Log vorhanden)")
+    txt_log.setPlainText(preview)
     layout.addWidget(txt_log)
 
     # Buttons
