@@ -451,26 +451,27 @@ class IC705Widget(QWidget):
         self.s_labels = []
         self.smeter_bar = type('_Dummy', (), {'setValue': lambda s, v: None, 'update': lambda s: None})()
 
-        # ── 7. TX Meter ──────────────────────────────────────────────
-        self.lbl_tx_info = QLabel("TX: --- dBFS")
-        self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        # ── 7. TX Meter (kompakt: nur Zahl) ─────────────────────────
+        self.lbl_tx_info = QLabel("---")
+        self.lbl_tx_info.setStyleSheet(f"color: {T['text_muted']}; font-size: 10px; border: none;")
+        self.lbl_tx_info.setFixedHeight(14)
         root.addWidget(self.lbl_tx_info)
 
         self.tx_bar = QProgressBar()
-        self.tx_bar.setFixedHeight(18)
+        self.tx_bar.setFixedHeight(8)
         self.tx_bar.setRange(0, 100)
         self.tx_bar.setValue(0)
         self.tx_bar.setTextVisible(False)
         self.tx_bar.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
-            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}""")
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
+            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 2px; }}""")
         root.addWidget(self.tx_bar)
 
         # ── 9. PTT Button ────────────────────────────────────────────
 
         self.btn_ptt = QPushButton("RX (SPACE)")
-        self.btn_ptt.setFixedHeight(50)
-        self.btn_ptt.setFont(QFont("Roboto", 20, QFont.Bold))
+        self.btn_ptt.setFixedHeight(36)
+        self.btn_ptt.setFont(QFont("Roboto", 14, QFont.Bold))
         self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
             border: 2px solid {T['ptt_rx_border']}; border-radius: 8px; }}""")
         self.btn_ptt.pressed.connect(self._ptt_on)
@@ -1200,7 +1201,7 @@ class IC705Widget(QWidget):
         self._tx_rms_db = db
         pct = max(0, min(100, int((db + 60) / 60 * 100)))
         self.tx_bar.setValue(pct)
-        self.lbl_tx_info.setText(f"TX: {db:.0f} dBFS")
+        self.lbl_tx_info.setText(f"{db:.0f} dB")
 
     def _vox_tick(self):
         if not self._vox_enabled or self._vox_mute:

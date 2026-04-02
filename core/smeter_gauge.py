@@ -142,25 +142,27 @@ class SMeterGauge(QWidget):
             p.setPen(red_c)
             p.drawText(int(lp.x()) - 8, int(lp.y()) + 4, label)
 
-        # ── Nadel ────────────────────────────────────────────────────
+        # ── Nadel (schwarz mit weißer Spitze) ────────────────────────
         frac = self._value / 1000.0
         needle_angle = frac_to_angle(frac)
         ux, uy = needle_dir(needle_angle)
-        needle_len = radius * 0.75
+        needle_len = radius * 0.85
+        origin = QPointF(cx, needle_cy)
         tip = QPointF(cx + needle_len * ux, needle_cy + needle_len * uy)
+        mid = QPointF(cx + needle_len * 0.75 * ux, needle_cy + needle_len * 0.75 * uy)
 
-        # Schatten
-        p.setPen(QPen(QColor(0, 0, 0, 60), 2))
-        p.drawLine(QPointF(cx + 1, needle_cy + 1), QPointF(tip.x() + 1, tip.y() + 1))
+        # Schwarzer Teil (Basis → 75%)
+        p.setPen(QPen(QColor(20, 20, 20), 2))
+        p.drawLine(origin, mid)
 
-        # Nadel
-        p.setPen(QPen(accent_c, 2))
-        p.drawLine(QPointF(cx, needle_cy), tip)
+        # Weißer Teil (75% → Spitze)
+        p.setPen(QPen(QColor(tr, tg, tb), 2))
+        p.drawLine(mid, tip)
 
-        # Nadel-Punkt
-        p.setBrush(accent_c)
-        p.setPen(Qt.NoPen)
-        p.drawEllipse(QPointF(cx, needle_cy), 5, 5)
+        # Nadel-Punkt (Drehpunkt)
+        p.setBrush(QColor(40, 40, 40))
+        p.setPen(QPen(QColor(80, 80, 80), 1))
+        p.drawEllipse(origin, 4, 4)
 
         # ── Peak Hold ────────────────────────────────────────────────
         if self._peak > 10:
