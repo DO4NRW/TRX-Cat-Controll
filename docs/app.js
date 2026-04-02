@@ -798,35 +798,22 @@ async function loadDemoData() {
 }
 
 // Demo-Frame abspielen (zeitgesteuert wie echte App)
+let lastDemoTick = 0;
+
 function playDemoFrame() {
     if (!demoData || demoData.length === 0) {
         generateSpectrum();
         return;
     }
 
-    // Echtzeit-Playback basierend auf Timestamps
-    if (demoStartTime === 0) {
-        demoStartTime = performance.now();
-        demoBaseTime = demoData[0].t || 0;
-        demoIndex = 0;
-    }
+    // Nur 1 Frame alle 120ms (langsamer als App, sieht besser aus auf GitHub Pages)
+    const now = performance.now();
+    if (now - lastDemoTick < 120) return;
+    lastDemoTick = now;
 
-    const elapsed = (performance.now() - demoStartTime) / 1000;
-    const targetTime = demoBaseTime + elapsed;
-
-    // Frames bis zum aktuellen Zeitpunkt abspielen
-    while (demoIndex < demoData.length && (demoData[demoIndex].t || 0) <= targetTime) {
-        demoIndex++;
-    }
-    if (demoIndex >= demoData.length) {
-        // Loop
-        demoStartTime = performance.now();
-        demoBaseTime = demoData[0].t || 0;
-        demoIndex = 0;
-    }
-    if (demoIndex === 0) return;
-
-    const frame = demoData[demoIndex - 1];
+    // Nächsten Frame abspielen
+    demoIndex = (demoIndex + 1) % demoData.length;
+    const frame = demoData[demoIndex];
 
     if (frame.sp) {
         // Target-Spektrum setzen (wie _last_spectrum in Python)
