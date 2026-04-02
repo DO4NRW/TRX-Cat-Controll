@@ -585,6 +585,43 @@ function updateTXMeter() {
     }
 }
 
+// Kontaktformular
+function setupContact() {
+    const overlay = document.getElementById('contact-overlay');
+    const link = document.getElementById('link-contact');
+    const closeBtn = document.getElementById('btn-contact-close');
+    const sendBtn = document.getElementById('btn-contact-send');
+    const status = document.getElementById('contact-status');
+
+    link.addEventListener('click', (e) => { e.preventDefault(); overlay.style.display = 'flex'; });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+
+    sendBtn.addEventListener('click', async () => {
+        const name = document.getElementById('contact-name').value.trim();
+        const email = document.getElementById('contact-email').value.trim();
+        const msg = document.getElementById('contact-msg').value.trim();
+        if (!msg) { status.textContent = 'Bitte Nachricht eingeben.'; return; }
+
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sende...';
+
+        const body = `## Kontaktformular (Web Demo)\n\n**Von:** ${name || 'Anonym'}\n**E-Mail:** ${email || 'nicht angegeben'}\n\n## Nachricht\n${msg}\n\n## Browser\n\`\`\`\n${getBrowserInfo()}\n\`\`\``;
+        const result = await sendWebReport('[KONTAKT] ' + (name || 'Web Demo'), body);
+
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Senden';
+
+        if (result && result.ok) {
+            status.textContent = 'Nachricht gesendet! Danke.';
+            document.getElementById('contact-msg').value = '';
+            setTimeout(() => { overlay.style.display = 'none'; status.textContent = ''; }, 2000);
+        } else {
+            status.textContent = 'Fehler beim Senden. Bitte per E-Mail kontaktieren.';
+        }
+    });
+}
+
 // Main loop
 function tick() {
     if (!liveScope) generateSpectrum();
@@ -609,6 +646,9 @@ async function init() {
     setupSpan();
     setupPower();
     setupWaterfallClick();
+    // Kontaktformular
+    setupContact();
+
     // Web Serial Hinweis
     const verLabel = document.getElementById('version-text');
     if (hasWebSerial) {

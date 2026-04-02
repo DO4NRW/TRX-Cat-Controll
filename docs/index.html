@@ -167,9 +167,29 @@
         </div>
     </div>
 
+    <!-- Kontakt Overlay -->
+    <div class="overlay" id="contact-overlay" style="display:none;">
+        <div class="overlay-panel">
+            <h3>Kontakt</h3>
+            <label>Name / Rufzeichen</label>
+            <input type="text" id="contact-name" placeholder="z.B. DL1ABC">
+            <label>E-Mail</label>
+            <input type="text" id="contact-email" placeholder="deine@email.de">
+            <label>Nachricht</label>
+            <textarea id="contact-msg" rows="4" placeholder="Deine Nachricht..."></textarea>
+            <div class="overlay-buttons">
+                <button class="btn" id="btn-contact-close">Abbrechen</button>
+                <button class="btn btn-accent" id="btn-contact-send">Senden</button>
+            </div>
+            <div class="contact-status" id="contact-status"></div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <div class="legal-footer">
         <span>Verantwortlich: DO4NRW | <a href="mailto:do4nrw@darc.de">do4nrw@darc.de</a></span>
+        <span class="legal-sep">|</span>
+        <span><a href="#" id="link-contact">Kontaktformular</a></span>
         <span class="legal-sep">|</span>
         <span>Diese Demo sammelt keine persönlichen Daten. Fehlerberichte werden anonymisiert an raport.pcore.de gesendet.</span>
         <span class="legal-sep">|</span>

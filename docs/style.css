@@ -332,9 +332,27 @@ input[type="range"]::-moz-range-thumb {
     font-family: 'Consolas', monospace;
 }
 .overlay-panel select:focus,
-.overlay-panel input:focus {
+.overlay-panel input:focus,
+.overlay-panel textarea:focus {
     border-color: var(--accent, #06c6a4);
     outline: none;
+}
+.overlay-panel textarea {
+    width: 100%;
+    background: var(--bg-mid, #2a2a2a);
+    color: var(--text, #fff);
+    border: 1px solid var(--border, #555);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    resize: vertical;
+}
+.contact-status {
+    margin-top: 8px;
+    font-size: 12px;
+    text-align: center;
+    color: var(--accent, #06c6a4);
 }
 .overlay-info {
     margin-top: 16px;
