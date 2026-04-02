@@ -1535,3 +1535,11 @@ class IC705Widget(QWidget):
         if not self._ptt_active:
             self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
                 border: 2px solid {T['ptt_rx_border']}; border-radius: 8px; }}""")
+
+        # Wasserfall-Palette aus Theme
+        wf_pal = T.get('wf_palette', 'sdr')
+        if hasattr(self, 'waterfall'):
+            self.waterfall.set_palette(wf_pal)
+            self._palette_idx = list(self.waterfall.PALETTES.keys()).index(wf_pal) if wf_pal in self.waterfall.PALETTES else 0
+            if hasattr(self, 'btn_palette'):
+                self.btn_palette.setText(wf_pal.upper()[:4])

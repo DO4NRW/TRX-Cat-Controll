@@ -231,6 +231,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(160, 170, 180, 255)",
         "wf_freq_tick":        "rgba(60, 70, 80, 255)",
         "wf_cursor":           "rgba(0, 220, 100, 255)",
+        "wf_palette":          "sdr",
     },
 
     "light": {
@@ -271,6 +272,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(140, 150, 165, 255)",
         "wf_freq_tick":        "rgba(55, 62, 72, 255)",
         "wf_cursor":           "rgba(0, 150, 80, 255)",
+        "wf_palette":          "sdr",
     },
 
     "discord": {
@@ -311,6 +313,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(150, 155, 165, 255)",
         "wf_freq_tick":        "rgba(55, 58, 65, 255)",
         "wf_cursor":           "rgba(87, 242, 135, 255)",
+        "wf_palette":          "sdr",
     },
 
     "nord": {
@@ -351,6 +354,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(160, 170, 190, 255)",
         "wf_freq_tick":        "rgba(65, 72, 88, 255)",
         "wf_cursor":           "rgba(163, 190, 140, 255)",
+        "wf_palette":          "sdr",
     },
 
     "dracula": {
@@ -391,6 +395,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(160, 170, 200, 255)",
         "wf_freq_tick":        "rgba(60, 65, 80, 255)",
         "wf_cursor":           "rgba(80, 250, 123, 255)",
+        "wf_palette":          "sdr",
     },
 
     "monokai": {
@@ -431,6 +436,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(175, 172, 155, 255)",
         "wf_freq_tick":        "rgba(65, 66, 58, 255)",
         "wf_cursor":           "rgba(166, 226, 46, 255)",
+        "wf_palette":          "sdr",
     },
 
     "colorblind": {
@@ -471,6 +477,7 @@ PRESETS = {
         "wf_freq_text":        "rgba(160, 160, 175, 255)",
         "wf_freq_tick":        "rgba(55, 55, 65, 255)",
         "wf_cursor":           "rgba(240, 228, 66, 255)",
+        "wf_palette":          "viridis",
     },
 }
 
