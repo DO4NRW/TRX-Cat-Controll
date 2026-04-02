@@ -43,9 +43,11 @@ class WaterfallWidget(QWidget):
         self._spectrum_frac = 0.25
         self._fill_alpha = 0.75
 
-        # Farbpalette als numpy Array (256 x 3) — aus Theme wenn vorhanden
-        wf_pal = T.get('wf_palette', 'sdr')
-        self._palette = self._build_palette(wf_pal)
+        # Farbpalette — aus Theme wf_color_1-9 wenn vorhanden, sonst Preset
+        if T.get('wf_color_1'):
+            self.set_palette("theme")
+        else:
+            self._palette = self._build_palette(T.get('wf_palette', 'sdr'))
 
         self._last_spectrum = np.zeros(num_points, dtype=np.float32)
         self._display_spectrum = np.zeros(num_points, dtype=np.float32)
@@ -162,9 +164,43 @@ class WaterfallWidget(QWidget):
         self._last_spectrum = new
 
     def set_palette(self, name):
-        """Wasserfall-Palette wechseln: 'sdr', 'viridis', 'inferno', 'graustufen'"""
+        """Wasserfall-Palette wechseln oder aus Theme-Keys laden."""
+        if name == "theme":
+            # Palette aus T['wf_color_1'] bis T['wf_color_9'] bauen
+            stops = []
+            for i in range(1, 10):
+                key = f"wf_color_{i}"
+                color_str = T.get(key, None)
+                if color_str:
+                    r, g, b, a = rgba_parts(color_str)
+                    frac = (i - 1) / 8.0
+                    stops.append((frac, (r, g, b)))
+            if stops:
+                self._palette = self._build_palette_from_stops(stops)
+                return
         if name in self.PALETTES:
             self._palette = self._build_palette(name)
+
+    def _build_palette_from_stops(self, stops):
+        """Palette aus custom Stops bauen."""
+        palette = np.zeros((256, 3), dtype=np.uint8)
+        for i in range(256):
+            frac = i / 255.0
+            lo = stops[0]
+            hi = stops[-1]
+            for j in range(len(stops) - 1):
+                if stops[j][0] <= frac <= stops[j + 1][0]:
+                    lo = stops[j]
+                    hi = stops[j + 1]
+                    break
+            if hi[0] == lo[0]:
+                t = 0
+            else:
+                t = (frac - lo[0]) / (hi[0] - lo[0])
+            palette[i, 0] = int(lo[1][0] + t * (hi[1][0] - lo[1][0]))
+            palette[i, 1] = int(lo[1][1] + t * (hi[1][1] - lo[1][1]))
+            palette[i, 2] = int(lo[1][2] + t * (hi[1][2] - lo[1][2]))
+        return palette
 
     def set_step_hz(self, step):
         """Tuning-Schrittweite für Mausrad setzen."""

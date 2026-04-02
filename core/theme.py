@@ -232,6 +232,15 @@ PRESETS = {
         "wf_freq_tick":        "rgba(60, 70, 80, 255)",
         "wf_cursor":           "rgba(0, 220, 100, 255)",
         "wf_palette":          "sdr",
+        "wf_color_1":          "rgba(8, 12, 35, 255)",
+        "wf_color_2":          "rgba(10, 20, 70, 255)",
+        "wf_color_3":          "rgba(0, 40, 160, 255)",
+        "wf_color_4":          "rgba(0, 150, 180, 255)",
+        "wf_color_5":          "rgba(0, 220, 100, 255)",
+        "wf_color_6":          "rgba(180, 220, 0, 255)",
+        "wf_color_7":          "rgba(255, 140, 0, 255)",
+        "wf_color_8":          "rgba(255, 40, 0, 255)",
+        "wf_color_9":          "rgba(255, 255, 255, 255)",
     },
 
     "light": {
@@ -478,6 +487,15 @@ PRESETS = {
         "wf_freq_tick":        "rgba(55, 55, 65, 255)",
         "wf_cursor":           "rgba(240, 228, 66, 255)",
         "wf_palette":          "viridis",
+        "wf_color_1":          "rgba(68, 1, 84, 255)",
+        "wf_color_2":          "rgba(72, 36, 117, 255)",
+        "wf_color_3":          "rgba(56, 88, 140, 255)",
+        "wf_color_4":          "rgba(39, 130, 142, 255)",
+        "wf_color_5":          "rgba(31, 158, 137, 255)",
+        "wf_color_6":          "rgba(53, 183, 121, 255)",
+        "wf_color_7":          "rgba(110, 206, 88, 255)",
+        "wf_color_8":          "rgba(181, 222, 43, 255)",
+        "wf_color_9":          "rgba(253, 231, 37, 255)",
     },
 }
 

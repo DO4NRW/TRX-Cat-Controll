@@ -1734,6 +1734,15 @@ _THEME_FIELDS = [
     ("vu_green",            "VU Grün"),
     ("vu_yellow",           "VU Gelb"),
     ("vu_red",              "VU Rot"),
+    ("wf_color_1",          "Wasserfall 1"),
+    ("wf_color_2",          "Wasserfall 2"),
+    ("wf_color_3",          "Wasserfall 3"),
+    ("wf_color_4",          "Wasserfall 4"),
+    ("wf_color_5",          "Wasserfall 5"),
+    ("wf_color_6",          "Wasserfall 6"),
+    ("wf_color_7",          "Wasserfall 7"),
+    ("wf_color_8",          "Wasserfall 8"),
+    ("wf_color_9",          "Wasserfall 9"),
 ]
 
 
