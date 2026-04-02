@@ -209,7 +209,7 @@ class IC705Widget(QWidget):
         self.slider_span.setRange(0, 6)
         self.slider_span.setValue(3)
         self.slider_span.setFixedWidth(16)
-        self.slider_span.setStyleSheet(_vslider_style if '_vslider_style' in dir() else _SLIDER_STYLE())
+        self.slider_span.setInvertedAppearance(True)  # Oben = großer Span
         self.slider_span.valueChanged.connect(self._update_span_label)
         self.slider_span.sliderReleased.connect(self._apply_span)
 
