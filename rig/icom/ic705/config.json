@@ -48,7 +48,7 @@
         "hold_ms": 700
     },
     "smeter": {
-        "s9_raw": 130,
+        "s9_raw": 100,
         "max_raw": 241,
         "steps_over_s9": [
             "S9+10",

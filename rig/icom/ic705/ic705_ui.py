@@ -48,6 +48,80 @@ _SLIDER_STYLE = lambda: f"""QSlider::groove:horizontal {{ background: {T['slider
     QSlider::sub-page:horizontal {{ background: {T['slider_fill']}; border-radius: 3px; }}"""
 
 
+class _SegmentedMeter(QWidget):
+    """S-Meter als segmentierte Blöcke mit Tick-Marks oben."""
+    def __init__(self, segments, parent=None):
+        super().__init__(parent)
+        self._segments = segments
+        self._value = 0  # 0-1000
+        from PySide6.QtGui import QPainter, QColor, QPen
+
+    def setValue(self, val):
+        self._value = val
+        self.update()
+
+    def value(self):
+        return self._value
+
+    def paintEvent(self, event):
+        from PySide6.QtGui import QPainter, QColor, QPen
+        from PySide6.QtCore import QRect
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        w = self.width()
+        h = self.height()
+        n = self._segments
+        gap = 2
+        tick_h = 4
+
+        # Tick-Marks oben (vertikale Striche)
+        r, g, b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
+            T.get('smeter_label_inactive', 'rgba(136,136,136,255)'))
+        tick_color = QColor(r, g, b)
+        p.setPen(QPen(tick_color, 1))
+        for i in range(n):
+            cx = int((i + 0.5) * w / n)
+            p.drawLine(cx, 0, cx, tick_h)
+
+        # Segmente
+        bar_y = tick_h + 1
+        bar_h = h - bar_y
+        seg_w = w / n
+        fill_frac = self._value / 1000.0
+        fill_segments = fill_frac * n
+
+        # Hintergrund
+        bg_r, bg_g, bg_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
+            T.get('bg_dark', 'rgba(26,26,26,255)'))
+        border_r, border_g, border_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
+            T.get('border', 'rgba(85,85,85,255)'))
+        bar_r, bar_g, bar_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
+            T.get('smeter_bar', 'rgba(6,198,164,255)'))
+
+        for i in range(n):
+            x = int(i * seg_w) + gap // 2
+            sw = int(seg_w) - gap
+            rect = QRect(x, bar_y, sw, bar_h)
+
+            if i < int(fill_segments):
+                # Voller Block
+                p.fillRect(rect, QColor(bar_r, bar_g, bar_b))
+            elif i < fill_segments:
+                # Teilweise gefüllt (letzter Block)
+                p.fillRect(rect, QColor(bg_r, bg_g, bg_b))
+                part_w = int(sw * (fill_segments - int(fill_segments)))
+                p.fillRect(QRect(x, bar_y, part_w, bar_h), QColor(bar_r, bar_g, bar_b))
+            else:
+                # Leer
+                p.fillRect(rect, QColor(bg_r, bg_g, bg_b))
+
+            # Border
+            p.setPen(QPen(QColor(border_r, border_g, border_b), 1))
+            p.drawRect(rect)
+
+        p.end()
+
+
 class IC705Widget(QWidget):
     """Icom IC705 Rig-Widget — funktioniert mit jedem CatBase-Backend."""
 
@@ -281,6 +355,7 @@ class IC705Widget(QWidget):
         self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
         root.addWidget(self.lbl_smeter_info)
 
+        # S-Meter Labels
         scale_row = QHBoxLayout()
         scale_row.setSpacing(0)
         self.s_labels = []
@@ -292,14 +367,9 @@ class IC705Widget(QWidget):
             self.s_labels.append(lbl)
         root.addLayout(scale_row)
 
-        self.smeter_bar = QProgressBar()
-        self.smeter_bar.setFixedHeight(18)
-        self.smeter_bar.setRange(0, 1000)
-        self.smeter_bar.setValue(0)
-        self.smeter_bar.setTextVisible(False)
-        self.smeter_bar.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
-            QProgressBar::chunk {{ background-color: {T['smeter_bar']}; border-radius: 3px; }}""")
+        # S-Meter Segmented Bar (Custom Widget)
+        self.smeter_bar = _SegmentedMeter(len(self._S_LABELS), self)
+        self.smeter_bar.setFixedHeight(20)
         root.addWidget(self.smeter_bar)
 
         # ── 7. TX Meter ──────────────────────────────────────────────
@@ -1171,9 +1241,7 @@ class IC705Widget(QWidget):
 
         # S-Meter
         self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
-        self.smeter_bar.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
-            QProgressBar::chunk {{ background-color: {T['smeter_bar']}; border-radius: 3px; }}""")
+        self.smeter_bar.update()  # Custom Widget repaint
         for lbl in self.s_labels:
             lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
 
