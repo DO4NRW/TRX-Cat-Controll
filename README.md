@@ -35,11 +35,23 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 - S-Meter mit Kalibrierung aus Config
 
 ### Wasserfall / Spektrum (Icom)
-- Echtzeit Spektrum + scrollender Wasserfall via CI-V Scope
+- Echtzeit Spektrum + fließender Wasserfall via CI-V Scope
+- **Click-to-Tune:** Klick im Wasserfall/Spektrum setzt Frequenz
+- **Mausrad-Tuning:** Frequenz hoch/runter um Step-Size
+- **Hover-Cursor:** Frequenz-Label am Mauszeiger
 - Frequenz-Leiste mit Labels
 - Center-Marker + Passband-Anzeige (USB/LSB/FM)
 - Span-Slider (2.5 kHz - 500 kHz)
 - Smooth Blend zwischen Sweeps
+- Alle Farben aus Theme-System
+
+### Bug Report System
+- **Crash-Erkennung:** Automatischer Dialog beim Start nach Absturz
+- **Session-Log:** Trackt alle User-Aktionen (Buttons, Connects, Fehler)
+- **Report-Server:** Eigener Server (`raport.pcore.de`), kein Token im Code
+- **HMAC-Signatur:** Spam-Schutz, nur echte RigLink-Reports
+- **Hardware-Info:** CPU, RAM, GPU, Disks, Monitore, USB-Geräte
+- **Datenschutz:** Vollständige Vorschau vor dem Senden
 
 ### PTT
 - Methoden: CAT, RTS, DTR, VOX
@@ -89,7 +101,7 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
-### Main GUI
+### Main GUI (FT-991A, Light Theme)
 ![Main GUI](Screenshot0.png)
 
 ### Radio Setup (CAT + PTT)
@@ -101,8 +113,14 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ### Theme Editor
 ![Theme Editor](Screenshot3.png)
 
-### IC-705 Wasserfall / Spektrum
+### IC-705 Wasserfall / Spektrum (Dark Theme, Click-to-Tune)
 ![IC-705 Waterfall](Screenshot4.png)
+
+### Light Theme mit Menü
+![Light Theme](Screenshot5.png)
+
+### Bug Report Dialog (Hardware-Info)
+![Bug Report](Screenshot6.png)
 
 ---
 
