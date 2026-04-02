@@ -377,13 +377,13 @@ class IC705Widget(QWidget):
 
         root.addLayout(dsp_row)
 
-        # ── 5. Power + Notch Slider (nebeneinander) ────────────────
-        pwr_notch_row = QHBoxLayout()
-        pwr_notch_row.setSpacing(6)
+        # ── 5. Power Slider ──────────────────────────────────────────
+        pwr_row = QHBoxLayout()
+        pwr_row.setSpacing(6)
 
         self.lbl_pwr = QLabel("PWR: 50")
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        pwr_notch_row.addWidget(self.lbl_pwr)
+        pwr_row.addWidget(self.lbl_pwr)
 
         self.slider_pwr = QSlider(Qt.Horizontal)
         self.slider_pwr.setRange(0, 255)
@@ -391,9 +391,43 @@ class IC705Widget(QWidget):
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
         self.slider_pwr.valueChanged.connect(lambda v: self.lbl_pwr.setText(f"PWR: {v * 10 / 255:.1f}W"))
         self.slider_pwr.sliderReleased.connect(self._apply_power)
-        pwr_notch_row.addWidget(self.slider_pwr, stretch=1)
+        pwr_row.addWidget(self.slider_pwr, stretch=1)
 
-        root.addLayout(pwr_notch_row)
+        root.addLayout(pwr_row)
+
+        # ── 5b. PBT Slider (BW + SFT wie IC-705 Twin PBT) ───────
+        pbt_row = QHBoxLayout()
+        pbt_row.setSpacing(6)
+
+        self.lbl_bw = QLabel("BW: 0")
+        self.lbl_bw.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.lbl_bw.setFixedWidth(55)
+        pbt_row.addWidget(self.lbl_bw)
+
+        self.slider_pbt_inner = QSlider(Qt.Horizontal)
+        self.slider_pbt_inner.setRange(0, 255)
+        self.slider_pbt_inner.setValue(128)
+        self.slider_pbt_inner.setStyleSheet(_SLIDER_STYLE())
+        self.slider_pbt_inner.setToolTip("PBT Inner (Bandbreite)")
+        self.slider_pbt_inner.valueChanged.connect(self._update_pbt_labels)
+        self.slider_pbt_inner.sliderReleased.connect(self._apply_pbt)
+        pbt_row.addWidget(self.slider_pbt_inner, stretch=1)
+
+        self.lbl_sft = QLabel("SFT: 0")
+        self.lbl_sft.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.lbl_sft.setFixedWidth(50)
+        pbt_row.addWidget(self.lbl_sft)
+
+        self.slider_pbt_outer = QSlider(Qt.Horizontal)
+        self.slider_pbt_outer.setRange(0, 255)
+        self.slider_pbt_outer.setValue(128)
+        self.slider_pbt_outer.setStyleSheet(_SLIDER_STYLE())
+        self.slider_pbt_outer.setToolTip("PBT Outer (Shift)")
+        self.slider_pbt_outer.valueChanged.connect(self._update_pbt_labels)
+        self.slider_pbt_outer.sliderReleased.connect(self._apply_pbt)
+        pbt_row.addWidget(self.slider_pbt_outer, stretch=1)
+
+        root.addLayout(pbt_row)
 
         # ── 6. S-Meter ───────────────────────────────────────────────
         self.lbl_smeter_info = QLabel("S-METER: ---")
@@ -649,6 +683,18 @@ class IC705Widget(QWidget):
             self.slider_pwr.blockSignals(False)
             self.lbl_pwr.setText(f"PWR: {raw * 10 / 255:.1f}W")
 
+        # PBT Inner/Outer auslesen
+        for sub, slider in [(0x07, self.slider_pbt_inner), (0x08, self.slider_pbt_outer)]:
+            result = self._cat._civ_query(0x14, sub=sub)
+            if result:
+                _, data = result
+                if len(data) >= 3 and data[0] == sub:
+                    val = self._cat._bcd_to_int_msb(data[1:3])
+                    slider.blockSignals(True)
+                    slider.setValue(val)
+                    slider.blockSignals(False)
+        self._update_pbt_labels()
+
         # DSP Status auslesen (generisch über Handler)
         comp = self._cat.get_comp()
         if comp is not None and "COMP" in self.dsp_buttons:
@@ -875,9 +921,25 @@ class IC705Widget(QWidget):
                 return True
         return super().eventFilter(obj, event)
 
-    def _apply_notch(self):
-        if self._cat and self._cat.connected:
-            self._cat.set_notch_freq(self.slider_notch.value())
+    def _update_pbt_labels(self):
+        inner = self.slider_pbt_inner.value()
+        outer = self.slider_pbt_outer.value()
+        # BW = Differenz der beiden (wie am IC-705)
+        bw = abs(outer - inner)
+        sft = ((inner + outer) / 2 - 128)
+        self.lbl_bw.setText(f"BW: {bw}")
+        self.lbl_sft.setText(f"SFT: {int(sft)}")
+
+    def _apply_pbt(self):
+        if not self._cat or not self._cat.connected:
+            return
+        inner = self.slider_pbt_inner.value()
+        outer = self.slider_pbt_outer.value()
+        # CI-V: 0x14 0x07 = PBT Inner, 0x14 0x08 = PBT Outer
+        self._cat._civ_send(0x14, sub=0x07,
+            data=self._cat._int_to_bcd_msb(inner, 2))
+        self._cat._civ_send(0x14, sub=0x08,
+            data=self._cat._int_to_bcd_msb(outer, 2))
 
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
@@ -1292,9 +1354,13 @@ class IC705Widget(QWidget):
         self.btn_preamp.setStyleSheet(_BTN_DARK())
         self.btn_agc.setStyleSheet(_BTN_DARK())
 
-        # Power
+        # Power + PBT
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+        self.lbl_bw.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.lbl_sft.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.slider_pbt_inner.setStyleSheet(_SLIDER_STYLE())
+        self.slider_pbt_outer.setStyleSheet(_SLIDER_STYLE())
 
         # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
