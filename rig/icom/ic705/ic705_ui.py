@@ -302,6 +302,21 @@ class IC705Widget(QWidget):
         self.lbl_span.setText("50k")
         slider_col.addWidget(self.lbl_span)  # Wert unten
 
+        # Palette-Button (cycled durch die Paletten)
+        self._palette_names = list(self.waterfall.PALETTES.keys())
+        self._palette_idx = 0
+        self.btn_palette = QPushButton("SDR")
+        self.btn_palette.setFixedSize(30, 20)
+        self.btn_palette.setCursor(Qt.PointingHandCursor)
+        self.btn_palette.setStyleSheet(f"""
+            QPushButton {{ background: {T['bg_mid']}; color: {T['text_muted']};
+                border: 1px solid {T['border']}; border-radius: 3px; font-size: 7px; }}
+            QPushButton:hover {{ border-color: {T['accent']}; }}
+        """)
+        self.btn_palette.setToolTip("Wasserfall-Palette wechseln")
+        self.btn_palette.clicked.connect(self._cycle_palette)
+        slider_col.addWidget(self.btn_palette)
+
         wf_row.addLayout(slider_col)
 
         root.addLayout(wf_row, stretch=1)
@@ -1066,6 +1081,12 @@ class IC705Widget(QWidget):
                     self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
         except Exception as e:
             print(f"DSP laden fehlgeschlagen: {e}")
+
+    def _cycle_palette(self):
+        self._palette_idx = (self._palette_idx + 1) % len(self._palette_names)
+        name = self._palette_names[self._palette_idx]
+        self.waterfall.set_palette(name)
+        self.btn_palette.setText(name.upper()[:4])
 
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
