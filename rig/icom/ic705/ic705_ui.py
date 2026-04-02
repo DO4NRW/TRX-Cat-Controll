@@ -485,6 +485,8 @@ class IC705Widget(QWidget):
         self._cat = cat
         self._poll_count = 0
         self._sync_rig_state()
+        # DSP Buttons nochmal forcieren aus gespeichertem State
+        self._load_dsp_state()
         # Scope aktivieren (IC-705 CI-V)
         if hasattr(cat, 'scope_enable'):
             cat.scope_enable(True)
