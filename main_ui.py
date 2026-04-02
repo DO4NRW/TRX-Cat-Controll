@@ -14,6 +14,7 @@ from core.theme import T, load_theme, save_theme, apply_theme, hex_to_rgba, rgba
     rgba_parts, with_alpha, PRESETS, PRESET_NAMES, register_refresh, unregister_refresh, \
     detect_preset, get_last_theme, themed_icon, \
     load_user_themes, save_user_theme, delete_user_theme, is_builtin_preset
+from core.session_logger import log_action, log_event, log_error
 
 _ICONS = os.path.join(os.path.dirname(__file__), "assets", "icons")
 _RIG_DIR = os.path.join(os.path.dirname(__file__), "rig")
@@ -794,11 +795,14 @@ class RadioSetupOverlay(QWidget):
         self.btn_save.setStyleSheet(style)
         QTimer.singleShot(2000, lambda: self.btn_save.setStyleSheet(self._save_style_default))
 
-        # Top-Bar Combo synchronisieren (nur wenn Rig gewechselt wurde)
+        # Top-Bar Combo synchronisieren + Rig als konfiguriert markieren
         if ok:
             main_win = self.parent().window() if self.parent() else None
             if main_win and hasattr(main_win, "combo_rig_select"):
                 new_rig = self.combo_rig.currentText()
+                # Rig zur configured_rigs Liste hinzufügen
+                if hasattr(main_win, "_add_configured_rig"):
+                    main_win._add_configured_rig(new_rig)
                 if main_win.combo_rig_select.currentText() != new_rig:
                     main_win.combo_rig_select.setCurrentText(new_rig)
 
@@ -2285,9 +2289,14 @@ class MainWindow(QMainWindow):
         self.action_theme = QAction("Theme", self)
         self.action_theme.setIcon(themed_icon(os.path.join(_ICONS, "settings.svg")))
 
+        self.action_report = QAction("Bug Report", self)
+        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug.svg")))
+
         self.main_menu.addAction(self.action_settings)
         self.main_menu.addAction(self.action_audio)
         self.main_menu.addAction(self.action_theme)
+        self.main_menu.addSeparator()
+        self.main_menu.addAction(self.action_report)
 
         def show_custom_menu():
             button_pos = self.btn_menu.mapToGlobal(QPoint(0, 0))
@@ -2309,6 +2318,13 @@ class MainWindow(QMainWindow):
         # Theme Editor Overlay
         self.theme_editor_overlay = ThemeEditorOverlay(self.central_widget)
         self.action_theme.triggered.connect(self.theme_editor_overlay.show_overlay)
+
+        # Bug Report
+        def _open_report():
+            log_action("Menü → Bug Report")
+            from core.reporter import show_report_dialog
+            show_report_dialog(self)
+        self.action_report.triggered.connect(_open_report)
 
         # =====================================================================
         # END OF BLOCK
@@ -2388,8 +2404,9 @@ class MainWindow(QMainWindow):
         self.top_layout.addWidget(self.btn_mute)
 
         # ── Rig-Auswahl Combo in der Top-Bar ─────────────────────────
+        # Zeigt nur konfigurierte Rigs (aus status_conf.json), nicht alle gescannten
         self.combo_rig_select = DropDownComboBox()
-        self.combo_rig_select.addItems(_scan_rigs())
+        self.combo_rig_select.addItems(self._get_configured_rigs())
         self.combo_rig_select.setFixedHeight(40)
         self.combo_rig_select.setMinimumWidth(160)
         self.combo_rig_select.setFocusPolicy(Qt.NoFocus)
@@ -2441,12 +2458,12 @@ class MainWindow(QMainWindow):
         status_row.setSpacing(0)
 
         self.status_label = QLabel(" Status: Ready")
-        self.status_label.setStyleSheet("color: #ffffff; padding-left: 10px;")
+        self.status_label.setStyleSheet(f"color: {T['text']}; padding-left: 10px;")
         status_row.addWidget(self.status_label)
 
         from core.updater import CURRENT_VERSION
         self.lbl_version = QLabel(f"v{CURRENT_VERSION}")
-        self.lbl_version.setStyleSheet("color: #888888; font-size: 11px; padding-right: 8px;")
+        self.lbl_version.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; padding-right: 8px;")
         self.lbl_version.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         status_row.addWidget(self.lbl_version)
 
@@ -2606,6 +2623,13 @@ class MainWindow(QMainWindow):
 
         self.status_bar_widget.setStyleSheet(self._STATUS_ON if self._cat_connected else self._STATUS_OFF)
 
+        # Status-Bar Labels
+        self.status_label.setStyleSheet(f"color: {T['text']}; padding-left: 10px; font-family: Consolas;")
+        self.lbl_version.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; padding-right: 8px;")
+
+        # Report-Action Icon
+        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug.svg")))
+
         # Alle ToggleButtons: Icons + Style neu laden
         for tb in self.findChildren(ToggleButton):
             tb._load_icons()
@@ -2712,6 +2736,7 @@ class MainWindow(QMainWindow):
                 self._cat_connected = True
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_ON)
                 self.status_label.setText(f" CAT: Verbunden ({port} @ {baud})")
+                log_event(f"CAT verbunden: {rig_name} auf {port} @ {baud}")
                 self.status_bar_widget.setStyleSheet(self._STATUS_ON)
 
                 # Rig-Widget mit CatHandler verbinden
@@ -2731,6 +2756,7 @@ class MainWindow(QMainWindow):
                 self._cat_handler = None
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
                 self.status_label.setText(f" CAT: Verbindung fehlgeschlagen ({port})")
+                log_error(f"CAT Verbindung fehlgeschlagen: {port} @ {baud}")
                 self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
                 QTimer.singleShot(3000, lambda: (
                     self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
@@ -2739,6 +2765,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
             self.status_label.setText(f" CAT Fehler: {e}")
+            log_error(f"CAT Exception: {e}")
             self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
             QTimer.singleShot(3000, lambda: (
                 self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
@@ -2746,6 +2773,7 @@ class MainWindow(QMainWindow):
 
     def _disconnect_cat(self):
         """CAT-Verbindung trennen — sofort connected=False, Polling stop, dann Serial close."""
+        log_event("CAT Disconnect")
         # 1. CatHandler sofort als disconnected markieren (stoppt laufende Queries)
         if self._cat_handler:
             self._cat_handler.connected = False
@@ -2800,6 +2828,7 @@ class MainWindow(QMainWindow):
             pass
 
     def _toggle_vox(self, checked):
+        log_action(f"VOX {'aktiviert' if checked else 'deaktiviert'}")
         if self.rig_widget and hasattr(self.rig_widget, "set_vox_enabled"):
             self.rig_widget.set_vox_enabled(checked)
 
@@ -2891,6 +2920,51 @@ class MainWindow(QMainWindow):
             print(f"Rig-Widget geladen: {class_name}")
         except Exception as e:
             print(f"Rig-Widget laden fehlgeschlagen: {e}")
+
+
+    # ── Configured Rigs ─────────────────────────────────────────────
+
+    def _get_configured_rigs(self):
+        """Liest configured_rigs aus status_conf.json. Fallback: alle gescannten Rigs."""
+        try:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "configs", "status_conf.json")
+            with open(path) as f:
+                cfg = json.load(f)
+            rigs = cfg.get("configured_rigs", [])
+            if rigs:
+                return rigs
+        except Exception:
+            pass
+        return _scan_rigs()
+
+    def _add_configured_rig(self, rig_name):
+        """Fügt ein Rig zur configured_rigs Liste hinzu (nach Save im Radio Setup)."""
+        try:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "configs", "status_conf.json")
+            cfg = {}
+            if os.path.exists(path):
+                with open(path) as f:
+                    cfg = json.load(f)
+            rigs = cfg.get("configured_rigs", [])
+            if rig_name not in rigs:
+                rigs.append(rig_name)
+                cfg["configured_rigs"] = rigs
+                with open(path, "w") as f:
+                    json.dump(cfg, f, indent=4)
+                # Top-Bar Combo aktualisieren
+                if self.combo_rig_select.findText(rig_name) == -1:
+                    self.combo_rig_select.addItem(rig_name)
+        except Exception as e:
+            print(f"configured_rigs update fehlgeschlagen: {e}")
+
+    def closeEvent(self, event):
+        """Sauberen Exit markieren wenn User das Fenster schließt."""
+        from core.session_logger import mark_clean_exit
+        log_event("Fenster geschlossen (X-Button)")
+        mark_clean_exit()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":

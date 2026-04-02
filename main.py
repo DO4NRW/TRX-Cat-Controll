@@ -13,18 +13,30 @@ def main():
         T.update(PRESETS[last])
         save_theme()  # theme.json synchron halten
 
+    from core.session_logger import start_session, had_crash, has_previous_log
     from main_ui import MainWindow
     from core.status import StatusManager
+
+    # Crash-Check BEVOR neue Session startet
+    _prev_crash = had_crash() and has_previous_log()
+
+    # Neue Session starten (setzt clean_exit=False)
+    start_session()
 
     window = MainWindow()
     #StatusManager Start
     stat_mgr = StatusManager()
-    text, color = stat_mgr.get_status_data("READY")
+    text, _ = stat_mgr.get_status_data("READY")
     window.status_label.setText(text.upper())
-    window.status_label.setStyleSheet(window.status_label.styleSheet() + f"color:{color}; padding-left: 10px; font-family: Consolas;")
+    window.status_label.setStyleSheet(f"color: {T['text']}; padding-left: 10px; font-family: Consolas;")
 
 
     window.show()
+
+    # Crash-Report Dialog (wenn letzte Session abgestürzt ist)
+    if _prev_crash:
+        from core.reporter import show_crash_dialog
+        show_crash_dialog(window)
 
     # Auto-Update Check im Hintergrund
     from core.updater import UpdateChecker, show_update_dialog

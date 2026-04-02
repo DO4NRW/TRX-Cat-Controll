@@ -35,6 +35,8 @@ class IcomCat(CatBase):
         self._scope_div_max = 11
         self._scope_latest = None
         self._scope_span_hz = 0
+        self._scope_center_hz = 0
+        self._poll_dbg_count = 0
         import threading
         self._scope_lock = threading.Lock()
 
@@ -160,6 +162,28 @@ class IcomCat(CatBase):
             data.append((hi << 4) | lo)
         return bytes(data)
 
+    @staticmethod
+    def _int_to_bcd_msb(value, length=2):
+        """Integer → BCD bytes (MSB first, für Level/Gain/Power)."""
+        data = []
+        for _ in range(length):
+            lo = value % 10
+            value //= 10
+            hi = value % 10
+            value //= 10
+            data.append((hi << 4) | lo)
+        return bytes(reversed(data))
+
+    @staticmethod
+    def _bcd_to_int_msb(data):
+        """BCD bytes → integer (MSB first, für Level/Gain/Power)."""
+        result = 0
+        for b in data:
+            hi = (b >> 4) & 0x0F
+            lo = b & 0x0F
+            result = result * 100 + hi * 10 + lo
+        return result
+
     # ── Frequency ─────────────────────────────────────────────────────
 
     def get_frequency(self) -> int | None:
@@ -246,15 +270,30 @@ class IcomCat(CatBase):
         if result:
             cmd, data = result
             if len(data) >= 3 and data[0] == 0x0A:
-                raw = self._bcd_to_int(data[1:3])
-                return min(100, int(raw / 255 * 100))
+                raw = self._bcd_to_int_msb(data[1:3])
+                return min(100, round(raw / 255 * 100))
         return None
 
     def set_power(self, pct: int):
         pct = max(0, min(100, int(pct)))
-        raw = int(pct / 100 * 255)
-        data = self._int_to_bcd(raw, 2)
-        self._civ_send(0x14, sub=0x0A, data=data)
+        raw = round(pct / 100 * 255)
+        data = self._int_to_bcd_msb(raw, 2)
+        self._civ_query(0x14, sub=0x0A, data=data)
+
+    def get_power_raw(self) -> int | None:
+        """Power als Rohwert 0-255 lesen (kein Prozent-Umrechnen)."""
+        result = self._civ_query(0x14, sub=0x0A)
+        if result:
+            cmd, data = result
+            if len(data) >= 3 and data[0] == 0x0A:
+                return self._bcd_to_int_msb(data[1:3])
+        return None
+
+    def set_power_raw(self, raw: int):
+        """Power als Rohwert 0-255 setzen (kein Prozent-Umrechnen)."""
+        raw = max(0, min(255, int(raw)))
+        data = self._int_to_bcd_msb(raw, 2)
+        self._civ_query(0x14, sub=0x0A, data=data)
 
     # ── Preamp / ATT ──────────────────────────────────────────────────
 
@@ -444,6 +483,7 @@ class IcomCat(CatBase):
 
             if div_order == 1:
                 if len(frame) >= 18:
+                    self._scope_center_hz = self._bcd_to_int(frame[10:15])
                     self._scope_span_hz = self._bcd_to_int(frame[15:18])
                 continue
 

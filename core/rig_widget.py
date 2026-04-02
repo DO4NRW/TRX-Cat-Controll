@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 
 from core.theme import T, register_refresh
+from core.session_logger import log_action, log_event, log_error
 
 # ── Style Helpers ─────────────────────────────────────────────────────
 
@@ -418,6 +419,7 @@ class GenericRigWidget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def _set_mode(self, mode):
+        log_action(f"Mode → {mode}")
         if not self._cat or not self._cat.connected:
             return
         if self._digi_modifier:
@@ -455,6 +457,7 @@ class GenericRigWidget(QWidget):
     def _update_mode_buttons(self):
         for m, btn in self.mode_buttons.items():
             if m in self._DIGI_MODES:
+                btn.setStyleSheet(_BTN_ACTIVE() if self._digi_modifier == m else _BTN_DARK())
                 continue
             btn.setStyleSheet(_BTN_ACTIVE() if m == self._current_mode else _BTN_DARK())
             if self._digi_modifier:
@@ -506,6 +509,7 @@ class GenericRigWidget(QWidget):
         self._cat.step_frequency(step)
 
     def _set_freq_from_input(self):
+        log_action(f"Frequenz → {self.input_freq.text().strip()}")
         if not self._cat or not self._cat.connected:
             return
         try:
@@ -528,6 +532,7 @@ class GenericRigWidget(QWidget):
     def _ptt_on(self):
         if self._ptt_active:
             return
+        log_action("PTT ON (TX)")
         self._ptt_active = True
         self.btn_ptt.setText("TX")
         self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_tx_bg']}; color: {T['text']};
@@ -545,6 +550,7 @@ class GenericRigWidget(QWidget):
     def _ptt_off(self):
         if not self._ptt_active:
             return
+        log_action("PTT OFF (RX)")
         self._ptt_active = False
         self.btn_ptt.setText("RX (SPACE)")
         self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
@@ -622,6 +628,7 @@ class GenericRigWidget(QWidget):
 
     def start_audio(self, config_path):
         """Audio-Streams starten basierend auf Rig-Config."""
+        log_event(f"Audio Start: {config_path}")
         try:
             subprocess.run(["pkill", "-9", "-f", "pw-cat"],
                          capture_output=True, timeout=3)
@@ -800,10 +807,43 @@ class GenericRigWidget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def refresh_theme(self):
+        # Frequenz + Tuning
         self.lbl_freq.setStyleSheet(f"color: {T['text']}; font-size: 32px; border: none;")
         self.btn_step_down.setStyleSheet(_BTN_DARK())
         self.btn_step_up.setStyleSheet(_BTN_DARK())
         self.combo_step.setStyleSheet(_COMBO_STYLE())
         self.input_freq.setStyleSheet(_INPUT_STYLE())
-        self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+        self.btn_set_freq.setStyleSheet(f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
+            border: 2px solid {T['accent']}; border-radius: 4px; padding: 4px 12px; font-size: 13px; font-weight: bold; }}
+            QPushButton:hover {{ background-color: {T['bg_light']}; }}""")
+
+        # Mode + Digi Buttons
         self._update_mode_buttons()
+
+        # DSP Buttons
+        for name, btn in self.dsp_buttons.items():
+            btn.setStyleSheet(_BTN_ACTIVE() if btn.isChecked() else _BTN_DARK())
+        self.btn_preamp.setStyleSheet(_BTN_DARK())
+
+        # Power
+        self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+
+        # S-Meter
+        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        self.smeter_bar.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
+            QProgressBar::chunk {{ background-color: {T['smeter_bar']}; border-radius: 3px; }}""")
+        for lbl in self.s_labels:
+            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
+
+        # TX Meter
+        self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        self.tx_bar.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
+            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}""")
+
+        # PTT Button
+        if not self._ptt_active:
+            self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
+                border: 2px solid {T['ptt_rx_border']}; border-radius: 8px; }}""")

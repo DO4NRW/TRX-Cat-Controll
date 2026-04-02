@@ -14,3 +14,7 @@ venv/
 debug_trx.py
 CLAUDE.md
 test_*.py
+tests/
+source/
+logs/session.log
+logs/session_state.json

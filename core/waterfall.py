@@ -1,19 +1,26 @@
 """
 Wasserfall/Spektrum-Widget — inspiriert von AetherSDR.
-Spektrum oben mit Gradient-Fill, Wasserfall unten als Ring-Buffer.
+Spektrum oben mit Gradient-Fill, Wasserfall unten fließt von oben nach unten.
 """
 
 import numpy as np
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRect, Signal
 from PySide6.QtGui import (QPainter, QColor, QImage, QLinearGradient,
-                           QPainterPath, QPen, QFont)
+                           QPainterPath, QPen, QFont, QCursor)
 
 from core.theme import T
 
 
 class WaterfallWidget(QWidget):
-    """Spektrum + Wasserfall Display."""
+    """Spektrum + Wasserfall Display.
+
+    Signals:
+        frequency_clicked(int) — User hat auf eine Frequenz geklickt (Hz)
+        frequency_scrolled(int) — User hat mit Mausrad gescrollt (Step in Hz, +/-)
+    """
+    frequency_clicked = Signal(int)   # Frequenz in Hz
+    frequency_scrolled = Signal(int)  # Richtung * Step in Hz
 
     def __init__(self, parent=None, num_points=475, max_amp=160):
         super().__init__(parent)
@@ -21,35 +28,42 @@ class WaterfallWidget(QWidget):
         self._max_amp = max_amp
         self._spectrum = np.zeros(num_points, dtype=np.float32)
         self._wf_lines = 200
-        self._wf_write_row = 0
 
-        # Wasserfall als QImage (Ring-Buffer) — dunkelblauer Hintergrund wie Icom
-        self._wf_image = QImage(num_points, self._wf_lines, QImage.Format_RGB32)
-        self._wf_image.fill(QColor(8, 12, 35))
+        # Wasserfall als numpy Array (RGB) — fließt von oben nach unten
+        self._wf_data = np.zeros((self._wf_lines, num_points, 3), dtype=np.uint8)
+        # Dunkelblauer Hintergrund
+        self._wf_data[:, :, 0] = 8   # R
+        self._wf_data[:, :, 1] = 12  # G
+        self._wf_data[:, :, 2] = 35  # B
 
         # Display Settings
-        self._color_gain = 3.0     # Farbverstärkung (weniger aggressiv)
-        self._black_level = 3      # Unter diesem Wert = schwarz
-        self._spectrum_frac = 0.35  # 35% Spektrum, 65% Wasserfall
+        self._color_gain = 3.0
+        self._black_level = 3
+        self._spectrum_frac = 0.35
         self._fill_alpha = 0.75
 
-        # Farbpalette
+        # Farbpalette als numpy Array (256 x 3)
         self._palette = self._build_palette()
 
         self._last_spectrum = np.zeros(num_points, dtype=np.float32)
         self._display_spectrum = np.zeros(num_points, dtype=np.float32)
         self._scroll_timer = None
-        self._center_freq = 0  # Hz
+        self._center_freq = 0
         self._span_hz = 0
-        self._filter_width = 2700  # Default SSB Bandbreite in Hz
-        self._filter_side = "upper"  # "upper"=USB, "lower"=LSB, "both"=FM/AM
+        self._filter_width = 2700
+        self._filter_side = "upper"
+        self._step_hz = 100  # Tuning-Schrittweite für Mausrad
+        self._scroll_accum = 0  # Akkumulator für feine Scroll-Events
+        self._hover_x = -1     # Maus-Position X für Cursor-Linie
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.ClickFocus)
+        self.setCursor(QCursor(Qt.CrossCursor))
 
     def _build_palette(self):
         """SDR-Style Farbpalette: schwarz → blau → cyan → grün → gelb → rot → weiß."""
-        palette = []
         stops = [
             (0.00, (8, 12, 35)),
             (0.05, (10, 20, 70)),
@@ -61,6 +75,7 @@ class WaterfallWidget(QWidget):
             (0.88, (255, 40, 0)),
             (1.00, (255, 255, 255)),
         ]
+        palette = np.zeros((256, 3), dtype=np.uint8)
         for i in range(256):
             frac = i / 255.0
             lo = stops[0]
@@ -74,18 +89,17 @@ class WaterfallWidget(QWidget):
                 t = 0
             else:
                 t = (frac - lo[0]) / (hi[0] - lo[0])
-            r = int(lo[1][0] + t * (hi[1][0] - lo[1][0]))
-            g = int(lo[1][1] + t * (hi[1][1] - lo[1][1]))
-            b = int(lo[1][2] + t * (hi[1][2] - lo[1][2]))
-            palette.append(QColor(r, g, b).rgb())
+            palette[i, 0] = int(lo[1][0] + t * (hi[1][0] - lo[1][0]))
+            palette[i, 1] = int(lo[1][1] + t * (hi[1][1] - lo[1][1]))
+            palette[i, 2] = int(lo[1][2] + t * (hi[1][2] - lo[1][2]))
         return palette
 
-    def _amp_to_color_idx(self, val):
-        """Amplitude (0-160) → Farbindex (0-255) mit Gain und Black Level."""
-        if val <= self._black_level:
-            return 0
-        scaled = (val - self._black_level) * self._color_gain
-        return min(255, max(0, int(scaled)))
+    def _amp_to_color_idx(self, spectrum):
+        """Amplitude Array → Farbindex Array (vektorisiert)."""
+        scaled = (spectrum - self._black_level) * self._color_gain
+        scaled = np.clip(scaled, 0, 255).astype(np.uint8)
+        scaled[spectrum <= self._black_level] = 0
+        return scaled
 
     def start_scroll(self, interval_ms=80):
         """Wasserfall durchgehend scrollen starten."""
@@ -100,11 +114,17 @@ class WaterfallWidget(QWidget):
             self._scroll_timer.stop()
 
     def _scroll_tick(self):
-        """Jeder Tick: langsam zum Ziel blenden und neue Zeile schreiben."""
-        # 10% pro Tick Richtung Ziel → ~30 Zwischenzeilen pro Übergang
+        """Jeder Tick: blenden, neue Zeile oben rein, alles rutscht nach unten."""
         self._display_spectrum += 0.10 * (self._last_spectrum - self._display_spectrum)
         self._spectrum = self._display_spectrum.copy()
-        self._write_row(self._display_spectrum)
+
+        # Alle Zeilen um eins nach unten schieben
+        self._wf_data[1:] = self._wf_data[:-1]
+
+        # Neue Zeile oben (Zeile 0) schreiben
+        indices = self._amp_to_color_idx(self._display_spectrum)
+        self._wf_data[0] = self._palette[indices]
+
         self.update()
 
     def set_freq_info(self, center_hz, span_hz, filter_width=None, filter_side=None):
@@ -121,18 +141,62 @@ class WaterfallWidget(QWidget):
         if data is None or len(data) != self._num_points:
             return
         new = np.array(data, dtype=np.float32)
-        # Erstes Update: direkt setzen statt blenden
         if self._last_spectrum.max() == 0:
             self._display_spectrum = new.copy()
             self._spectrum = new.copy()
         self._last_spectrum = new
 
-    def _write_row(self, spectrum):
-        """Ring-Buffer: neue Zeile schreiben, Pointer weiter."""
-        for col in range(self._num_points):
-            idx = self._amp_to_color_idx(int(spectrum[col]))
-            self._wf_image.setPixel(col, self._wf_write_row, self._palette[idx])
-        self._wf_write_row = (self._wf_write_row + 1) % self._wf_lines
+    def set_step_hz(self, step):
+        """Tuning-Schrittweite für Mausrad setzen."""
+        self._step_hz = max(1, int(step))
+
+    def _x_to_freq(self, x):
+        """Pixel X-Position → Frequenz in Hz."""
+        if self._span_hz <= 0 or self._center_freq <= 0 or self.width() <= 0:
+            return 0
+        frac = x / self.width()
+        start_freq = self._center_freq - self._span_hz // 2
+        return int(start_freq + frac * self._span_hz)
+
+    def mousePressEvent(self, event):
+        """Klick → Frequenz setzen."""
+        if event.button() == Qt.LeftButton:
+            if self._span_hz > 0 and self._center_freq > 0:
+                freq = self._x_to_freq(int(event.position().x()))
+                if freq > 0:
+                    freq = round(freq / self._step_hz) * self._step_hz
+                    self.frequency_clicked.emit(freq)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Hover → Cursor-Linie anzeigen. Drag → Frequenz live nachführen."""
+        self._hover_x = int(event.position().x())
+        if event.buttons() & Qt.LeftButton:
+            if self._span_hz > 0 and self._center_freq > 0:
+                freq = self._x_to_freq(self._hover_x)
+                if freq > 0:
+                    freq = round(freq / self._step_hz) * self._step_hz
+                    self.frequency_clicked.emit(freq)
+        self.update()  # Cursor-Linie neu zeichnen
+        event.accept()
+
+    def leaveEvent(self, event):
+        """Maus verlässt Widget → Cursor-Linie ausblenden."""
+        self._hover_x = -1
+        self.update()
+        super().leaveEvent(event)
+
+    def wheelEvent(self, event):
+        """Mausrad → Frequenz hoch/runter um Step-Size."""
+        delta = event.angleDelta().y()
+        self._scroll_accum += delta
+        steps = self._scroll_accum // 120
+        self._scroll_accum -= steps * 120
+        if steps != 0:
+            self.frequency_scrolled.emit(int(steps * self._step_hz))
+        event.accept()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -143,16 +207,17 @@ class WaterfallWidget(QWidget):
             p.end()
             return
 
-        freq_bar_h = 18  # Frequenz-Leiste Höhe
+        freq_bar_h = 18
         spec_h = int((h - freq_bar_h) * self._spectrum_frac)
         wf_h = max(10, h - spec_h - freq_bar_h)
 
-        # ── Spektrum-Hintergrund (etwas heller für Kontrast) ────────
-        bg = QColor(18, 22, 30)
+        # ── Spektrum-Hintergrund ─────────────────────────────────────
+        from core.theme import T, rgba_parts
+        bg = QColor(*rgba_parts(T.get('wf_bg', 'rgba(18,22,30,255)')))
         p.fillRect(0, 0, w, spec_h, bg)
 
         # ── Grid ─────────────────────────────────────────────────────
-        grid_color = QColor(30, 40, 55)
+        grid_color = QColor(*rgba_parts(T.get('wf_grid', 'rgba(30,40,55,255)')))
         p.setPen(grid_color)
         for i in range(1, 4):
             y = int(spec_h * i / 4)
@@ -164,13 +229,12 @@ class WaterfallWidget(QWidget):
         # ── Spektrum (Balken + Linie) ────────────────────────────────
         peak = float(self._spectrum.max())
         if peak > 0:
-            accent = QColor(6, 198, 164)  # Teal direkt als RGB
+            accent = QColor(*rgba_parts(T.get('accent', 'rgba(6,198,164,255)')))
             n = self._num_points
             auto_scale = 0.85 / max(peak, 1)
 
-            # Gefüllte Balken pro Spalte (transparenter)
             fill_color = QColor(accent)
-            fill_color.setAlpha(60)
+            fill_color.setAlpha(30)
             line_points = []
 
             for px in range(w):
@@ -186,17 +250,18 @@ class WaterfallWidget(QWidget):
                     p.fillRect(px, y, 1, bar_h, fill_color)
                 line_points.append((px, y))
 
-            # Helle Linie obendrauf
-            p.setPen(QPen(accent, 2))
+            p.setPen(QPen(accent, 1))
             for i in range(1, len(line_points)):
                 p.drawLine(line_points[i-1][0], line_points[i-1][1],
                           line_points[i][0], line_points[i][1])
 
-        # ── Frequenz-Leiste (zwischen Spektrum und Wasserfall) ────────
+        # ── Frequenz-Leiste ──────────────────────────────────────────
         freq_y = spec_h
-        p.fillRect(0, freq_y, w, freq_bar_h, QColor(20, 25, 35))
-        # Obere + untere Linie
-        p.setPen(QPen(QColor(40, 50, 60), 1))
+        freq_bar_bg = QColor(*rgba_parts(T.get('wf_freq_bar', 'rgba(20,25,35,255)')))
+        freq_text_c = QColor(*rgba_parts(T.get('wf_freq_text', 'rgba(160,170,180,255)')))
+        freq_tick_c = QColor(*rgba_parts(T.get('wf_freq_tick', 'rgba(60,70,80,255)')))
+        p.fillRect(0, freq_y, w, freq_bar_h, freq_bar_bg)
+        p.setPen(QPen(freq_tick_c, 1))
         p.drawLine(0, freq_y, w, freq_y)
         p.drawLine(0, freq_y + freq_bar_h, w, freq_y + freq_bar_h)
 
@@ -205,7 +270,7 @@ class WaterfallWidget(QWidget):
             end_freq = self._center_freq + self._span_hz // 2
 
             p.setFont(QFont("Roboto", 8))
-            p.setPen(QColor(160, 170, 180))
+            p.setPen(freq_text_c)
             for i in range(6):
                 freq = start_freq + (end_freq - start_freq) * i / 5
                 x = int(w * i / 5)
@@ -217,55 +282,73 @@ class WaterfallWidget(QWidget):
                     p.drawText(x - 48, freq_y + 13, label)
                 else:
                     p.drawText(x - 22, freq_y + 13, label)
-                # Tick-Linie
-                p.setPen(QColor(60, 70, 80))
+                p.setPen(freq_tick_c)
                 p.drawLine(x, freq_y, x, freq_y + 4)
-                p.setPen(QColor(160, 170, 180))
+                p.setPen(freq_text_c)
 
-        # ── Wasserfall (Ring-Buffer: neueste oben) ────────────────────
-        from PySide6.QtCore import QRect
+        # ── Wasserfall (numpy → QImage, fließt von oben nach unten) ──
         wf_y = freq_y + freq_bar_h
-        wr = self._wf_write_row
-        img_h = self._wf_lines
 
-        # Teil 1: [wr..end] = ältere (unten)
-        # Teil 2: [0..wr) = neuere (oben)
-        # Neueste oben → erst [0..wr) dann [wr..end]
-        if wr == 0:
-            p.drawImage(QRect(0, wf_y, w, wf_h), self._wf_image)
-        else:
-            scale = wf_h / img_h
-            new_h = max(1, int(wr * scale))
-            old_h = wf_h - new_h
-            # Oben: neuere [wr-1 → 0] (umgekehrt gezeichnet = neueste ganz oben)
-            p.drawImage(QRect(0, wf_y, w, new_h),
-                       self._wf_image, QRect(0, 0, self._num_points, wr))
-            # Unten: ältere [end → wr]
-            if old_h > 0:
-                p.drawImage(QRect(0, wf_y + new_h, w, old_h),
-                           self._wf_image, QRect(0, wr, self._num_points, img_h - wr))
+        # numpy RGB Array → QImage
+        rgb = np.ascontiguousarray(self._wf_data)
+        # RGBX Format braucht 4 Bytes pro Pixel
+        h_img, w_img, _ = rgb.shape
+        rgbx = np.zeros((h_img, w_img, 4), dtype=np.uint8)
+        rgbx[:, :, 0] = rgb[:, :, 2]  # B
+        rgbx[:, :, 1] = rgb[:, :, 1]  # G
+        rgbx[:, :, 2] = rgb[:, :, 0]  # R
+        rgbx[:, :, 3] = 255           # A
 
-        # ── Center-Marker (nur im Wasserfall) ────────────────────────
+        img = QImage(rgbx.data, w_img, h_img, w_img * 4, QImage.Format_RGB32)
+        p.drawImage(QRect(0, wf_y, w, wf_h), img)
+
+        # ── Center-Marker + Passband (über Spektrum UND Wasserfall) ──
         if self._center_freq > 0:
+            ar, ag, ab, _ = rgba_parts(T.get('accent', 'rgba(6,198,164,255)'))
             cx = w // 2
-            p.setPen(QPen(QColor(6, 198, 164, 60), 1))
-            p.drawLine(cx, wf_y, cx, h)
+            # Center-Linie (über gesamte Höhe)
+            p.setPen(QPen(QColor(ar, ag, ab, 100), 1))
+            p.drawLine(cx, 0, cx, h)
 
-            # ── Bandbreiten-Anzeige (Passband) ───────────────────────
+            # Bandbreiten-Anzeige (Passband)
             if self._span_hz > 0 and self._filter_width > 0:
                 bw_pixels = int(self._filter_width / self._span_hz * w)
-                if self._filter_side == "upper":    # USB: rechts vom Center
+                if self._filter_side == "upper":
                     bx = cx
-                elif self._filter_side == "lower":  # LSB: links vom Center
+                elif self._filter_side == "lower":
                     bx = cx - bw_pixels
-                else:                               # FM/AM: beidseitig
+                else:
                     bx = cx - bw_pixels // 2
-                    bw_pixels = bw_pixels  # schon korrekt
-                # Halbtransparentes Rechteck
-                p.fillRect(bx, wf_y, bw_pixels, wf_h, QColor(6, 198, 164, 25))
+                # Halbtransparente Füllung über gesamte Höhe
+                p.fillRect(bx, 0, bw_pixels, h, QColor(ar, ag, ab, 40))
                 # Ränder
-                p.setPen(QPen(QColor(6, 198, 164, 80), 1))
-                p.drawLine(bx, wf_y, bx, h)
-                p.drawLine(bx + bw_pixels, wf_y, bx + bw_pixels, h)
+                p.setPen(QPen(QColor(ar, ag, ab, 140), 1))
+                p.drawLine(bx, 0, bx, h)
+                p.drawLine(bx + bw_pixels, 0, bx + bw_pixels, h)
+
+        # ── Maus-Cursor mit Frequenz-Label ───────────────────────────
+        if self._hover_x >= 0 and self._span_hz > 0:
+            cr, cg, cb, _ = rgba_parts(T.get('wf_cursor', 'rgba(0,220,100,255)'))
+            hx = self._hover_x
+            # Cursor-Linie
+            p.setPen(QPen(QColor(cr, cg, cb, 100), 1, Qt.DashLine))
+            p.drawLine(hx, 0, hx, h)
+
+            # Frequenz-Label am Cursor
+            hover_freq = self._x_to_freq(hx)
+            if hover_freq > 0:
+                hover_freq = round(hover_freq / self._step_hz) * self._step_hz
+                khz = (hover_freq % 1_000_000) // 1_000
+                hz = hover_freq % 1_000
+                label = f"{hover_freq // 1_000_000}.{khz:03d}.{hz:03d}"
+                p.setFont(QFont("Consolas", 9, QFont.Bold))
+                fm = p.fontMetrics()
+                tw = fm.horizontalAdvance(label) + 8
+                th = fm.height() + 4
+                lx = min(hx + 5, w - tw - 2)
+                ly = 4
+                p.fillRect(lx, ly, tw, th, QColor(0, 0, 0, 180))
+                p.setPen(QColor(cr, cg, cb))
+                p.drawText(lx + 4, ly + fm.ascent() + 2, label)
 
         p.end()

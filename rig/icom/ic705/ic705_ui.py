@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont
 
 from core.theme import T, register_refresh
+from core.session_logger import log_action, log_event, log_error
 
 # ── Style Helpers ─────────────────────────────────────────────────────
 
@@ -137,6 +138,9 @@ class IC705Widget(QWidget):
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
         self.waterfall.setMinimumHeight(180)
+        self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
+        self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
+        self.waterfall.installEventFilter(self)
         # Scroll Timer startet erst beim CAT Connect
         root.addWidget(self.waterfall, stretch=1)
 
@@ -160,6 +164,8 @@ class IC705Widget(QWidget):
         self.combo_step.setCurrentText("100")
         self.combo_step.setMinimumWidth(80)
         self.combo_step.setStyleSheet(_COMBO_STYLE())
+        self.combo_step.currentTextChanged.connect(
+            lambda t: self.waterfall.set_step_hz(int(t)) if t.isdigit() else None)
         tune_row.addWidget(self.combo_step, stretch=1)
 
         self.btn_step_up = QPushButton("STEP >")
@@ -258,10 +264,10 @@ class IC705Widget(QWidget):
         pwr_row.addWidget(self.lbl_pwr)
 
         self.slider_pwr = QSlider(Qt.Horizontal)
-        self.slider_pwr.setRange(0, 10)  # IC-705: max 10W
-        self.slider_pwr.setValue(50)
+        self.slider_pwr.setRange(0, 255)  # IC-705: 0-255 raw (= 0-10W)
+        self.slider_pwr.setValue(128)
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
-        self.slider_pwr.valueChanged.connect(lambda v: self.lbl_pwr.setText(f"PWR: {v}"))
+        self.slider_pwr.valueChanged.connect(lambda v: self.lbl_pwr.setText(f"PWR: {v * 10 / 255:.1f}W"))
         self.slider_pwr.sliderReleased.connect(self._apply_power)
         pwr_row.addWidget(self.slider_pwr, stretch=1)
 
@@ -369,8 +375,8 @@ class IC705Widget(QWidget):
 
         self._poll_count += 1
 
-        # Sync bei Connect
-        if self._poll_count <= 3:
+        # Sync bei Connect (mehr Ticks für langsame Rigs)
+        if self._poll_count <= 5:
             self._sync_rig_state()
 
         # Scope-Daten lesen: bei Query-Ticks aus dem Buffer, sonst direkt vom Port
@@ -382,9 +388,10 @@ class IC705Widget(QWidget):
                 self.waterfall.update_spectrum(spectrum)
                 if self._poll_count % 30 == 0:
                     print(f"SCOPE: {sum(1 for v in spectrum if v>0)}/475 max={max(spectrum)}")
-                # Freq+Span an Wasserfall für Labels
-                if self._current_freq > 0 and hasattr(self._cat, '_scope_span_hz'):
-                    self.waterfall.set_freq_info(self._current_freq, self._cat._scope_span_hz)
+                # Freq+Span an Wasserfall (echtes Scope-Center für genaues Click-to-Tune)
+                scope_center = getattr(self._cat, '_scope_center_hz', 0) or self._current_freq
+                if scope_center > 0 and hasattr(self._cat, '_scope_span_hz'):
+                    self.waterfall.set_freq_info(scope_center, self._cat._scope_span_hz)
                 if hasattr(self._cat, '_scope_span_hz') and not self.slider_span.isSliderDown():
                     span_hz = self._cat._scope_span_hz
                     if span_hz > 0:
@@ -498,15 +505,13 @@ class IC705Widget(QWidget):
             self.dsp_buttons["ATT"].setChecked(att)
             self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
 
-        # Power auslesen (IC-705: 0-10W)
-        pwr = self._cat.get_power()
-        if pwr is not None:
-            # Icom gibt 0-255 zurück, umrechnen auf 0-10W
-            pwr_w = min(10, round(pwr * 10 / 100))
+        # Power auslesen (IC-705: 0-255 raw = 0-10W)
+        raw = self._cat.get_power_raw()
+        if raw is not None:
             self.slider_pwr.blockSignals(True)
-            self.slider_pwr.setValue(pwr_w)
+            self.slider_pwr.setValue(raw)
             self.slider_pwr.blockSignals(False)
-            self.lbl_pwr.setText(f"PWR: {pwr_w}W")
+            self.lbl_pwr.setText(f"PWR: {raw * 10 / 255:.1f}W")
 
         # DSP Status auslesen via CI-V
         dsp_queries = {
@@ -584,6 +589,7 @@ class IC705Widget(QWidget):
     def _update_mode_buttons(self):
         for m, btn in self.mode_buttons.items():
             if m in self._DIGI_MODES:
+                btn.setStyleSheet(_BTN_ACTIVE() if self._digi_modifier == m else _BTN_DARK())
                 continue
             btn.setStyleSheet(_BTN_ACTIVE() if m == self._current_mode else _BTN_DARK())
             if self._digi_modifier:
@@ -670,7 +676,19 @@ class IC705Widget(QWidget):
 
     def _apply_power(self):
         if self._cat and self._cat.connected:
-            self._cat.set_power(self.slider_pwr.value())
+            self._cat.set_power_raw(self.slider_pwr.value())
+            QTimer.singleShot(200, self._readback_power)
+
+    def _readback_power(self):
+        """Power vom Rig zurücklesen und Slider aktualisieren."""
+        if not self._cat or not self._cat.connected:
+            return
+        raw = self._cat.get_power_raw()
+        if raw is not None:
+            self.slider_pwr.blockSignals(True)
+            self.slider_pwr.setValue(raw)
+            self.slider_pwr.blockSignals(False)
+            self.lbl_pwr.setText(f"PWR: {raw * 10 / 255:.1f}W")
 
     # ══════════════════════════════════════════════════════════════════
     # FREQUENCY
@@ -697,6 +715,54 @@ class IC705Widget(QWidget):
         except ValueError:
             pass
         self.input_freq.clearFocus()
+
+    def eventFilter(self, obj, event):
+        """EventFilter auf Wasserfall — fängt Mouse-Events ab."""
+        from PySide6.QtCore import QEvent
+        if obj is self.waterfall:
+            if event.type() == QEvent.Type.MouseButtonPress:
+                x = int(event.position().x())
+                freq = self.waterfall._x_to_freq(x)
+                if freq > 0:
+                    step = self.waterfall._step_hz
+                    freq = round(freq / step) * step
+                    self._on_waterfall_click(freq)
+                return True
+            elif event.type() == QEvent.Type.MouseMove:
+                if event.buttons() & Qt.LeftButton:
+                    x = int(event.position().x())
+                    freq = self.waterfall._x_to_freq(x)
+                    if freq > 0:
+                        step = self.waterfall._step_hz
+                        freq = round(freq / step) * step
+                        self._on_waterfall_click(freq)
+                    return True
+            elif event.type() == QEvent.Type.Wheel:
+                delta = event.angleDelta().y()
+                self.waterfall._scroll_accum += delta
+                steps = self.waterfall._scroll_accum // 120
+                self.waterfall._scroll_accum -= steps * 120
+                if steps != 0:
+                    self._on_waterfall_scroll(int(steps * self.waterfall._step_hz))
+                return True
+        return super().eventFilter(obj, event)
+
+    # ══════════════════════════════════════════════════════════════════
+    # WATERFALL CLICK / SCROLL
+    # ══════════════════════════════════════════════════════════════════
+
+    def _on_waterfall_click(self, freq_hz):
+        """Klick im Wasserfall → Frequenz direkt setzen."""
+        if not self._cat or not self._cat.connected:
+            return
+        log_action(f"Wasserfall Klick → {freq_hz} Hz")
+        self._cat.set_frequency(freq_hz)
+
+    def _on_waterfall_scroll(self, delta_hz):
+        """Mausrad im Wasserfall → Frequenz um delta_hz ändern."""
+        if not self._cat or not self._cat.connected:
+            return
+        self._cat.step_frequency(delta_hz)
 
     # ══════════════════════════════════════════════════════════════════
     # PTT
@@ -983,10 +1049,48 @@ class IC705Widget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def refresh_theme(self):
+        # Frequenz + Tuning
         self.lbl_freq.setStyleSheet(f"color: {T['text']}; font-size: 32px; border: none;")
         self.btn_step_down.setStyleSheet(_BTN_DARK())
         self.btn_step_up.setStyleSheet(_BTN_DARK())
         self.combo_step.setStyleSheet(_COMBO_STYLE())
         self.input_freq.setStyleSheet(_INPUT_STYLE())
-        self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+        self.btn_set_freq.setStyleSheet(f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
+            border: 2px solid {T['accent']}; border-radius: 4px; padding: 4px 12px; font-size: 13px; font-weight: bold; }}
+            QPushButton:hover {{ background-color: {T['bg_light']}; }}""")
+
+        # Mode + Digi Buttons
         self._update_mode_buttons()
+
+        # DSP Buttons
+        for name, btn in self.dsp_buttons.items():
+            btn.setStyleSheet(_BTN_ACTIVE() if btn.isChecked() else _BTN_DARK())
+        self.btn_preamp.setStyleSheet(_BTN_DARK())
+        self.btn_agc.setStyleSheet(_BTN_DARK())
+
+        # Power
+        self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+
+        # Span/Ref Slider
+        self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
+        self.slider_span.setStyleSheet(_SLIDER_STYLE())
+
+        # S-Meter
+        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        self.smeter_bar.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
+            QProgressBar::chunk {{ background-color: {T['smeter_bar']}; border-radius: 3px; }}""")
+        for lbl in self.s_labels:
+            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
+
+        # TX Meter
+        self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        self.tx_bar.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
+            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}""")
+
+        # PTT Button
+        if not self._ptt_active:
+            self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
+                border: 2px solid {T['ptt_rx_border']}; border-radius: 8px; }}""")
