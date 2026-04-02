@@ -695,35 +695,8 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP Status auslesen via CI-V
-        dsp_queries = {
-            "ATT":   lambda: self._cat.get_att(),
-            "NB":    lambda: self._cat._civ_query(0x16, sub=0x22),
-            "NR":    lambda: self._cat._civ_query(0x16, sub=0x40),
-            "NOTCH": lambda: self._cat._civ_query(0x16, sub=0x41),
-            "COMP":  lambda: self._cat.get_comp(),
-        }
-        for name, query in dsp_queries.items():
-            if name not in self.dsp_buttons:
-                continue
-            result = query()
-            if result is None:
-                continue
-            # ATT und COMP geben direkt bool zurück
-            if isinstance(result, bool):
-                on = result
-            elif isinstance(result, tuple):
-                _, data = result
-                on = len(data) >= 2 and data[-1] > 0
-            else:
-                continue
-            self.dsp_buttons[name].setChecked(on)
-            self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
-
-        # AGC auslesen
-        agc = self._cat.get_agc()
-        if agc and hasattr(self, 'btn_agc'):
-            self.btn_agc.setText(f"AGC: {agc}")
+        # DSP-States aus gespeicherter Config laden (Scope stört CI-V Queries)
+        self._load_dsp_state()
 
     def _update_s_labels(self, active_idx):
         for i, lbl in enumerate(self.s_labels):
@@ -800,7 +773,6 @@ class IC705Widget(QWidget):
             return
         btn = self.dsp_buttons[name]
         on = btn.isChecked()
-        # Generische Handler-Aufrufe (funktioniert mit jedem Rig)
         if name == "ATT":
             self._cat.set_att(on)
         elif name == "NB":
@@ -812,6 +784,8 @@ class IC705Widget(QWidget):
         elif name == "COMP":
             self._cat.set_comp(on)
         btn.setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+        # DSP-State speichern
+        self._save_dsp_state()
 
     def _cycle_preamp(self):
         if not self._cat or not self._cat.connected:
@@ -866,6 +840,7 @@ class IC705Widget(QWidget):
         new_mode = cycle.get(current, "SLOW")
         self._cat.set_agc(new_mode)
         self.btn_agc.setText(f"AGC: {new_mode}")
+        self._save_dsp_state()
 
     def _apply_power(self):
         if self._cat and self._cat.connected:
@@ -959,6 +934,44 @@ class IC705Widget(QWidget):
             data=self._cat._int_to_bcd_msb(inner, 2))
         self._cat._civ_send(0x14, sub=0x08,
             data=self._cat._int_to_bcd_msb(outer, 2))
+
+    def _save_dsp_state(self):
+        """DSP Button-States in status_conf.json speichern."""
+        try:
+            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+            cfg = {}
+            if os.path.exists(path):
+                with open(path) as f:
+                    cfg = json.load(f)
+            dsp = {}
+            for name, btn in self.dsp_buttons.items():
+                dsp[name] = btn.isChecked()
+            if hasattr(self, 'btn_agc'):
+                dsp["AGC"] = self.btn_agc.text().replace("AGC: ", "")
+            cfg["dsp_state"] = dsp
+            with open(path, "w") as f:
+                json.dump(cfg, f, indent=4)
+        except Exception:
+            pass
+
+    def _load_dsp_state(self):
+        """DSP Button-States aus status_conf.json laden und an TRX senden."""
+        try:
+            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+            with open(path) as f:
+                dsp = json.load(f).get("dsp_state", {})
+            for name, on in dsp.items():
+                if name == "AGC":
+                    if hasattr(self, 'btn_agc'):
+                        self.btn_agc.setText(f"AGC: {on}")
+                    continue
+                if name in self.dsp_buttons:
+                    self.dsp_buttons[name].setChecked(on)
+                    self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+        except Exception:
+            pass
 
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
