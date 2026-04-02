@@ -527,9 +527,7 @@ class IC705Widget(QWidget):
 
         self._poll_count += 1
 
-        # Sync bei Connect (mehr Ticks für langsame Rigs)
-        if self._poll_count <= 5:
-            self._sync_rig_state()
+        # Kein wiederholter Sync — passiert einmal in set_cat_handler
 
         # Scope-Daten lesen: bei Query-Ticks aus dem Buffer, sonst direkt vom Port
         if self._poll_count % 5 != 0 and hasattr(self._cat, '_flush_scope_from_serial'):
