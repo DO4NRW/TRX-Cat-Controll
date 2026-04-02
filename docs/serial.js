@@ -49,10 +49,13 @@ class IcomCIV {
             this.writer = this.port.writable.getWriter();
             this.connected = true;
 
-            if (this.onConnect) this.onConnect();
-
-            // Start reading
+            // Read-Loop ZUERST starten (muss bereit sein bevor Daten kommen)
             this._readLoop();
+
+            // Kurz warten damit Reader ready ist
+            await new Promise(r => setTimeout(r, 200));
+
+            if (this.onConnect) this.onConnect();
 
             // Scope aktivieren (IC-705: 0x27 0x10 0x01 = Scope ON)
             await this._send(0x27, 0x10, [0x01]);
@@ -114,24 +117,29 @@ class IcomCIV {
         }
     }
 
-    // Read loop
+    // Read loop — mit ReadableStream pipeTo für maximalen Durchsatz
     async _readLoop() {
         while (this.connected && this.port?.readable) {
-            const reader = this.port.readable.getReader();
-            this.reader = reader;
             try {
+                const reader = this.port.readable.getReader();
+                this.reader = reader;
+
                 while (this.connected) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    if (value) this._processBytes(value);
+                    if (value && value.length > 0) {
+                        this._processBytes(value);
+                    }
                 }
+                reader.releaseLock();
             } catch (e) {
-                if (this.connected) console.warn('Read error (reconnecting...):', e.message);
-            } finally {
-                try { reader.releaseLock(); } catch (_) {}
+                if (this.connected) {
+                    console.warn('Serial read interrupted:', e.message);
+                    try { this.reader?.releaseLock(); } catch (_) {}
+                    // Reconnect nach kurzer Pause
+                    await new Promise(r => setTimeout(r, 300));
+                }
             }
-            // Kurz warten vor Retry
-            if (this.connected) await new Promise(r => setTimeout(r, 500));
         }
     }
 
@@ -183,7 +191,6 @@ class IcomCIV {
         if (frame.length < 5) return;
         const cmd = frame[4];
         const data = frame.slice(5, -1);
-        console.log(`[CIV] cmd=0x${cmd.toString(16)} len=${data.length} data=${Array.from(data.slice(0,6)).map(b=>'0x'+b.toString(16)).join(' ')}`);
 
         switch (cmd) {
             case 0x03: // Frequency response
