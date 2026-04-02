@@ -286,20 +286,22 @@ input[type="range"]::-moz-range-thumb {
     display: flex; align-items: center; justify-content: center;
 }
 .overlay-panel {
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
+    background: var(--bg-dark, #1a1a1a);
+    border: 1px solid var(--border, #555);
     border-radius: 8px;
     padding: 20px;
     min-width: 320px;
     max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    color: var(--text, #fff);
 }
 .overlay-panel h3 {
-    color: var(--accent);
+    color: var(--accent, #06c6a4);
     font-size: 18px;
     margin-bottom: 16px;
 }
 .overlay-panel label {
-    color: var(--text-secondary);
+    color: var(--text-secondary, #ccc);
     font-size: 12px;
     display: block;
     margin-top: 10px;
@@ -308,9 +310,9 @@ input[type="range"]::-moz-range-thumb {
 .overlay-panel select,
 .overlay-panel input[type="text"] {
     width: 100%;
-    background: var(--bg-mid);
-    color: var(--text);
-    border: 1px solid var(--border);
+    background: var(--bg-mid, #2a2a2a);
+    color: var(--text, #fff);
+    border: 1px solid var(--border, #555);
     border-radius: 4px;
     padding: 8px;
     font-size: 13px;
@@ -318,19 +320,19 @@ input[type="range"]::-moz-range-thumb {
 }
 .overlay-panel select:focus,
 .overlay-panel input:focus {
-    border-color: var(--accent);
+    border-color: var(--accent, #06c6a4);
     outline: none;
 }
 .overlay-info {
     margin-top: 16px;
     padding: 10px;
-    background: var(--bg-mid);
+    background: var(--bg-mid, #2a2a2a);
     border-radius: 4px;
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--text-muted, #aaa);
     line-height: 1.6;
 }
-.overlay-info b { color: var(--accent); }
+.overlay-info b { color: var(--accent, #06c6a4); }
 .overlay-buttons {
     margin-top: 16px;
     display: flex;
