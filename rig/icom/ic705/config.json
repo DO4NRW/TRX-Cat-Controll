@@ -28,12 +28,12 @@
             "channels": 1
         },
         "trx_mic": {
-            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
             "rate": 44100,
             "channels": 1
         },
         "trx_speaker": {
-            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
             "rate": 44100,
             "channels": 1
         },
@@ -50,6 +50,11 @@
     "smeter": {
         "s9_raw": 130,
         "max_raw": 241,
-        "steps_over_s9": ["S9+20", "S9+40", "S9+60"]
+        "steps_over_s9": [
+            "S9+10",
+            "S9+20",
+            "S9+40",
+            "S9+60"
+        ]
     }
 }
