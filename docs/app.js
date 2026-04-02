@@ -314,18 +314,86 @@ function setupPTT() {
     });
 }
 
-// Connect button
+// Connect button — Web Serial wenn verfügbar, sonst Demo-Mode
+let civ = null;
+const hasWebSerial = 'serial' in navigator;
+
 function setupConnect() {
     const btn = document.getElementById('btn-connect');
     const status = document.getElementById('status-text');
     const bar = document.querySelector('.status-bar');
-    btn.addEventListener('click', () => {
-        connected = !connected;
-        btn.classList.toggle('connected', connected);
-        bar.classList.toggle('connected', connected);
-        status.textContent = connected ? 'CAT+Audio: Verbunden (DEMO)' : 'SYSTEM READY';
+
+    btn.addEventListener('click', async () => {
+        if (connected) {
+            // Disconnect
+            if (civ) await civ.disconnect();
+            connected = false;
+            btn.classList.remove('connected');
+            bar.classList.remove('connected');
+            status.textContent = 'SYSTEM READY';
+            return;
+        }
+
+        if (hasWebSerial) {
+            // Echte Serial-Verbindung
+            status.textContent = 'Verbinde...';
+            civ = new IcomCIV();
+
+            civ.onFrequency = (hz) => {
+                currentFreq = hz;
+                updateFreqDisplay();
+            };
+            civ.onMode = (mode) => {
+                currentMode = mode;
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.mode === mode);
+                });
+            };
+            civ.onSMeter = (raw) => {
+                smeterValue = raw / 2.55; // 0-255 → 0-100
+            };
+            civ.onPower = (raw) => {
+                const slider = document.getElementById('pwr-slider');
+                const label = document.getElementById('pwr-label');
+                slider.value = raw;
+                label.textContent = `PWR: ${(raw * 10 / 255).toFixed(1)}W`;
+            };
+            civ.onSpectrum = (data, center, span) => {
+                // Echte Scope-Daten statt simulierte
+                for (let i = 0; i < 475; i++) spectrum[i] = data[i];
+                if (center > 0) currentFreq = center;
+                liveScope = true;
+            };
+            civ.onConnect = () => {
+                connected = true;
+                btn.classList.add('connected');
+                bar.classList.add('connected');
+                status.textContent = 'CAT: Verbunden (Web Serial) — READ ONLY';
+            };
+            civ.onDisconnect = () => {
+                connected = false;
+                liveScope = false;
+                btn.classList.remove('connected');
+                bar.classList.remove('connected');
+                status.textContent = 'SYSTEM READY';
+            };
+
+            const ok = await civ.connect();
+            if (!ok) {
+                status.textContent = 'Verbindung fehlgeschlagen';
+                setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 3000);
+            }
+        } else {
+            // Demo-Mode (kein Web Serial)
+            connected = !connected;
+            btn.classList.toggle('connected', connected);
+            bar.classList.toggle('connected', connected);
+            status.textContent = connected ? 'DEMO MODE (kein Web Serial)' : 'SYSTEM READY';
+        }
     });
 }
+
+let liveScope = false;
 
 // Step buttons
 function setupStepButtons() {
@@ -400,7 +468,7 @@ function updateTXMeter() {
 
 // Main loop
 function tick() {
-    generateSpectrum();
+    if (!liveScope) generateSpectrum();
     drawWaterfall();
     updateSMeter();
     updateTXMeter();
@@ -420,6 +488,14 @@ async function init() {
     setupStepButtons();
     setupPower();
     setupWaterfallClick();
+    // Web Serial Hinweis
+    const verLabel = document.getElementById('version-text');
+    if (hasWebSerial) {
+        verLabel.textContent = 'v2.0.8 — Web Serial Ready';
+    } else {
+        verLabel.textContent = 'v2.0.8 — DEMO (Chrome/Edge für CAT)';
+    }
+
     tick();
 }
 
