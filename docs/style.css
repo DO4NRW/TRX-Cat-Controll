@@ -122,10 +122,10 @@ input[type="range"]::-moz-range-thumb {
 /* Span Slider */
 .span-row {
     display: flex; align-items: center; gap: 8px;
-    padding: 2px 12px;
+    padding: 4px 12px;
 }
-.span-label { color: var(--text-secondary); font-size: 10px; min-width: 80px; }
-.span-slider { flex: 1; width: 100%; }
+.span-label { color: var(--text-secondary, #aaa); font-size: 10px; min-width: 80px; flex-shrink: 0; }
+.span-row input[type="range"] { flex: 1; min-width: 0; }
 
 /* Waterfall */
 .waterfall-container {
