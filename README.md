@@ -101,27 +101,23 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
-### IC-705 Wasserfall / Spektrum (Dark Theme, Click-to-Tune)
-![IC-705 Waterfall](screenshots/Screenshot4.png)
+![IC-705 Wasserfall + Click-to-Tune](screenshots/Screenshot4.png)
 
-### Main GUI (FT-991A, Light Theme)
-![Main GUI](screenshots/Screenshot0.png)
+<details>
+<summary><b>Mehr Screenshots anzeigen</b></summary>
 
-### Light Theme mit Menü
-![Light Theme](screenshots/Screenshot5.png)
+| | |
+|---|---|
+| ![Main GUI (FT-991A)](screenshots/Screenshot0.png) | ![Light Theme](screenshots/Screenshot5.png) |
+| **Main GUI** (FT-991A, Light Theme) | **Light Theme** mit Menü |
+| ![Radio Setup](screenshots/Screenshot1.png) | ![Audio Matrix](screenshots/Screenshot2.png) |
+| **Radio Setup** (CAT + PTT) | **Audio Matrix** |
+| ![Theme Editor](screenshots/Screenshot3.png) | ![Color Picker](screenshots/Screenshot7.png) |
+| **Theme Editor** | **Color Picker** |
+| ![Bug Report](screenshots/Screenshot6.png) | |
+| **Bug Report** (Hardware-Info) | |
 
-### Radio Setup (CAT + PTT)
-![Radio Setup](screenshots/Screenshot1.png)
-
-### Audio Matrix
-![Audio Matrix](screenshots/Screenshot2.png)
-
-### Theme Editor + Color Picker
-![Theme Editor](screenshots/Screenshot3.png)
-![Color Picker](screenshots/Screenshot7.png)
-
-### Bug Report Dialog (Hardware-Info)
-![Bug Report](screenshots/Screenshot6.png)
+</details>
 
 ---
 
