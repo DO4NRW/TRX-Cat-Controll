@@ -201,20 +201,17 @@ class IC705Widget(QWidget):
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
 
-        # Span-Slider
-        span_row = QHBoxLayout()
-        span_row.setSpacing(6)
-        self.lbl_span = QLabel("SPAN: TRX")
-        self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
-        span_row.addWidget(self.lbl_span)
-        self.slider_span = QSlider(Qt.Horizontal)
+        # Span-Slider (wird rechts neben Wasserfall gesetzt)
+        self.lbl_span = QLabel("SPAN")
+        self.lbl_span.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        self.lbl_span.setAlignment(Qt.AlignCenter)
+        self.slider_span = QSlider(Qt.Vertical)
         self.slider_span.setRange(0, 6)
         self.slider_span.setValue(3)
-        self.slider_span.setStyleSheet(_SLIDER_STYLE())
+        self.slider_span.setFixedWidth(16)
+        self.slider_span.setStyleSheet(_vslider_style if '_vslider_style' in dir() else _SLIDER_STYLE())
         self.slider_span.valueChanged.connect(self._update_span_label)
         self.slider_span.sliderReleased.connect(self._apply_span)
-        span_row.addWidget(self.slider_span, stretch=1)
-        root.addLayout(span_row)
 
         self._SPAN_VALUES = [
             (2500, "2.5 kHz"), (5000, "5 kHz"), (10000, "10 kHz"),
@@ -291,6 +288,12 @@ class IC705Widget(QWidget):
         self.slider_noise.setStyleSheet(_vslider_style)
         self.slider_noise.valueChanged.connect(self._apply_noise_floor)
         slider_col.addWidget(self.slider_noise, stretch=1)
+
+        # Span Slider (vertikal, unter NF)
+        slider_col.addWidget(self.lbl_span)
+        self.slider_span.setStyleSheet(_vslider_style)
+        self.slider_span.setFocusPolicy(Qt.NoFocus)
+        slider_col.addWidget(self.slider_span, stretch=1)
 
         wf_row.addLayout(slider_col)
 
