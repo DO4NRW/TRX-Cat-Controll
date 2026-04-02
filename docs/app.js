@@ -860,9 +860,9 @@ function tick() {
         playDemoFrame();
     }
 
-    // Blend: displaySpectrum nähert sich spectrum an (10% pro Tick wie Python)
+    // Blend: displaySpectrum nähert sich spectrum an (20% pro Tick — schneller als Python weil Browser 60fps)
     for (let i = 0; i < 475; i++) {
-        displaySpectrum[i] += 0.10 * (spectrum[i] - displaySpectrum[i]);
+        displaySpectrum[i] += 0.20 * (spectrum[i] - displaySpectrum[i]);
     }
 
     // Wasserfall: neue Zeile nur alle 80ms (wie App scroll_timer)
