@@ -2386,7 +2386,15 @@ class MainWindow(QMainWindow):
 
         self.slider_vol = QSlider(Qt.Horizontal)
         self.slider_vol.setRange(0, 20)
-        self.slider_vol.setValue(5)
+        # Gespeicherten Wert laden oder Default 1 (5%)
+        _saved_vol = 1
+        try:
+            _sc = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "status_conf.json")
+            with open(_sc) as f:
+                _saved_vol = json.load(f).get("sliders", {}).get("volume", 1)
+        except Exception:
+            pass
+        self.slider_vol.setValue(_saved_vol)
         self.slider_vol.setFixedWidth(100)
         self.slider_vol.setFixedHeight(30)
         self.slider_vol.setFocusPolicy(Qt.NoFocus)
@@ -2931,6 +2939,16 @@ class MainWindow(QMainWindow):
             self.rig_widget = widget_class(self.central_widget)
             self.main_layout.insertWidget(1, self.rig_widget, stretch=1)
             print(f"Rig-Widget geladen: {class_name}")
+            # Gespeicherte Slider-Werte wiederherstellen
+            try:
+                with open(self._status_conf_path) as f:
+                    sliders = json.load(f).get("sliders", {})
+                if hasattr(self.rig_widget, 'slider_signal') and "signal_gain" in sliders:
+                    self.rig_widget.slider_signal.setValue(sliders["signal_gain"])
+                if hasattr(self.rig_widget, 'slider_noise') and "noise_floor" in sliders:
+                    self.rig_widget.slider_noise.setValue(sliders["noise_floor"])
+            except Exception:
+                pass
         except Exception as e:
             print(f"Rig-Widget laden fehlgeschlagen: {e}")
 
@@ -2973,9 +2991,30 @@ class MainWindow(QMainWindow):
             print(f"configured_rigs update fehlgeschlagen: {e}")
 
     def closeEvent(self, event):
-        """Sauberen Exit markieren wenn User das Fenster schließt."""
+        """Sauberen Exit markieren + Slider-Positionen speichern."""
         from core.session_logger import mark_clean_exit
         log_event("Fenster geschlossen (X-Button)")
+
+        # Slider-Werte in status_conf.json speichern
+        try:
+            cfg = {}
+            if os.path.exists(self._status_conf_path):
+                with open(self._status_conf_path) as f:
+                    cfg = json.load(f)
+            cfg["sliders"] = {
+                "volume": self.slider_vol.value(),
+            }
+            # Rig-Widget Slider
+            if self.rig_widget:
+                if hasattr(self.rig_widget, 'slider_signal'):
+                    cfg["sliders"]["signal_gain"] = self.rig_widget.slider_signal.value()
+                if hasattr(self.rig_widget, 'slider_noise'):
+                    cfg["sliders"]["noise_floor"] = self.rig_widget.slider_noise.value()
+            with open(self._status_conf_path, "w") as f:
+                json.dump(cfg, f, indent=4)
+        except Exception:
+            pass
+
         mark_clean_exit()
         super().closeEvent(event)
 
