@@ -51,41 +51,41 @@ class SMeterGauge(QWidget):
         r, g, b, a = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
         p.fillRect(0, 0, w, h, QColor(r, g, b, a))
 
-        # Arc Geometrie
+        # Arc Geometrie — flacher Bogen wie bei analogen Messgeräten
         cx = w * 0.5
-        radius = w * 0.42
-        cy = h * 0.85  # Bogen-Zentrum unten
+        radius = w * 0.38
+        cy = h * 0.95  # Bogen-Zentrum weit unten
 
-        arc_start = 200  # Grad (links)
-        arc_end = 340    # Grad (rechts)
+        arc_start = 210  # Grad (links)
+        arc_end = 330    # Grad (rechts)
         arc_span = arc_end - arc_start
 
         def frac_to_angle(frac):
-            """Fraction 0-1 → Winkel in Grad."""
-            return arc_start + frac * arc_span
+            """Fraction 0-1 → Winkel in Grad (links=0, rechts=1)."""
+            return arc_end - frac * arc_span
 
         def angle_to_point(angle_deg, r):
             """Winkel → Punkt auf dem Bogen."""
             rad = math.radians(angle_deg)
             return QPointF(cx + r * math.cos(rad), cy - r * math.sin(rad))
 
-        # ── Bogen zeichnen ───────────────────────────────────────────
+        # ── Skala-Bogen zeichnen ──────────────────────────────────────
         ar, ag, ab, _ = rgba_parts(T.get('text', 'rgba(255,255,255,255)'))
-        s9_frac = 9 / 13  # S9 Position
-
-        # S0-S9: weiß
-        pen_white = QPen(QColor(ar, ag, ab), 2)
-        p.setPen(pen_white)
-        rect = QRectF(cx - radius, cy - radius, radius * 2, radius * 2)
-        p.drawArc(rect, int(frac_to_angle(0) * 16), int((s9_frac * arc_span) * 16))
-
-        # S9+: rot/accent
         acr, acg, acb, _ = rgba_parts(T.get('error', 'rgba(255,68,68,255)'))
-        pen_red = QPen(QColor(acr, acg, acb), 2)
-        p.setPen(pen_red)
-        start_angle = frac_to_angle(s9_frac)
-        span_angle = (1.0 - s9_frac) * arc_span
-        p.drawArc(rect, int(start_angle * 16), int(span_angle * 16))
+        s9_frac = 9 / 13
+
+        # Bogen Stück für Stück zeichnen (S0→S9 weiß, S9→S9+60 rot)
+        steps = 50
+        for i in range(steps):
+            f1 = i / steps
+            f2 = (i + 1) / steps
+            a1 = frac_to_angle(f1)
+            a2 = frac_to_angle(f2)
+            p1 = angle_to_point(a1, radius)
+            p2 = angle_to_point(a2, radius)
+            color = QColor(acr, acg, acb) if f1 >= s9_frac else QColor(ar, ag, ab, 180)
+            p.setPen(QPen(color, 2))
+            p.drawLine(p1, p2)
 
         # ── Tick-Marks + Labels ──────────────────────────────────────
         p.setFont(QFont("Consolas", 7))

@@ -192,7 +192,7 @@ class IC705Widget(QWidget):
         # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
         from core.smeter_gauge import SMeterGauge
         self.smeter_gauge = SMeterGauge(self)
-        self.smeter_gauge.setFixedHeight(90)
+        self.smeter_gauge.setFixedHeight(110)
         root.addWidget(self.smeter_gauge)
 
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
@@ -220,7 +220,8 @@ class IC705Widget(QWidget):
         ]
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
-        self.waterfall.setMinimumHeight(180)
+        self.waterfall.setMinimumHeight(120)
+        self.waterfall.setMaximumHeight(400)
         self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
         self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
         self.waterfall.filter_changed.connect(self._on_filter_changed)
