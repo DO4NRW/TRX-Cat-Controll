@@ -2842,6 +2842,14 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+    def _on_rig_combo_changed(self, rig_name):
+        """Top-Bar Rig-Combo geändert → Radio Setup synchronisieren."""
+        if self._rig_switching or not rig_name:
+            return
+        # Radio Setup Combo synchronisieren
+        if hasattr(self, 'radio_setup_overlay'):
+            self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
+
     def _toggle_demo_rec(self, checked):
         if not self.rig_widget or not hasattr(self.rig_widget, '_demo_recording'):
             return
