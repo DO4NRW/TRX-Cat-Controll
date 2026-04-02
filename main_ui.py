@@ -2763,6 +2763,8 @@ class MainWindow(QMainWindow):
                         # VOX-Werte aus Rig in Top-Bar Slider laden
                         self.slider_vox_thr.setValue(int(self.rig_widget._vox_threshold))
                         self.slider_vox_hold.setValue(int(self.rig_widget._vox_hold_ms) // 100)
+                        # Gespeicherte Lautstärke auf den Stream anwenden
+                        self._apply_volume(self.slider_vol.value())
                     else:
                         self.status_label.setText(f" CAT: Verbunden, Audio FEHLT ({port})")
             else:

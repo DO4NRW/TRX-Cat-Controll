@@ -217,6 +217,7 @@ class IC705Widget(QWidget):
         self.waterfall.setMinimumHeight(180)
         self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
         self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
+        self.waterfall.filter_changed.connect(self._on_filter_changed)
         self.waterfall.installEventFilter(self)
 
         # Wasserfall + Contrast-Slider in HLayout
@@ -987,6 +988,12 @@ class IC705Widget(QWidget):
             return
         log_action(f"Wasserfall Klick → {freq_hz} Hz")
         self._cat.set_frequency(freq_hz)
+
+    def _on_filter_changed(self, bw_hz):
+        """Filter-Bandbreite geändert durch Drag im Wasserfall."""
+        if self._cat and self._cat.connected:
+            log_action(f"Filter → {bw_hz} Hz")
+            self._cat.set_filter(bw_hz)
 
     def _on_waterfall_scroll(self, delta_hz):
         """Mausrad im Wasserfall → Frequenz um delta_hz ändern."""

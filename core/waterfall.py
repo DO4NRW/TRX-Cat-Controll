@@ -21,6 +21,7 @@ class WaterfallWidget(QWidget):
     """
     frequency_clicked = Signal(int)   # Frequenz in Hz
     frequency_scrolled = Signal(int)  # Richtung * Step in Hz
+    filter_changed = Signal(int)      # Neue Filter-Bandbreite in Hz
 
     def __init__(self, parent=None, num_points=475, max_amp=160):
         super().__init__(parent)
@@ -52,9 +53,11 @@ class WaterfallWidget(QWidget):
         self._span_hz = 0
         self._filter_width = 2700
         self._filter_side = "upper"
-        self._step_hz = 100  # Tuning-Schrittweite für Mausrad
-        self._scroll_accum = 0  # Akkumulator für feine Scroll-Events
-        self._hover_x = -1     # Maus-Position X für Cursor-Linie
+        self._step_hz = 100
+        self._scroll_accum = 0
+        self._hover_x = -1
+        self._dragging_filter = False  # Filter-Kante wird gezogen
+        self._drag_edge = None         # "left" oder "right"
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
@@ -158,11 +161,42 @@ class WaterfallWidget(QWidget):
         start_freq = self._center_freq - self._span_hz // 2
         return int(start_freq + frac * self._span_hz)
 
+    def _passband_edges_px(self):
+        """Gibt (left_px, right_px) der Passband-Kanten zurück."""
+        if self._span_hz <= 0 or self._filter_width <= 0:
+            return None, None
+        w = self.width()
+        cx = w // 2
+        bw_px = int(self._filter_width / self._span_hz * w)
+        if self._filter_side == "upper":
+            return cx, cx + bw_px
+        elif self._filter_side == "lower":
+            return cx - bw_px, cx
+        else:
+            return cx - bw_px // 2, cx + bw_px // 2
+
     def mousePressEvent(self, event):
-        """Klick → Frequenz setzen."""
-        if event.button() == Qt.LeftButton:
-            if self._span_hz > 0 and self._center_freq > 0:
-                freq = self._x_to_freq(int(event.position().x()))
+        """Klick → Frequenz setzen oder Filter-Kante greifen."""
+        if event.button() == Qt.LeftButton and self._span_hz > 0:
+            x = int(event.position().x())
+            left, right = self._passband_edges_px()
+
+            # Prüfe ob nahe an einer Filter-Kante (±5px)
+            if left is not None:
+                if abs(x - left) < 6:
+                    self._dragging_filter = True
+                    self._drag_edge = "left"
+                    event.accept()
+                    return
+                elif abs(x - right) < 6:
+                    self._dragging_filter = True
+                    self._drag_edge = "right"
+                    event.accept()
+                    return
+
+            # Normaler Click-to-Tune
+            if self._center_freq > 0:
+                freq = self._x_to_freq(x)
                 if freq > 0:
                     freq = round(freq / self._step_hz) * self._step_hz
                     self.frequency_clicked.emit(freq)
@@ -170,16 +204,46 @@ class WaterfallWidget(QWidget):
         else:
             super().mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event):
+        if self._dragging_filter:
+            self._dragging_filter = False
+            self._drag_edge = None
+        super().mouseReleaseEvent(event)
+
     def mouseMoveEvent(self, event):
-        """Hover → Cursor-Linie anzeigen. Drag → Frequenz live nachführen."""
+        """Hover, Filter-Drag oder Click-to-Tune Drag."""
         self._hover_x = int(event.position().x())
-        if event.buttons() & Qt.LeftButton:
+        x = self._hover_x
+        w = self.width()
+
+        # Filter-Kante ziehen
+        if self._dragging_filter and self._span_hz > 0:
+            cx = w // 2
+            dx_hz = abs(x - cx) / w * self._span_hz
+            new_bw = max(100, int(dx_hz))  # Min 100 Hz
+            if new_bw != self._filter_width:
+                self._filter_width = new_bw
+                self.filter_changed.emit(new_bw)
+            self.update()
+            event.accept()
+            return
+
+        # Cursor anpassen: Resize-Cursor nahe Filter-Kanten
+        left, right = self._passband_edges_px()
+        if left is not None and (abs(x - left) < 6 or abs(x - right) < 6):
+            self.setCursor(QCursor(Qt.SizeHorCursor))
+        else:
+            self.setCursor(QCursor(Qt.CrossCursor))
+
+        # Click-to-Tune Drag
+        if event.buttons() & Qt.LeftButton and not self._dragging_filter:
             if self._span_hz > 0 and self._center_freq > 0:
-                freq = self._x_to_freq(self._hover_x)
+                freq = self._x_to_freq(x)
                 if freq > 0:
                     freq = round(freq / self._step_hz) * self._step_hz
                     self.frequency_clicked.emit(freq)
-        self.update()  # Cursor-Linie neu zeichnen
+
+        self.update()
         event.accept()
 
     def leaveEvent(self, event):
