@@ -757,6 +757,16 @@ function playDemoFrame() {
     }
     if (frame.sc && frame.ss) {
         currentSpanHz = frame.ss;
+        // Span-Slider synchronisieren
+        for (let i = 0; i < SPAN_VALUES.length; i++) {
+            if (SPAN_VALUES[i].hz === frame.ss) {
+                const slider = document.getElementById('span-slider');
+                if (slider) slider.value = i;
+                const label = document.getElementById('span-label');
+                if (label) label.textContent = `SPAN: ${SPAN_VALUES[i].label}`;
+                break;
+            }
+        }
     }
 }
 
