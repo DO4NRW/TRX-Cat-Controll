@@ -229,9 +229,30 @@ class IC705Widget(QWidget):
         self.waterfall.filter_changed.connect(self._on_filter_changed)
         self.waterfall.installEventFilter(self)
 
-        # Wasserfall + Contrast-Slider in HLayout
+        # Wasserfall + TX-Bar links + Contrast-Slider rechts
         wf_row = QHBoxLayout()
         wf_row.setSpacing(4)
+
+        # TX Mic Gain Balken (vertikal, links)
+        tx_col = QVBoxLayout()
+        tx_col.setSpacing(1)
+        self.tx_bar_v = QProgressBar()
+        self.tx_bar_v.setOrientation(Qt.Vertical)
+        self.tx_bar_v.setFixedWidth(10)
+        self.tx_bar_v.setRange(0, 100)
+        self.tx_bar_v.setValue(0)
+        self.tx_bar_v.setTextVisible(False)
+        self.tx_bar_v.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
+            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 2px; }}""")
+        tx_col.addWidget(self.tx_bar_v)
+        self.lbl_tx_db = QLabel("---")
+        self.lbl_tx_db.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        self.lbl_tx_db.setAlignment(Qt.AlignCenter)
+        self.lbl_tx_db.setFixedWidth(10)
+        tx_col.addWidget(self.lbl_tx_db)
+        wf_row.addLayout(tx_col)
+
         wf_row.addWidget(self.waterfall, stretch=1)
 
         # Wasserfall-Regler (vertikal, rechts neben Wasserfall)
@@ -451,21 +472,11 @@ class IC705Widget(QWidget):
         self.s_labels = []
         self.smeter_bar = type('_Dummy', (), {'setValue': lambda s, v: None, 'update': lambda s: None})()
 
-        # ── 7. TX Meter (kompakt: nur Zahl) ─────────────────────────
-        self.lbl_tx_info = QLabel("---")
-        self.lbl_tx_info.setStyleSheet(f"color: {T['text_muted']}; font-size: 10px; border: none;")
-        self.lbl_tx_info.setFixedHeight(14)
-        root.addWidget(self.lbl_tx_info)
-
+        # ── 7. TX Meter — Dummy (vertikaler Balken ist links neben Wasserfall)
+        self.lbl_tx_info = QLabel("")
+        self.lbl_tx_info.setFixedHeight(0)
         self.tx_bar = QProgressBar()
-        self.tx_bar.setFixedHeight(8)
-        self.tx_bar.setRange(0, 100)
-        self.tx_bar.setValue(0)
-        self.tx_bar.setTextVisible(False)
-        self.tx_bar.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
-            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 2px; }}""")
-        root.addWidget(self.tx_bar)
+        self.tx_bar.setFixedSize(0, 0)
 
         # ── 9. PTT Button ────────────────────────────────────────────
 
@@ -1200,8 +1211,10 @@ class IC705Widget(QWidget):
     def update_tx_meter(self, db):
         self._tx_rms_db = db
         pct = max(0, min(100, int((db + 60) / 60 * 100)))
-        self.tx_bar.setValue(pct)
-        self.lbl_tx_info.setText(f"{db:.0f} dB")
+        if hasattr(self, 'tx_bar_v'):
+            self.tx_bar_v.setValue(pct)
+        if hasattr(self, 'lbl_tx_db'):
+            self.lbl_tx_db.setText(f"{db:.0f}")
 
     def _vox_tick(self):
         if not self._vox_enabled or self._vox_mute:
