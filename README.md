@@ -110,8 +110,9 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ### Audio Matrix
 ![Audio Matrix](Screenshot2.png)
 
-### Theme Editor
+### Theme Editor + Color Picker
 ![Theme Editor](Screenshot3.png)
+![Color Picker](Screenshot7.png)
 
 ### IC-705 Wasserfall / Spektrum (Dark Theme, Click-to-Tune)
 ![IC-705 Waterfall](Screenshot4.png)
@@ -121,9 +122,6 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ### Bug Report Dialog (Hardware-Info)
 ![Bug Report](Screenshot6.png)
-
-### Color Picker
-![Color Picker](Screenshot7.png)
 
 ---
 
