@@ -695,8 +695,42 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP-States aus gespeicherter Config laden (Scope stört CI-V Queries)
-        self._load_dsp_state()
+        # DSP-States vom TRX lesen (Scope kurz pausieren für saubere Queries)
+        if hasattr(self._cat, 'scope_enable'):
+            self._cat.scope_enable(False)
+        import time; time.sleep(0.1)
+
+        dsp_queries = {
+            "NB":    (0x16, 0x22),
+            "NR":    (0x16, 0x40),
+            "NOTCH": (0x16, 0x41),
+            "COMP":  (0x16, 0x44),
+        }
+        for name, (cmd, sub) in dsp_queries.items():
+            if name not in self.dsp_buttons:
+                continue
+            result = self._cat._civ_query(cmd, sub=sub)
+            if result:
+                _, data = result
+                on = len(data) >= 2 and data[0] == sub and data[1] > 0
+                self.dsp_buttons[name].setChecked(on)
+                self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+
+        att = self._cat.get_att()
+        if att is not None and "ATT" in self.dsp_buttons:
+            self.dsp_buttons["ATT"].setChecked(att)
+            self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
+
+        agc = self._cat.get_agc()
+        if agc and hasattr(self, 'btn_agc'):
+            self.btn_agc.setText(f"AGC: {agc}")
+
+        # Scope wieder einschalten
+        if hasattr(self._cat, 'scope_enable'):
+            self._cat.scope_enable(True)
+
+        # States speichern
+        self._save_dsp_state()
 
     def _update_s_labels(self, active_idx):
         for i, lbl in enumerate(self.s_labels):
@@ -935,11 +969,15 @@ class IC705Widget(QWidget):
         self._cat._civ_send(0x14, sub=0x08,
             data=self._cat._int_to_bcd_msb(outer, 2))
 
+    def _status_conf_path(self):
+        """Pfad zu status_conf.json."""
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+
     def _save_dsp_state(self):
         """DSP Button-States in status_conf.json speichern."""
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+            path = self._status_conf_path()
             cfg = {}
             if os.path.exists(path):
                 with open(path) as f:
@@ -952,16 +990,20 @@ class IC705Widget(QWidget):
             cfg["dsp_state"] = dsp
             with open(path, "w") as f:
                 json.dump(cfg, f, indent=4)
-        except Exception:
-            pass
+            print(f"DSP gespeichert: {dsp}")
+        except Exception as e:
+            print(f"DSP speichern fehlgeschlagen: {e}")
 
     def _load_dsp_state(self):
-        """DSP Button-States aus status_conf.json laden und an TRX senden."""
+        """DSP Button-States aus status_conf.json laden."""
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+            path = self._status_conf_path()
             with open(path) as f:
                 dsp = json.load(f).get("dsp_state", {})
+            if not dsp:
+                print("Keine gespeicherten DSP-States")
+                return
+            print(f"DSP laden: {dsp}")
             for name, on in dsp.items():
                 if name == "AGC":
                     if hasattr(self, 'btn_agc'):
@@ -970,8 +1012,8 @@ class IC705Widget(QWidget):
                 if name in self.dsp_buttons:
                     self.dsp_buttons[name].setChecked(on)
                     self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"DSP laden fehlgeschlagen: {e}")
 
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
