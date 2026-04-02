@@ -220,8 +220,8 @@ class IC705Widget(QWidget):
         ]
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
-        self.waterfall.setMinimumHeight(120)
-        self.waterfall.setMaximumHeight(400)
+        self.waterfall.setMinimumHeight(100)
+        self.waterfall.setMaximumHeight(300)
         self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
         self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
         self.waterfall.filter_changed.connect(self._on_filter_changed)
@@ -271,7 +271,7 @@ class IC705Widget(QWidget):
 
         wf_row.addLayout(slider_col)
 
-        root.addLayout(wf_row, stretch=1)
+        root.addLayout(wf_row)
 
         # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
         self.lbl_freq = QLabel("")
