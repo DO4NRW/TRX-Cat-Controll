@@ -890,13 +890,24 @@ class IC705Widget(QWidget):
         idx = self.slider_span.value()
         if idx >= len(self._SPAN_VALUES):
             return
+        span_hz = self._SPAN_VALUES[idx][0]
         if not self._cat or not self._cat.connected:
             return
-        # Span setzen: 0x27 0x14 0x00 <index> (Scope Main, Center/Fixed Mode)
-        # Dann 0x27 0x15 0x00 <index> (Span Index)
-        self._cat._civ_send(0x27, sub=0x14, data=bytes([0x00, 0x00]))  # Center mode
-        import time; time.sleep(0.05)
-        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, idx]))
+        import time
+        # Scope Output pausieren
+        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x00]))
+        time.sleep(0.1)
+        # Span setzen: Receiver(0x00) + 3 Bytes BCD (Hz)
+        val = span_hz
+        bcd = []
+        for _ in range(3):
+            lo = val % 10; val //= 10
+            hi = val % 10; val //= 10
+            bcd.append((hi << 4) | lo)
+        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00] + bcd))
+        time.sleep(0.2)
+        # Scope Output wieder an
+        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
             try:
