@@ -172,9 +172,19 @@ function drawWaterfall() {
     const canvas = document.getElementById('waterfall');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.parentElement.clientWidth;
-    const h = canvas.height = canvas.parentElement.clientHeight;
+    // Canvas nur resizen wenn sich die Größe ändert (verhindert Buffer-Verlust)
+    const cw = canvas.parentElement.clientWidth;
+    const ch = canvas.parentElement.clientHeight;
+    if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+        // Wasserfall-Buffer zurücksetzen bei Resize
+        window._wfCanvas = null;
+    }
+    const w = canvas.width;
+    const h = canvas.height;
     if (w <= 0 || h <= 0) return;
+    ctx.imageSmoothingEnabled = true;
 
     const specFrac = 0.35;
     const freqBarH = 18;
@@ -252,37 +262,39 @@ function drawWaterfall() {
     // Waterfall
     const wfY = freqY + freqBarH;
 
-    // Offscreen Wasserfall-Canvas (gleiche Größe wie Zielbereich)
-    if (!window._wfCanvas || window._wfCanvas.width !== w || window._wfCanvas.height !== wfH) {
+    // Offscreen Wasserfall in Scope-Auflösung (475 x 200)
+    const WF_W = 475;
+    const WF_H = 200;
+    if (!window._wfCanvas) {
         window._wfCanvas = document.createElement('canvas');
-        window._wfCanvas.width = w;
-        window._wfCanvas.height = Math.max(1, wfH);
+        window._wfCanvas.width = WF_W;
+        window._wfCanvas.height = WF_H;
         const wc = window._wfCanvas.getContext('2d');
         wc.fillStyle = 'rgb(8, 12, 35)';
-        wc.fillRect(0, 0, w, wfH);
+        wc.fillRect(0, 0, WF_W, WF_H);
     }
     const wfCtx = window._wfCanvas.getContext('2d');
 
-    // Shift alles 1px nach unten
-    wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfH - 1, 0, 1, w, wfH - 1);
+    // Shift alles 1px nach unten (in nativer Auflösung)
+    wfCtx.drawImage(window._wfCanvas, 0, 0, WF_W, WF_H - 1, 0, 1, WF_W, WF_H - 1);
 
-    // Neue Zeile oben via ImageData (schnell!)
-    const lineData = wfCtx.createImageData(w, 1);
+    // Neue Zeile oben — 1 Pixel pro Scope-Punkt (475px breit)
+    const lineData = wfCtx.createImageData(WF_W, 1);
     const px = lineData.data;
-    for (let x = 0; x < w; x++) {
-        const idx = Math.min(474, Math.floor(x * 475 / w));
-        let val = spectrum[idx];
-        // Gleiche Berechnung wie Python: black_level=3, color_gain=3.0
+    for (let i = 0; i < WF_W; i++) {
+        let val = spectrum[i] || 0;
         val = Math.max(0, (val - 3) * 3.0);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
-        const off = x * 4;
+        const off = i * 4;
         px[off] = r; px[off + 1] = g; px[off + 2] = b; px[off + 3] = 255;
     }
     wfCtx.putImageData(lineData, 0, 0);
 
-    // Wasserfall auf Main Canvas zeichnen
-    ctx.drawImage(window._wfCanvas, 0, wfY);
+    // Skaliert auf Canvas blitten (Browser interpoliert smooth)
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(window._wfCanvas, 0, 0, WF_W, WF_H, 0, wfY, w, wfH);
 
     // Center marker + passband
     const cx = Math.floor(w / 2);
