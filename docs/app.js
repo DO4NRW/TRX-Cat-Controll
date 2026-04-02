@@ -247,25 +247,33 @@ function drawWaterfall() {
     // Waterfall
     const wfY = freqY + freqBarH;
 
-    // Add new line
-    const newLine = new Uint8ClampedArray(w * 4);
+    // Waterfall-Buffer (persistent offscreen canvas)
+    if (!window._wfCanvas || window._wfCanvas.width !== w || window._wfCanvas.height !== wfH) {
+        window._wfCanvas = document.createElement('canvas');
+        window._wfCanvas.width = w;
+        window._wfCanvas.height = Math.max(1, wfH);
+        const wfCtx = window._wfCanvas.getContext('2d');
+        wfCtx.fillStyle = 'rgb(8, 12, 35)';
+        wfCtx.fillRect(0, 0, w, wfH);
+    }
+    const wfCtx = window._wfCanvas.getContext('2d');
+
+    // Shift down: copy everything 1px lower
+    wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfH - 1, 0, 1, w, wfH - 1);
+
+    // New line at top
     for (let px = 0; px < w; px++) {
         const idx = Math.min(474, Math.floor(px * 475 / w));
         let val = spectrum[idx];
         val = Math.max(0, (val - 3) * 3);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
-        const off = px * 4;
-        newLine[off] = r; newLine[off + 1] = g; newLine[off + 2] = b; newLine[off + 3] = 255;
+        wfCtx.fillStyle = `rgb(${r},${g},${b})`;
+        wfCtx.fillRect(px, 0, 1, 1);
     }
 
-    // Shift waterfall down
-    if (wfH > 1) {
-        const existing = ctx.getImageData(0, wfY, w, wfH - 1);
-        ctx.putImageData(existing, 0, wfY + 1);
-    }
-    const lineData = new ImageData(newLine, w, 1);
-    ctx.putImageData(lineData, 0, wfY);
+    // Draw waterfall buffer to main canvas
+    ctx.drawImage(window._wfCanvas, 0, wfY);
 
     // Center marker + passband
     const cx = Math.floor(w / 2);

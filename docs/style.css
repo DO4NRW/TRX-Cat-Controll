@@ -5,6 +5,8 @@ body {
     font-family: 'Segoe UI', 'Roboto', sans-serif;
     overflow: hidden;
     height: 100vh;
+    background: #1a1a1a;
+    color: #fff;
 }
 
 #app {
@@ -43,8 +45,43 @@ body {
 .slider-label { color: var(--text); font-size: 10px; min-width: 38px; }
 .vol-label { color: var(--text); font-size: 11px; font-weight: bold; }
 
-.small-slider { width: 60px; height: 4px; accent-color: var(--accent); }
-.vol-slider { width: 100px; height: 6px; accent-color: var(--accent); }
+/* Slider Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-track {
+    background: var(--bg-mid);
+    height: 6px;
+    border-radius: 3px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-top: -4px;
+}
+input[type="range"]::-moz-range-track {
+    background: var(--bg-mid);
+    height: 6px;
+    border-radius: 3px;
+    border: none;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+}
+.small-slider { width: 60px; }
+.small-slider::-webkit-slider-track { height: 4px; }
+.small-slider::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; }
+.small-slider::-moz-range-track { height: 4px; }
+.small-slider::-moz-range-thumb { width: 12px; height: 12px; }
+.vol-slider { width: 100px; }
 
 .mute-btn {
     width: 40px; height: 40px;
