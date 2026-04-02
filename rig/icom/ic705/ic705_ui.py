@@ -49,12 +49,15 @@ _SLIDER_STYLE = lambda: f"""QSlider::groove:horizontal {{ background: {T['slider
 
 
 class _SegmentedMeter(QWidget):
-    """S-Meter als segmentierte Blöcke mit Tick-Marks oben."""
-    def __init__(self, segments, parent=None):
+    """S-Meter: Labels oben, segmentierte Blöcke unten.
+    14 Segmente: S0-S9 (10) + +10, +20, +40, +60 (4)."""
+    _LABELS = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9",
+               "+10", "+20", "+40", "+60"]
+
+    def __init__(self, segments=14, parent=None):
         super().__init__(parent)
-        self._segments = segments
+        self._segments = len(self._LABELS)
         self._value = 0  # 0-1000
-        from PySide6.QtGui import QPainter, QColor, QPen
 
     def setValue(self, val):
         self._value = val
@@ -64,58 +67,64 @@ class _SegmentedMeter(QWidget):
         return self._value
 
     def paintEvent(self, event):
-        from PySide6.QtGui import QPainter, QColor, QPen
-        from PySide6.QtCore import QRect
+        from PySide6.QtGui import QPainter, QColor, QPen, QFont
+        from PySide6.QtCore import QRect, Qt
+        from core.theme import rgba_parts
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         w = self.width()
         h = self.height()
         n = self._segments
         gap = 2
-        tick_h = 4
-
-        # Tick-Marks oben (vertikale Striche)
-        r, g, b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
-            T.get('smeter_label_inactive', 'rgba(136,136,136,255)'))
-        tick_color = QColor(r, g, b)
-        p.setPen(QPen(tick_color, 1))
-        for i in range(n):
-            cx = int((i + 0.5) * w / n)
-            p.drawLine(cx, 0, cx, tick_h)
-
-        # Segmente
-        bar_y = tick_h + 1
+        label_h = 11
+        bar_y = label_h + 1
         bar_h = h - bar_y
+
         seg_w = w / n
         fill_frac = self._value / 1000.0
         fill_segments = fill_frac * n
 
-        # Hintergrund
-        bg_r, bg_g, bg_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
-            T.get('bg_dark', 'rgba(26,26,26,255)'))
-        border_r, border_g, border_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
-            T.get('border', 'rgba(85,85,85,255)'))
-        bar_r, bar_g, bar_b, _ = __import__('core.theme', fromlist=['rgba_parts']).rgba_parts(
-            T.get('smeter_bar', 'rgba(6,198,164,255)'))
+        # Farben
+        inactive_r, inactive_g, inactive_b, _ = rgba_parts(T.get('smeter_label_inactive', 'rgba(136,136,136,255)'))
+        active_r, active_g, active_b, _ = rgba_parts(T.get('smeter_label_active', 'rgba(215,236,255,255)'))
+        bg_r, bg_g, bg_b, _ = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
+        border_r, border_g, border_b, _ = rgba_parts(T.get('border', 'rgba(85,85,85,255)'))
+        bar_r, bar_g, bar_b, _ = rgba_parts(T.get('smeter_bar', 'rgba(6,198,164,255)'))
+        err_r, err_g, err_b, _ = rgba_parts(T.get('error', 'rgba(255,68,68,255)'))
 
+        # Labels oben
+        p.setFont(QFont("Roboto", 7, QFont.Bold))
+        for i, label in enumerate(self._LABELS):
+            cx = int((i + 0.5) * seg_w)
+            is_active = i < fill_segments
+            if is_active:
+                p.setPen(QColor(active_r, active_g, active_b))
+            else:
+                p.setPen(QColor(inactive_r, inactive_g, inactive_b))
+            p.drawText(QRect(int(i * seg_w), 0, int(seg_w), label_h), Qt.AlignCenter, label)
+
+        # Segmente
         for i in range(n):
             x = int(i * seg_w) + gap // 2
             sw = int(seg_w) - gap
             rect = QRect(x, bar_y, sw, bar_h)
+            is_over = i >= 10  # +10, +20, +40, +60
 
             if i < int(fill_segments):
-                # Voller Block
-                p.fillRect(rect, QColor(bar_r, bar_g, bar_b))
+                if is_over:
+                    p.fillRect(rect, QColor(err_r, err_g, err_b))
+                else:
+                    p.fillRect(rect, QColor(bar_r, bar_g, bar_b))
             elif i < fill_segments:
-                # Teilweise gefüllt (letzter Block)
                 p.fillRect(rect, QColor(bg_r, bg_g, bg_b))
                 part_w = int(sw * (fill_segments - int(fill_segments)))
-                p.fillRect(QRect(x, bar_y, part_w, bar_h), QColor(bar_r, bar_g, bar_b))
+                if is_over:
+                    p.fillRect(QRect(x, bar_y, part_w, bar_h), QColor(err_r, err_g, err_b))
+                else:
+                    p.fillRect(QRect(x, bar_y, part_w, bar_h), QColor(bar_r, bar_g, bar_b))
             else:
-                # Leer
                 p.fillRect(rect, QColor(bg_r, bg_g, bg_b))
 
-            # Border
             p.setPen(QPen(QColor(border_r, border_g, border_b), 1))
             p.drawRect(rect)
 
@@ -189,14 +198,14 @@ class IC705Widget(QWidget):
         root.setContentsMargins(15, 10, 15, 10)
         root.setSpacing(8)
 
-        # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
-        from core.smeter_gauge import SMeterGauge
-        self.smeter_gauge = SMeterGauge(self)
-        self.smeter_gauge.setFixedSize(260, 70)
-        gauge_row = QHBoxLayout()
-        gauge_row.addWidget(self.smeter_gauge)
-        gauge_row.addStretch()
-        root.addLayout(gauge_row)
+        # ── 0. Analog S-Meter Gauge (auskommentiert) ─────────────────
+        # from core.smeter_gauge import SMeterGauge
+        # self.smeter_gauge = SMeterGauge(self)
+        # self.smeter_gauge.setFixedSize(260, 70)
+        # gauge_row = QHBoxLayout()
+        # gauge_row.addWidget(self.smeter_gauge)
+        # gauge_row.addStretch()
+        # root.addLayout(gauge_row)
 
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
@@ -310,11 +319,11 @@ class IC705Widget(QWidget):
 
         root.addLayout(wf_row, stretch=1)
 
-        # ── Accent Separator ─────────────────────────────────────────
-        self._sep_accent = QFrame()
-        self._sep_accent.setFixedHeight(2)
-        self._sep_accent.setStyleSheet(f"background-color: {T['accent']}; border: none;")
-        root.addWidget(self._sep_accent)
+        # ── S-Meter Balken mit integrierten Labels (zwischen Wasserfall und Mode)
+        self.smeter_bar_h = _SegmentedMeter(14, self)
+        self.smeter_bar_h.setFixedHeight(22)
+        root.addWidget(self.smeter_bar_h)
+        self.s_labels = []  # Labels sind jetzt im Widget integriert
 
         # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
         self.lbl_freq = QLabel("")
@@ -479,12 +488,10 @@ class IC705Widget(QWidget):
 
         root.addLayout(pbt_row)
 
-        # ── 6. S-Meter (Gauge oben zeigt alles) ──────────────────────
-        self.lbl_smeter_info = QLabel("")  # Dummy für Kompatibilität
+        # ── 6. S-Meter — smeter_bar_h ist oben zwischen Wasserfall und Mode
+        self.smeter_bar = self.smeter_bar_h  # Kompatibilität
+        self.lbl_smeter_info = QLabel("")
         self.lbl_smeter_info.setFixedHeight(0)
-        # Dummy für Kompatibilität
-        self.s_labels = []
-        self.smeter_bar = type('_Dummy', (), {'setValue': lambda s, v: None, 'update': lambda s: None})()
 
         # ── 7. TX Meter — Dummy (vertikaler Balken ist links neben Wasserfall)
         self.lbl_tx_info = QLabel("")
@@ -630,7 +637,9 @@ class IC705Widget(QWidget):
             if val <= s9_raw:
                 s_num = val * 9 / max(s9_raw, 1)
                 s_str = f"S{min(9, round(s_num))}"
-                frac = s_num / 13
+                # S0-S9 = Segment 0-9 von 14
+                # S9 (s_num=9) → frac=9/14, fill bis Mitte S9-Segment
+                frac = min(1.0, s_num / 14)
             else:
                 db_over = (val - s9_raw) / max(max_raw - s9_raw, 1) * 60
                 n_steps = len(s9_steps)
@@ -639,12 +648,11 @@ class IC705Widget(QWidget):
                 for i, label in enumerate(s9_steps):
                     if db_over >= (i + 0.5) * step_size:
                         s_str = label
-                frac = (9 + db_over / 60 * 4) / 13
-            s_val = min(12, int(frac * 13))
+                # S9+ → Segment 10-13 (+10/+20/+40/+60)
+                frac = min(1.0, (9 + db_over / 60 * 5) / 14)
+            s_val = min(13, int(frac * 14))
             bar_val = int(frac * 1000)
             self.smeter_bar.setValue(min(1000, bar_val))
-            if hasattr(self, 'smeter_gauge'):
-                self.smeter_gauge.setValue(min(1000, bar_val))
             preamp = self._current_preamp or "OFF"
             self.lbl_smeter_info.setText(f"S-METER: {s_str} | {preamp}")
             self._update_s_labels(s_val)
@@ -777,7 +785,14 @@ class IC705Widget(QWidget):
         print("  DSP Sync fertig.")
 
     def _update_s_labels(self, active_idx):
-        pass  # Labels sind im Gauge integriert
+        # Labels bis active_idx hell, danach gedimmt
+        # s_labels: [S1, S3, S5, S7, S9, +20, +40, +60] → Segment-Positionen [1,3,5,7,9,12,15,18]
+        seg_pos = [1, 3, 5, 7, 9, 12, 15, 18]
+        for i, lbl in enumerate(self.s_labels):
+            if seg_pos[i] < active_idx * 20 / 13:
+                lbl.setStyleSheet(f"color: {T['smeter_label_active']}; font-size: 8px; font-weight: bold; border: none;")
+            else:
+                lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 8px; font-weight: bold; border: none;")
 
     # ══════════════════════════════════════════════════════════════════
     # MODE
@@ -823,6 +838,10 @@ class IC705Widget(QWidget):
         else:
             self._digi_modifier = digi
             base = self._current_mode or "USB"
+            # DATA/RTTY nur mit LSB/USB — sonst auf USB springen
+            if base not in ("LSB", "USB"):
+                base = "USB"
+                self._current_mode = base
             combined = {"DATA": {"LSB": "D-L", "USB": "D-U"},
                        "RTTY": {"LSB": "RTTY", "USB": "RTTY-U"}}
             cat_mode = combined.get(digi, {}).get(base, base)
@@ -1470,8 +1489,6 @@ class IC705Widget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def refresh_theme(self):
-        # Accent Separator
-        self._sep_accent.setStyleSheet(f"background-color: {T['accent']}; border: none;")
         # Frequenz + Tuning
         self.lbl_freq.setStyleSheet(f"color: {T['text']}; font-size: 32px; border: none;")
         self.btn_step_down.setStyleSheet(_BTN_DARK())
@@ -1513,8 +1530,6 @@ class IC705Widget(QWidget):
         for lbl in self.s_labels:
             lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
         self.smeter_bar.update()
-        if hasattr(self, 'smeter_gauge'):
-            self.smeter_gauge.update()
 
         # TX Meter
         self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")

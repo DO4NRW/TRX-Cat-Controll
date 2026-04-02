@@ -17,7 +17,8 @@ RIG_ADDRESSES = {
 
 ICOM_MODES = {
     0x00: "LSB", 0x01: "USB", 0x02: "AM", 0x03: "CW",
-    0x04: "RTTY", 0x05: "FM", 0x06: "CW-R", 0x07: "RTTY-R",
+    0x04: "RTTY", 0x05: "FM", 0x06: "WFM", 0x07: "CW-R",
+    0x08: "RTTY-R",
 }
 MODE_TO_ICOM = {v: k for k, v in ICOM_MODES.items()}
 
