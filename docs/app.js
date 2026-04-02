@@ -57,8 +57,11 @@ let connected = false;
 let pttActive = false;
 let smeterValue = 0;
 let spectrum = new Float32Array(475);
+let displaySpectrum = new Float32Array(475);
 let wfData = [];
 const WF_LINES = 200;
+let spectrumChanged = false;
+let lastWfTime = 0;
 
 // Demo-Daten Playback
 let demoData = null;
@@ -219,7 +222,7 @@ function drawWaterfall() {
     }
 
     // Spectrum line + fill
-    const peak = Math.max(...spectrum);
+    const peak = Math.max(...displaySpectrum);
     if (peak > 0) {
         const scale = 0.85 / Math.max(peak, 1);
 
@@ -229,7 +232,7 @@ function drawWaterfall() {
         ctx.moveTo(0, specH);
         for (let px = 0; px < w; px++) {
             const idx = Math.min(474, Math.floor(px * 475 / w));
-            const normed = Math.min(1, spectrum[idx] * scale);
+            const normed = Math.min(1, displaySpectrum[idx] * scale);
             const y = Math.max(1, Math.floor(specH * (1 - normed)));
             ctx.lineTo(px, y);
         }
@@ -242,7 +245,7 @@ function drawWaterfall() {
         ctx.beginPath();
         for (let px = 0; px < w; px++) {
             const idx = Math.min(474, Math.floor(px * 475 / w));
-            const normed = Math.min(1, spectrum[idx] * scale);
+            const normed = Math.min(1, displaySpectrum[idx] * scale);
             const y = Math.max(1, Math.floor(specH * (1 - normed)));
             if (px === 0) ctx.moveTo(px, y);
             else ctx.lineTo(px, y);
@@ -304,8 +307,8 @@ function drawWaterfall() {
         const idx0 = Math.floor(fIdx);
         const idx1 = Math.min(474, idx0 + 1);
         const t = fIdx - idx0;
-        const val0 = spectrum[idx0] || 0;
-        const val1 = spectrum[idx1] || 0;
+        const val0 = displaySpectrum[idx0] || 0;
+        const val1 = displaySpectrum[idx1] || 0;
         let val = val0 + t * (val1 - val0);
         // 1:1 aus waterfall.py: black_level=3, color_gain=3.0
         val = Math.max(0, (val - 3) * 3.0);
@@ -829,10 +832,11 @@ function playDemoFrame() {
     const frame = demoData[demoIndex - 1];
 
     if (frame.sp) {
-        // Blend — etwas stärker als Python damit die Daten nicht zu verwaschen sind
+        // Target-Spektrum setzen (wie _last_spectrum in Python)
         for (let i = 0; i < Math.min(475, frame.sp.length); i++) {
-            spectrum[i] = spectrum[i] * 0.3 + frame.sp[i] * 0.7;
+            spectrum[i] = frame.sp[i];
         }
+        spectrumChanged = true;
     }
     if (frame.f) {
         currentFreq = frame.f;
@@ -863,12 +867,25 @@ function playDemoFrame() {
     }
 }
 
-// Main loop
+// Main loop — wie Python _scroll_tick (80ms Interval)
 function tick() {
+    const now = performance.now();
+
     if (!connected) {
         playDemoFrame();
     }
-    drawWaterfall();
+
+    // Blend: displaySpectrum nähert sich spectrum an (10% pro Tick wie Python)
+    for (let i = 0; i < 475; i++) {
+        displaySpectrum[i] += 0.10 * (spectrum[i] - displaySpectrum[i]);
+    }
+
+    // Wasserfall: neue Zeile nur alle 80ms (wie App scroll_timer)
+    if (now - lastWfTime >= 80) {
+        lastWfTime = now;
+        drawWaterfall();
+    }
+
     updateSMeter();
     updateTXMeter();
     requestAnimationFrame(tick);
