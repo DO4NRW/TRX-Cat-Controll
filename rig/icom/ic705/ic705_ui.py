@@ -206,7 +206,7 @@ class IC705Widget(QWidget):
         self.lbl_span.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
         self.lbl_span.setAlignment(Qt.AlignCenter)
         self.slider_span = QSlider(Qt.Vertical)
-        self.slider_span.setRange(0, 6)
+        self.slider_span.setRange(0, 7)
         self.slider_span.setValue(3)
         self.slider_span.setFixedWidth(16)
         self.slider_span.setInvertedAppearance(True)  # Oben = großer Span
@@ -217,8 +217,8 @@ class IC705Widget(QWidget):
 
         self._SPAN_VALUES = [
             (2500, "2.5 kHz"), (5000, "5 kHz"), (10000, "10 kHz"),
-            (50000, "50 kHz"), (100000, "100 kHz"), (250000, "250 kHz"),
-            (500000, "500 kHz"),
+            (25000, "25 kHz"), (50000, "50 kHz"), (100000, "100 kHz"),
+            (250000, "250 kHz"), (500000, "500 kHz"),
         ]
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
@@ -885,32 +885,15 @@ class IC705Widget(QWidget):
 
     def _apply_span(self):
         """Span am TRX setzen wenn Slider losgelassen wird."""
-        idx_val = self.slider_span.value()
-        print(f"[SPAN] _apply_span idx={idx_val} span={self._SPAN_VALUES[idx_val][0] if idx_val < len(self._SPAN_VALUES) else '?'}", flush=True)
-        # Polling-Update 2s blockieren damit der TRX Zeit hat
         self._span_lock = True
         QTimer.singleShot(2000, lambda: setattr(self, '_span_lock', False))
         idx = self.slider_span.value()
         if idx >= len(self._SPAN_VALUES):
             return
-        span_hz = self._SPAN_VALUES[idx][0]
         if not self._cat or not self._cat.connected:
             return
-        import time
-        # Scope Output pausieren
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x00]))
-        time.sleep(0.1)
-        # Span setzen: Receiver(0x00) + 3 Bytes BCD
-        val = span_hz
-        bcd = []
-        for _ in range(3):
-            lo = val % 10; val //= 10
-            hi = val % 10; val //= 10
-            bcd.append((hi << 4) | lo)
-        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00] + bcd))
-        time.sleep(0.2)
-        # Scope Output wieder an
-        self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
+        # Span setzen: Index 0-7 direkt (wie wfview)
+        self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, idx]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
             try:
