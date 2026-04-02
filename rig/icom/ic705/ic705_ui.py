@@ -527,7 +527,9 @@ class IC705Widget(QWidget):
 
         self._poll_count += 1
 
-        # Kein wiederholter Sync — passiert einmal in set_cat_handler
+        # Mode/Preamp/Power Sync in den ersten Ticks (OHNE DSP — das passiert einmal in set_cat_handler)
+        if self._poll_count <= 5:
+            self._sync_rig_basics()
 
         # Scope-Daten lesen: bei Query-Ticks aus dem Buffer, sonst direkt vom Port
         if self._poll_count % 5 != 0 and hasattr(self._cat, '_flush_scope_from_serial'):
@@ -626,10 +628,10 @@ class IC705Widget(QWidget):
 
         # Scope-Daten werden oben im Poll gelesen
 
-    def _sync_rig_state(self):
+    def _sync_rig_basics(self):
+        """Mode, Preamp, Power, PBT syncen (sicher mit Scope)."""
         if not self._cat:
             return
-
         mode = self._cat.get_mode()
         if mode is not None:
             if mode in ("D-L", "DATA-L"):
@@ -693,10 +695,17 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP-States vom TRX lesen (Scope kurz pausieren für saubere Queries)
+    def _sync_rig_state(self):
+        """Einmal bei Connect: DSP-States vom TRX lesen (Scope wird pausiert)."""
+        if not self._cat:
+            return
+        # Basics zuerst (Mode, Preamp, Power, PBT)
+        self._sync_rig_basics()
+
+        # DSP-States: Scope pausieren für saubere CI-V Queries
         if hasattr(self._cat, 'scope_enable'):
             self._cat.scope_enable(False)
-        import time; time.sleep(0.1)
+        import time; time.sleep(0.15)
 
         dsp_queries = {
             "NB":    (0x16, 0x22),
@@ -713,6 +722,7 @@ class IC705Widget(QWidget):
                 on = len(data) >= 2 and data[0] == sub and data[1] > 0
                 self.dsp_buttons[name].setChecked(on)
                 self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+            time.sleep(0.05)
 
         att = self._cat.get_att()
         if att is not None and "ATT" in self.dsp_buttons:
