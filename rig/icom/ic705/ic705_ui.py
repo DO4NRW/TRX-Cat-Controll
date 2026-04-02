@@ -1538,6 +1538,7 @@ class IC705Widget(QWidget):
 
         # Wasserfall-Palette aus Theme
         wf_pal = T.get('wf_palette', 'sdr')
+        print(f"[THEME] wf_palette={wf_pal}", flush=True)
         if hasattr(self, 'waterfall'):
             self.waterfall.set_palette(wf_pal)
             self._palette_idx = list(self.waterfall.PALETTES.keys()).index(wf_pal) if wf_pal in self.waterfall.PALETTES else 0

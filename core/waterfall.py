@@ -43,8 +43,9 @@ class WaterfallWidget(QWidget):
         self._spectrum_frac = 0.25
         self._fill_alpha = 0.75
 
-        # Farbpalette als numpy Array (256 x 3)
-        self._palette = self._build_palette()
+        # Farbpalette als numpy Array (256 x 3) — aus Theme wenn vorhanden
+        wf_pal = T.get('wf_palette', 'sdr')
+        self._palette = self._build_palette(wf_pal)
 
         self._last_spectrum = np.zeros(num_points, dtype=np.float32)
         self._display_spectrum = np.zeros(num_points, dtype=np.float32)
