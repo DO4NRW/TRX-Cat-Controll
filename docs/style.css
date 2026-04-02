@@ -211,3 +211,64 @@ body {
 .status-bar.connected { border-top: 2px solid var(--accent); }
 .status-text { color: var(--text); font-size: 12px; font-family: 'Consolas', monospace; }
 .version { color: var(--text-secondary); font-size: 11px; }
+
+/* Settings Overlay */
+.overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+}
+.overlay-panel {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 320px;
+    max-width: 400px;
+}
+.overlay-panel h3 {
+    color: var(--accent);
+    font-size: 18px;
+    margin-bottom: 16px;
+}
+.overlay-panel label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 4px;
+}
+.overlay-panel select,
+.overlay-panel input[type="text"] {
+    width: 100%;
+    background: var(--bg-mid);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    font-family: 'Consolas', monospace;
+}
+.overlay-panel select:focus,
+.overlay-panel input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+.overlay-info {
+    margin-top: 16px;
+    padding: 10px;
+    background: var(--bg-mid);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+.overlay-info b { color: var(--accent); }
+.overlay-buttons {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}

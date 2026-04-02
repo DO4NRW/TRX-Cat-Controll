@@ -9,9 +9,54 @@
 </head>
 <body>
     <div id="app">
+        <!-- Settings Overlay -->
+        <div class="overlay" id="settings-overlay" style="display:none;">
+            <div class="overlay-panel">
+                <h3>Radio Setup</h3>
+
+                <label>Rig</label>
+                <select id="cfg-rig">
+                    <option value="ic705">Icom IC-705</option>
+                    <option value="ic7300">Icom IC-7300</option>
+                    <option value="ic7610">Icom IC-7610</option>
+                    <option value="ic9700">Icom IC-9700</option>
+                    <option value="ic7100">Icom IC-7100</option>
+                </select>
+
+                <label>Baud Rate</label>
+                <select id="cfg-baud">
+                    <option>4800</option>
+                    <option>9600</option>
+                    <option>19200</option>
+                    <option>38400</option>
+                    <option selected>115200</option>
+                </select>
+
+                <label>Stop Bits</label>
+                <select id="cfg-stopbits">
+                    <option>1</option>
+                    <option selected>2</option>
+                </select>
+
+                <label>CI-V Adresse</label>
+                <input type="text" id="cfg-civ" value="0xA4" readonly>
+
+                <div class="overlay-info">
+                    <p>Nur <b>Chrome / Edge</b> unterstützen Web Serial.</p>
+                    <p>Read-Only: Frequenz, Mode, S-Meter, Wasserfall.</p>
+                    <p>Kein PTT, kein TX, kein Audio.</p>
+                </div>
+
+                <div class="overlay-buttons">
+                    <button class="btn" id="btn-settings-close">Schließen</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Top Bar -->
         <div class="top-bar">
             <div class="menu-btn"><span class="material-symbols-outlined">menu</span></div>
+            <div class="spacer"></div>
             <div class="vox-controls">
                 <span class="toggle-label">VOX</span>
                 <span class="slider-label">THR:-25</span>

@@ -382,8 +382,10 @@ function setupConnect() {
 
         if (hasWebSerial) {
             // Echte Serial-Verbindung
-            status.textContent = 'Verbinde...';
+            const cfg = getSerialConfig();
+            status.textContent = `Verbinde (${cfg.baud} baud)...`;
             civ = new IcomCIV();
+            civ.civAddress = cfg.civAddress;
 
             civ.onFrequency = (hz) => {
                 currentFreq = hz;
@@ -431,7 +433,7 @@ function setupConnect() {
                 }
             };
 
-            const ok = await civ.connect();
+            const ok = await civ.connect(cfg.baud);
             if (!ok) {
                 status.textContent = 'Verbindung fehlgeschlagen';
                 setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 3000);
@@ -447,6 +449,40 @@ function setupConnect() {
 }
 
 let liveScope = false;
+
+// Settings overlay
+function setupSettings() {
+    const overlay = document.getElementById('settings-overlay');
+    const menuBtn = document.querySelector('.menu-btn');
+    const closeBtn = document.getElementById('btn-settings-close');
+    const rigSelect = document.getElementById('cfg-rig');
+    const civInput = document.getElementById('cfg-civ');
+
+    menuBtn.addEventListener('click', () => {
+        overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+    });
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.style.display = 'none';
+    });
+
+    // Rig-Auswahl → CI-V Adresse updaten
+    rigSelect.addEventListener('change', () => {
+        const addr = IcomCIV.RIG_ADDRESSES[rigSelect.value] || 0xA4;
+        civInput.value = '0x' + addr.toString(16).toUpperCase();
+    });
+}
+
+function getSerialConfig() {
+    return {
+        rig: document.getElementById('cfg-rig').value,
+        baud: parseInt(document.getElementById('cfg-baud').value),
+        stopBits: parseInt(document.getElementById('cfg-stopbits').value),
+        civAddress: parseInt(document.getElementById('cfg-civ').value),
+    };
+}
 
 // Step buttons
 function setupStepButtons() {
@@ -534,6 +570,7 @@ async function init() {
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
     await loadTheme();
     updateFreqDisplay();
+    setupSettings();
     setupModeButtons();
     setupDSPButtons();
     setupPTT();
