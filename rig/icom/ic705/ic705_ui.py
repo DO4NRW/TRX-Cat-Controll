@@ -441,27 +441,13 @@ class IC705Widget(QWidget):
 
         root.addLayout(pbt_row)
 
-        # ── 6. S-Meter ───────────────────────────────────────────────
+        # ── 6. S-Meter (nur Info-Label, Gauge ist oben) ─────────────
         self.lbl_smeter_info = QLabel("S-METER: ---")
-        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
+        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         root.addWidget(self.lbl_smeter_info)
-
-        # S-Meter Labels
-        scale_row = QHBoxLayout()
-        scale_row.setSpacing(0)
+        # Dummy für Kompatibilität
         self.s_labels = []
-        for s in self._S_LABELS:
-            lbl = QLabel(s)
-            lbl.setAlignment(Qt.AlignCenter)
-            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
-            scale_row.addWidget(lbl, stretch=1)
-            self.s_labels.append(lbl)
-        root.addLayout(scale_row)
-
-        # S-Meter Segmented Bar (Custom Widget)
-        self.smeter_bar = _SegmentedMeter(len(self._S_LABELS), self)
-        self.smeter_bar.setFixedHeight(20)
-        root.addWidget(self.smeter_bar)
+        self.smeter_bar = type('_Dummy', (), {'setValue': lambda s, v: None, 'update': lambda s: None})()
 
         # ── 7. TX Meter ──────────────────────────────────────────────
         self.lbl_tx_info = QLabel("TX: --- dBFS")
@@ -763,11 +749,7 @@ class IC705Widget(QWidget):
         print("  DSP Sync fertig.")
 
     def _update_s_labels(self, active_idx):
-        for i, lbl in enumerate(self.s_labels):
-            if i <= active_idx:
-                lbl.setStyleSheet(f"color: {T['smeter_label_active']}; font-size: 10px; font-weight: bold; border: none;")
-            else:
-                lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
+        pass  # Labels sind im Gauge integriert
 
     # ══════════════════════════════════════════════════════════════════
     # MODE
@@ -1492,8 +1474,7 @@ class IC705Widget(QWidget):
         self.slider_noise.setStyleSheet(_vs)
 
         # S-Meter
-        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
-        self.smeter_bar.update()  # Custom Widget repaint
+        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         for lbl in self.s_labels:
             lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
 
