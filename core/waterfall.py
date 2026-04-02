@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, QRect, Signal
 from PySide6.QtGui import (QPainter, QColor, QImage, QLinearGradient,
                            QPainterPath, QPen, QFont, QCursor)
 
-from core.theme import T
+from core.theme import T, rgba_parts
 
 
 class WaterfallWidget(QWidget):
