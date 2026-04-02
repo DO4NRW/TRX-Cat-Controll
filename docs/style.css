@@ -1,5 +1,6 @@
 /* RigLink Demo — Styles werden dynamisch aus theme.json geladen */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+.material-symbols-outlined { font-size: 22px; color: var(--text); }
 body {
     font-family: 'Segoe UI', 'Roboto', sans-serif;
     overflow: hidden;

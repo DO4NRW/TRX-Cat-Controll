@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RigLink — Live Demo</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
         <!-- Top Bar -->
         <div class="top-bar">
-            <div class="menu-btn">☰</div>
+            <div class="menu-btn"><span class="material-symbols-outlined">menu</span></div>
             <div class="vox-controls">
                 <span class="toggle-label">VOX</span>
                 <span class="slider-label">THR:-25</span>
@@ -21,7 +22,7 @@
             <div class="vol-controls">
                 <span class="vol-label">VOL</span>
                 <input type="range" class="vol-slider" min="0" max="20" value="5">
-                <div class="mute-btn" title="Mute">🔊</div>
+                <div class="mute-btn" title="Mute"><span class="material-symbols-outlined">volume_up</span></div>
             </div>
             <div class="rig-select">
                 <select id="rig-combo">
@@ -29,7 +30,7 @@
                     <option>Yaesu FT-991A</option>
                 </select>
             </div>
-            <div class="connect-btn" id="btn-connect" title="Connect">⚡</div>
+            <div class="connect-btn" id="btn-connect" title="Connect"><span class="material-symbols-outlined">cable</span></div>
         </div>
 
         <!-- Waterfall / Spectrum -->
