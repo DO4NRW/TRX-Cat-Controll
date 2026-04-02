@@ -2891,6 +2891,9 @@ class MainWindow(QMainWindow):
                 super().keyPressEvent(event)
                 return
             if not event.isAutoRepeat() and self.rig_widget and hasattr(self.rig_widget, "_ptt_on"):
+                # AM: kein PTT
+                if getattr(self.rig_widget, '_current_mode', '') == 'AM':
+                    return
                 self.rig_widget._ptt_on()
             event.accept()
             return

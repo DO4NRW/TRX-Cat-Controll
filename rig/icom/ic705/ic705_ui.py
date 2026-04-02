@@ -126,7 +126,7 @@ class IC705Widget(QWidget):
     """Icom IC705 Rig-Widget — funktioniert mit jedem CatBase-Backend."""
 
     _S_LABELS = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S9+10","S9+20","S9+40","S9+60"]
-    _MODES = ["LSB", "USB", "CW", "CW-R", "FM", "RTTY", "RTTY-R"]
+    _MODES = ["LSB", "USB", "AM", "CW", "CW-R", "FM", "RTTY", "RTTY-R"]
     _DIGI_MODES = ["DATA"]
     _STEPS = ["10","50","100","500","1000","2500","5000","10000","25000","100000"]
 
@@ -771,6 +771,15 @@ class IC705Widget(QWidget):
             self._cat.set_mode(mode)
         self._current_mode = mode
         self._update_mode_buttons()
+        # PTT sperren bei AM (Audio-Routing funktioniert nicht in AM)
+        if hasattr(self, 'btn_ptt'):
+            if mode == "AM":
+                self.btn_ptt.setEnabled(False)
+                self.btn_ptt.setText("AM — kein TX")
+            else:
+                self.btn_ptt.setEnabled(True)
+                if not self._ptt_active:
+                    self.btn_ptt.setText("RX (SPACE)")
         # Passband im Wasserfall sofort updaten
         if hasattr(self, 'waterfall') and hasattr(self._cat, '_scope_span_hz'):
             bw = {"USB": 2700, "LSB": 2700, "CW": 500, "CW-R": 500,
