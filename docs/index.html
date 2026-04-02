@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RigLink — Live Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="menu-btn">☰</div>
+            <div class="vox-controls">
+                <span class="toggle-label">VOX</span>
+                <span class="slider-label">THR:-25</span>
+                <input type="range" class="small-slider" min="-60" max="-5" value="-25">
+                <span class="slider-label">H:700</span>
+                <input type="range" class="small-slider" min="1" max="20" value="7">
+            </div>
+            <div class="vol-controls">
+                <span class="vol-label">VOL</span>
+                <input type="range" class="vol-slider" min="0" max="20" value="5">
+                <div class="mute-btn" title="Mute">🔊</div>
+            </div>
+            <div class="rig-select">
+                <select id="rig-combo">
+                    <option>Icom IC-705</option>
+                    <option>Yaesu FT-991A</option>
+                </select>
+            </div>
+            <div class="connect-btn" id="btn-connect" title="Connect">⚡</div>
+        </div>
+
+        <!-- Waterfall / Spectrum -->
+        <div class="waterfall-container">
+            <canvas id="waterfall" width="900" height="300"></canvas>
+        </div>
+
+        <!-- Frequency Display -->
+        <div class="freq-row">
+            <button class="btn" id="btn-step-down">STEP &lt;</button>
+            <select id="step-select">
+                <option>10</option>
+                <option>50</option>
+                <option selected>100</option>
+                <option>500</option>
+                <option>1000</option>
+                <option>5000</option>
+            </select>
+            <button class="btn" id="btn-step-up">STEP &gt;</button>
+            <div class="spacer"></div>
+            <input type="text" id="freq-input" placeholder="14.200.000">
+            <button class="btn btn-accent" id="btn-set">SET</button>
+        </div>
+
+        <!-- Mode Buttons -->
+        <div class="mode-row">
+            <button class="btn mode-btn" data-mode="LSB">LSB</button>
+            <button class="btn mode-btn active" data-mode="USB">USB</button>
+            <button class="btn mode-btn" data-mode="CW">CW</button>
+            <button class="btn mode-btn" data-mode="CW-R">CW-R</button>
+            <button class="btn mode-btn" data-mode="FM">FM</button>
+            <button class="btn mode-btn" data-mode="RTTY">RTTY</button>
+            <button class="btn mode-btn" data-mode="RTTY-R">RTTY-R</button>
+            <div class="mode-sep"></div>
+            <button class="btn mode-btn" data-mode="DATA">DATA</button>
+        </div>
+
+        <!-- DSP Row -->
+        <div class="dsp-row">
+            <button class="btn dsp-btn" data-dsp="ATT">ATT</button>
+            <button class="btn dsp-btn" data-dsp="NB">NB</button>
+            <button class="btn dsp-btn" data-dsp="NR">NR</button>
+            <button class="btn dsp-btn" data-dsp="NOTCH">NOTCH</button>
+            <button class="btn dsp-btn" data-dsp="COMP">COMP</button>
+            <button class="btn dsp-btn" id="btn-preamp">P.AMP: OFF</button>
+            <button class="btn dsp-btn" id="btn-agc">AGC: SLOW</button>
+        </div>
+
+        <!-- Power Slider -->
+        <div class="pwr-row">
+            <span class="pwr-label" id="pwr-label">PWR: 5.0W</span>
+            <input type="range" class="pwr-slider" id="pwr-slider" min="0" max="255" value="128">
+        </div>
+
+        <!-- S-Meter -->
+        <div class="smeter-section">
+            <div class="smeter-info" id="smeter-info">S-METER: S7 | P1</div>
+            <div class="smeter-labels">
+                <span>S1</span><span>S2</span><span>S3</span><span>S4</span><span>S5</span>
+                <span>S6</span><span>S7</span><span>S8</span><span>S9</span>
+                <span>S9+10</span><span>S9+20</span><span>S9+40</span><span>S9+60</span>
+            </div>
+            <div class="smeter-bar-bg">
+                <div class="smeter-bar" id="smeter-bar"></div>
+            </div>
+        </div>
+
+        <!-- TX Meter -->
+        <div class="tx-section">
+            <div class="tx-info">TX: -33 dBFS</div>
+            <div class="tx-bar-bg">
+                <div class="tx-bar" id="tx-bar"></div>
+            </div>
+        </div>
+
+        <!-- PTT Button -->
+        <button class="ptt-btn" id="btn-ptt">RX (SPACE)</button>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span class="status-text" id="status-text">SYSTEM READY</span>
+            <span class="version">v2.0.8 — DEMO</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
