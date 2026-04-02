@@ -1762,30 +1762,15 @@ class ThemeEditorOverlay(QWidget):
         root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(6)
 
-        # ── Title + Preset Row ────────────────────────────────────────
-        top_row = QHBoxLayout()
+        # ── Title Row ─────────────────────────────────────────────────
         self._title_lbl = QLabel("Theme Editor")
         self._title_lbl.setStyleSheet(f"color: {T['text']}; font-size: 16px; font-weight: bold; border: none;")
-        top_row.addWidget(self._title_lbl)
-        top_row.addStretch()
+        root.addWidget(self._title_lbl)
 
-        self._preset_lbl = QLabel("Vorlage:")
-        self._preset_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 12px; border: none;")
-        top_row.addWidget(self._preset_lbl)
-
+        # Preset-Combo wird unten im Save-Row eingebaut (dummy für Kompatibilität)
         self.combo_preset = DropDownComboBox()
-        self.combo_preset.setMinimumWidth(150)
-        self.combo_preset.setStyleSheet(f"""
-            QComboBox {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
-                border: 1px solid {T['border']}; border-radius: 5px;
-                padding: 4px 10px; font-size: 12px; min-height: 28px; }}
-            QComboBox::drop-down {{ border: none; width: 24px; }}
-            QComboBox QAbstractItemView {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
-                selection-background-color: {T['bg_light']}; border: 1px solid {T['border']}; }}
-        """)
-        self.combo_preset.currentIndexChanged.connect(self._on_preset_selected)
-        top_row.addWidget(self.combo_preset)
-        root.addLayout(top_row)
+        self.combo_preset.hide()
+        self._preset_lbl = QLabel("")
 
         # ── Farbliste mit Punkten + Edit-Button pro Zeile ─────────
         scroll = QScrollArea()
@@ -1809,7 +1794,7 @@ class ThemeEditorOverlay(QWidget):
 
         for key, label in _THEME_FIELDS:
             row_widget = QWidget()
-            row_widget.setFixedHeight(26)
+            row_widget.setFixedHeight(34)
             row_widget.setCursor(Qt.PointingHandCursor)
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(6, 0, 6, 0)
@@ -1817,8 +1802,8 @@ class ThemeEditorOverlay(QWidget):
 
             # Farbpunkt (rundes Widget mit Border)
             dot = QLabel("")
-            dot.setFixedSize(14, 14)
-            dot.setStyleSheet(f"background: {T['accent']}; border: 1px solid {T['border_hover']}; border-radius: 7px;")
+            dot.setFixedSize(20, 20)
+            dot.setStyleSheet(f"background: {T['accent']}; border: 2px solid {T['border']}; border-radius: 10px;")
             row_layout.addWidget(dot)
             self._color_dots[key] = dot
 
@@ -1827,14 +1812,15 @@ class ThemeEditorOverlay(QWidget):
             lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
             row_layout.addWidget(lbl, stretch=1)
 
-            # Edit Button
-            btn_edit = QPushButton("Edit")
-            btn_edit.setFixedSize(40, 20)
+            # Edit Button (Schraubenschlüssel Icon)
+            btn_edit = QPushButton()
+            btn_edit.setFixedSize(34, 34)
             btn_edit.setCursor(Qt.PointingHandCursor)
+            btn_edit.setIcon(themed_icon(os.path.join(_ICONS, "build.svg")))
+            btn_edit.setIconSize(QSize(24, 24))
             btn_edit.setStyleSheet(f"""
-                QPushButton {{ background: {T['bg_mid']}; color: {T['text_muted']};
-                    border: 1px solid {T['border']}; border-radius: 3px; font-size: 9px; }}
-                QPushButton:hover {{ border-color: {T['accent']}; color: {T['text']}; }}
+                QPushButton {{ background: transparent; border: none; }}
+                QPushButton:hover {{ background: {T['bg_light']}; border-radius: 3px; }}
             """)
             btn_edit.clicked.connect(lambda checked, k=key: self._edit_color(k))
             row_layout.addWidget(btn_edit)
@@ -1852,30 +1838,62 @@ class ThemeEditorOverlay(QWidget):
         self._rgba_inputs = {"R": QLineEdit(), "G": QLineEdit(), "B": QLineEdit(), "A": QLineEdit()}
         self._hex_input = QLineEdit()
 
-        # ── Save Row: Name-Eingabe + Delete + Save ────────────────────
+        # ── Save Row: Kombi-Dropdown (Laden + Benennen) + Delete + Save ─
+        hint_lbl = QLabel("Name ändern = neues Theme")
+        hint_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 9px; border: none;")
+        root.addWidget(hint_lbl)
+
         save_row = QHBoxLayout()
         save_row.setSpacing(6)
 
+        # Name-Feld (editierbar) + Preset-Pfeil
         self.input_theme_name = QLineEdit()
-        self.input_theme_name.setPlaceholderText("Theme-Name eingeben...")
+        self.input_theme_name.setPlaceholderText("Theme-Name...")
+        self.input_theme_name.setMinimumHeight(32)
         self.input_theme_name.setStyleSheet(f"""
-            QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
-                        border: 1px solid {T['border']}; border-radius: 5px;
-                        padding: 4px 8px; font-size: 12px; }}
+            QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text']};
+                border: 1px solid {T['border']}; border-radius: 5px;
+                padding: 4px 10px; font-size: 12px; }}
+            QLineEdit:focus {{ border-color: {T['accent']}; }}
         """)
         self.input_theme_name.setFocusPolicy(Qt.ClickFocus)
         self.input_theme_name.textEdited.connect(self._on_name_edited)
         save_row.addWidget(self.input_theme_name, stretch=1)
 
+        # Preset-Pfeil Button → öffnet Preset-Menü nach oben
+        self._preset_menu = QMenu(self)
+        from PySide6.QtGui import QTransform, QPixmap
+        btn_presets = QPushButton()
+        btn_presets.setFixedSize(32, 32)
+        btn_presets.setCursor(Qt.PointingHandCursor)
+        # Arrow SVG laden und 270° drehen (Pfeil nach oben)
+        icon = themed_icon(os.path.join(_ICONS, "arrow.svg"))
+        pixmap = icon.pixmap(QSize(18, 18))
+        rotated = pixmap.transformed(QTransform().rotate(270))
+        btn_presets.setIcon(QIcon(rotated))
+        btn_presets.setIconSize(QSize(18, 18))
+        btn_presets.setStyleSheet(f"""
+            QPushButton {{ background: {T['bg_mid']};
+                border: 1px solid {T['border']}; border-radius: 5px; }}
+            QPushButton:hover {{ border-color: {T['accent']}; }}
+        """)
+        self._btn_presets = btn_presets
+        btn_presets.clicked.connect(lambda: self._show_preset_menu(btn_presets))
+        save_row.addWidget(btn_presets)
+
+        # Hidden combo_preset für Kompatibilität mit bestehenden Methoden
+        self.combo_preset = QComboBox()
+        self.combo_preset.hide()
+
         self.btn_delete = QPushButton()
-        self.btn_delete.setFixedSize(40, 40)
+        self.btn_delete.setFixedSize(32, 32)
         self.btn_delete.setText("X")
         self.btn_delete.setCursor(Qt.PointingHandCursor)
         self.btn_delete.setToolTip("User-Theme löschen")
         self._delete_style = f"""
             QPushButton {{ background-color: {T['bg_mid']}; border: 2px solid {T['error']};
                           border-radius: 5px; padding: 5px; color: {T['error']};
-                          font-weight: bold; font-size: 14px; }}
+                          font-weight: bold; font-size: 12px; }}
             QPushButton:hover {{ background-color: {T['bg_light']}; }}"""
         self.btn_delete.setStyleSheet(self._delete_style)
         self.btn_delete.clicked.connect(self._delete_theme)
@@ -1948,6 +1966,56 @@ class ThemeEditorOverlay(QWidget):
         for key in self._color_rows:
             self._update_color_row(key, selected=(key == self._selected_key))
 
+    def _show_preset_menu(self, btn):
+        """Preset-Menü als Popup unter dem ▼ Button anzeigen."""
+        self._preset_menu.clear()
+        self._preset_menu.setStyleSheet(f"""
+            QMenu {{ background: {T['bg_mid']}; color: {T['text']}; border: 1px solid {T['border']};
+                border-radius: 6px; padding: 4px; }}
+            QMenu::item {{ padding: 6px 16px; border-radius: 4px; }}
+            QMenu::item:selected {{ background: {T['bg_light']}; }}
+        """)
+        # Builtin Presets
+        for key, name in PRESET_NAMES.items():
+            action = self._preset_menu.addAction(name)
+            action.setData(f"builtin:{key}")
+            action.triggered.connect(lambda checked, k=key: self._load_preset(k))
+        # User Themes
+        user_themes = load_user_themes()
+        if user_themes:
+            self._preset_menu.addSeparator()
+            for name in sorted(user_themes.keys()):
+                action = self._preset_menu.addAction(f"  {name}")
+                action.triggered.connect(lambda checked, n=name: self._load_user_theme(n))
+
+        # Popup nach OBEN öffnen
+        menu_height = self._preset_menu.sizeHint().height()
+        pos = btn.mapToGlobal(QPoint(0, -menu_height))
+        self._preset_menu.exec(pos)
+
+    def _load_preset(self, key):
+        """Builtin Preset laden."""
+        if key in PRESETS:
+            import copy
+            self._theme_data = copy.deepcopy(PRESETS[key])
+            self.input_theme_name.setText(PRESET_NAMES.get(key, key))
+            self._user_edited_name = False
+            for k in self._color_rows:
+                self._update_color_row(k)
+            self._hide_delete_btn()
+
+    def _load_user_theme(self, name):
+        """User-Theme laden."""
+        user_themes = load_user_themes()
+        if name in user_themes:
+            import copy
+            self._theme_data = copy.deepcopy(user_themes[name])
+            self.input_theme_name.setText(name)
+            self._user_edited_name = True
+            for k in self._color_rows:
+                self._update_color_row(k)
+            self._show_delete_btn()
+
     def _edit_color(self, key):
         """Edit-Button geklickt → Farbrad Popup öffnen."""
         self._selected_key = key
@@ -1976,9 +2044,8 @@ class ThemeEditorOverlay(QWidget):
         r, g, b, a = rgba_parts(color_str)
         dot.setFixedSize(14, 14)
         dot.setText("")
-        luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        border_c = T['border_hover'] if luminance < 60 else T['border']
-        dot.setStyleSheet(f"background: rgba({r},{g},{b},{a}); border: 1px solid {border_c}; border-radius: 7px;")
+        dot.setFixedSize(20, 20)
+        dot.setStyleSheet(f"background: rgba({r},{g},{b},{a}); border: 2px solid {T['border']}; border-radius: 10px;")
         if selected:
             lbl.setStyleSheet(f"color: {T['text']}; font-size: 11px; font-weight: bold; border: none;")
             widget.setStyleSheet(f"background: {T['bg_light']}; border: 1px solid {T['accent']}; border-radius: 4px;")
