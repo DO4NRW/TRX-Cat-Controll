@@ -191,12 +191,21 @@ function drawWaterfall() {
     const specH = Math.floor((h - freqBarH) * specFrac);
     const wfH = h - specH - freqBarH;
 
+    // Farben aus Theme (CSS-Variablen)
+    const cs = getComputedStyle(document.documentElement);
+    const wfBg = cs.getPropertyValue('--wf-bg').trim() || 'rgb(18, 22, 30)';
+    const wfGrid = cs.getPropertyValue('--wf-grid').trim() || 'rgb(30, 40, 55)';
+    const wfFreqBar = cs.getPropertyValue('--wf-freq-bar').trim() || 'rgb(20, 25, 35)';
+    const wfFreqText = cs.getPropertyValue('--wf-freq-text').trim() || 'rgb(160, 170, 180)';
+    const wfFreqTick = cs.getPropertyValue('--wf-freq-tick').trim() || 'rgb(60, 70, 80)';
+    const accent = cs.getPropertyValue('--accent').trim() || '#06c6a4';
+
     // Spectrum background
-    ctx.fillStyle = 'rgb(18, 22, 30)';
+    ctx.fillStyle = wfBg;
     ctx.fillRect(0, 0, w, specH);
 
     // Grid
-    ctx.strokeStyle = 'rgb(30, 40, 55)';
+    ctx.strokeStyle = wfGrid;
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) {
         const y = Math.floor(specH * i / 4);
@@ -211,7 +220,6 @@ function drawWaterfall() {
     const peak = Math.max(...spectrum);
     if (peak > 0) {
         const scale = 0.85 / Math.max(peak, 1);
-        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#06c6a4';
 
         // Fill (alpha 30/255 ≈ 0.12 — waterfall.py nutzt 30 nach Theme-Fix)
         ctx.fillStyle = accent + '1e';
@@ -242,14 +250,18 @@ function drawWaterfall() {
 
     // Freq bar
     const freqY = specH;
-    ctx.fillStyle = 'rgb(20, 25, 35)';
+    ctx.fillStyle = wfFreqBar;
     ctx.fillRect(0, freqY, w, freqBarH);
+    ctx.strokeStyle = wfFreqTick;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, freqY); ctx.lineTo(w, freqY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, freqY + freqBarH); ctx.lineTo(w, freqY + freqBarH); ctx.stroke();
 
     const spanHz = currentSpanHz;
     const startFreq = currentFreq - spanHz / 2;
     const endFreq = currentFreq + spanHz / 2;
     ctx.font = '9px Roboto, sans-serif';
-    ctx.fillStyle = 'rgb(160, 170, 180)';
+    ctx.fillStyle = wfFreqText;
     for (let i = 0; i <= 5; i++) {
         const freq = startFreq + (endFreq - startFreq) * i / 5;
         const x = Math.floor(w * i / 5);
@@ -257,6 +269,10 @@ function drawWaterfall() {
         if (i === 0) ctx.fillText(label, x + 3, freqY + 13);
         else if (i === 5) ctx.fillText(label, x - 48, freqY + 13);
         else ctx.fillText(label, x - 22, freqY + 13);
+        // Tick
+        ctx.strokeStyle = wfFreqTick;
+        ctx.beginPath(); ctx.moveTo(x, freqY); ctx.lineTo(x, freqY + 4); ctx.stroke();
+        ctx.fillStyle = wfFreqText;
     }
 
     // Waterfall
