@@ -290,10 +290,15 @@ class IC705Widget(QWidget):
         slider_col.addWidget(self.slider_noise, stretch=1)
 
         # Span Slider (vertikal, unter NF)
+        lbl_span_title = QLabel("SPAN")
+        lbl_span_title.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        lbl_span_title.setAlignment(Qt.AlignCenter)
+        slider_col.addWidget(lbl_span_title)
         self.slider_span.setStyleSheet(_vslider_style)
         self.slider_span.setFocusPolicy(Qt.NoFocus)
         slider_col.addWidget(self.slider_span, stretch=1)
-        slider_col.addWidget(self.lbl_span)  # Label unten
+        self.lbl_span.setText("50k")
+        slider_col.addWidget(self.lbl_span)  # Wert unten
 
         wf_row.addLayout(slider_col)
 
@@ -576,14 +581,14 @@ class IC705Widget(QWidget):
                     fw = bw.get(self._current_mode, 2700)
                     fs = side.get(self._current_mode, "upper")
                     self.waterfall.set_freq_info(scope_center, self._cat._scope_span_hz, fw, fs)
-                if hasattr(self._cat, '_scope_span_hz') and not self.slider_span.isSliderDown():
+                if hasattr(self._cat, '_scope_span_hz') and not self.slider_span.isSliderDown() and not getattr(self, '_span_lock', False):
                     span_hz = self._cat._scope_span_hz
                     if span_hz > 0:
                         for i, (hz, _) in enumerate(self._SPAN_VALUES):
                             if hz == span_hz:
                                 self.slider_span.blockSignals(True)
                                 self.slider_span.setValue(i)
-                                self.lbl_span.setText(f"SPAN: {self._SPAN_VALUES[i][1]}")
+                                self.lbl_span.setText(self._SPAN_VALUES[i][1].replace(" kHz", "k"))
                                 self.slider_span.blockSignals(False)
                                 break
 
@@ -873,10 +878,13 @@ class IC705Widget(QWidget):
     def _update_span_label(self, idx):
         """Nur Label updaten beim Slider-Bewegen."""
         if idx < len(self._SPAN_VALUES):
-            self.lbl_span.setText(f"SPAN: {self._SPAN_VALUES[idx][1]}")
+            self.lbl_span.setText(self._SPAN_VALUES[idx][1].replace(" kHz", "k"))
 
     def _apply_span(self):
         """Span am TRX setzen wenn Slider losgelassen wird."""
+        # Polling-Update 2s blockieren damit der TRX Zeit hat
+        self._span_lock = True
+        QTimer.singleShot(2000, lambda: setattr(self, '_span_lock', False))
         idx = self.slider_span.value()
         if idx >= len(self._SPAN_VALUES):
             return
