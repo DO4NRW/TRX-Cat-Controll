@@ -13,9 +13,19 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    /* Farben werden per JS aus theme.json gesetzt */
     background: var(--bg-dark);
     color: var(--text);
+}
+
+/* Title Bar */
+.title-bar {
+    text-align: center;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--text-secondary, #ccc);
+    border-bottom: 1px solid var(--border, #555);
+    background: var(--bg-dark);
+    flex-shrink: 0;
 }
 
 /* Top Bar */

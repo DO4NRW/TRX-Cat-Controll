@@ -9,6 +9,7 @@
 </head>
 <body>
     <div id="app">
+
         <!-- Menu Dropdown -->
         <div class="overlay" id="menu-overlay" style="display:none;">
             <div class="menu-dropdown">
@@ -24,7 +25,6 @@
         <div class="overlay" id="settings-overlay" style="display:none;">
             <div class="overlay-panel">
                 <h3>Radio Setup</h3>
-
                 <label>Rig</label>
                 <select id="cfg-rig">
                     <option value="ic705">Icom IC-705</option>
@@ -33,34 +33,20 @@
                     <option value="ic9700">Icom IC-9700</option>
                     <option value="ic7100">Icom IC-7100</option>
                 </select>
-
                 <label>Baud Rate</label>
                 <select id="cfg-baud">
-                    <option>4800</option>
-                    <option>9600</option>
-                    <option>19200</option>
-                    <option>38400</option>
-                    <option selected>115200</option>
+                    <option>4800</option><option>9600</option><option>19200</option>
+                    <option>38400</option><option selected>115200</option>
                 </select>
-
                 <label>Stop Bits</label>
-                <select id="cfg-stopbits">
-                    <option>1</option>
-                    <option selected>2</option>
-                </select>
-
+                <select id="cfg-stopbits"><option>1</option><option selected>2</option></select>
                 <label>CI-V Adresse</label>
                 <input type="text" id="cfg-civ" value="0xA4" readonly>
-
                 <div class="overlay-info">
                     <p>Nur <b>Chrome / Edge</b> unterstützen Web Serial.</p>
                     <p>Read-Only: Frequenz, Mode, S-Meter, Wasserfall.</p>
-                    <p>Kein PTT, kein TX, kein Audio.</p>
                 </div>
-
-                <div class="overlay-buttons">
-                    <button class="btn" id="btn-settings-close">Schließen</button>
-                </div>
+                <div class="overlay-buttons"><button class="btn" id="btn-settings-close">Schließen</button></div>
             </div>
         </div>
 
@@ -70,12 +56,9 @@
                 <h3>Audio Setup</h3>
                 <div class="overlay-info">
                     <p>Audio-Routing ist nur in der <b>Desktop-App</b> verfügbar.</p>
-                    <p>Die Web-Demo unterstützt nur CAT-Steuerung (Read-Only).</p>
                     <p><a href="https://github.com/DO4NRW/RigLink/releases" style="color:var(--accent)">RigLink herunterladen</a></p>
                 </div>
-                <div class="overlay-buttons">
-                    <button class="btn" id="btn-audio-close">Schließen</button>
-                </div>
+                <div class="overlay-buttons"><button class="btn" id="btn-audio-close">Schließen</button></div>
             </div>
         </div>
 
@@ -94,15 +77,35 @@
                 </select>
                 <div class="overlay-info" style="margin-top:12px;">
                     <p>Theme wird live angewendet.</p>
-                    <p>In der Desktop-App: eigene Themes erstellen + speichern.</p>
                 </div>
-                <div class="overlay-buttons">
-                    <button class="btn" id="btn-theme-close">Schließen</button>
-                </div>
+                <div class="overlay-buttons"><button class="btn" id="btn-theme-close">Schließen</button></div>
             </div>
         </div>
 
-        <!-- Top Bar -->
+        <!-- Kontakt Overlay -->
+        <div class="overlay" id="contact-overlay" style="display:none;">
+            <div class="overlay-panel">
+                <h3>Kontakt</h3>
+                <label>Name / Rufzeichen</label>
+                <input type="text" id="contact-name" placeholder="z.B. DL1ABC">
+                <label>E-Mail</label>
+                <input type="text" id="contact-email" placeholder="deine@email.de">
+                <label>Nachricht</label>
+                <textarea id="contact-msg" rows="4" placeholder="Deine Nachricht..."></textarea>
+                <div class="overlay-buttons">
+                    <button class="btn" id="btn-contact-close">Abbrechen</button>
+                    <button class="btn btn-accent" id="btn-contact-send">Senden</button>
+                </div>
+                <div class="contact-status" id="contact-status"></div>
+            </div>
+        </div>
+
+        <!-- ═══ Title Bar ═══ -->
+        <div class="title-bar">
+            <span class="title-text">RigLink</span>
+        </div>
+
+        <!-- ═══ Top Bar ═══ -->
         <div class="top-bar">
             <div class="menu-btn"><span class="material-symbols-outlined">menu</span></div>
             <div class="spacer"></div>
@@ -127,27 +130,23 @@
             <div class="connect-btn" id="btn-connect" title="Connect"><span class="material-symbols-outlined">cable</span></div>
         </div>
 
-        <!-- Span Slider -->
+        <!-- ═══ Span Slider ═══ -->
         <div class="span-row">
             <span class="span-label" id="span-label">SPAN: 50 kHz</span>
-            <input type="range" class="span-slider" id="span-slider" min="0" max="6" value="3">
+            <input type="range" id="span-slider" min="0" max="6" value="3">
         </div>
 
-        <!-- Waterfall / Spectrum -->
+        <!-- ═══ Waterfall / Spectrum ═══ -->
         <div class="waterfall-container">
-            <canvas id="waterfall" width="900" height="300"></canvas>
+            <canvas id="waterfall"></canvas>
         </div>
 
-        <!-- Frequency Display -->
+        <!-- ═══ Frequency Row ═══ -->
         <div class="freq-row">
             <button class="btn" id="btn-step-down">STEP &lt;</button>
             <select id="step-select">
-                <option>10</option>
-                <option>50</option>
-                <option selected>100</option>
-                <option>500</option>
-                <option>1000</option>
-                <option>5000</option>
+                <option>10</option><option>50</option><option selected>100</option>
+                <option>500</option><option>1000</option><option>5000</option>
             </select>
             <button class="btn" id="btn-step-up">STEP &gt;</button>
             <div class="spacer"></div>
@@ -155,7 +154,7 @@
             <button class="btn btn-accent" id="btn-set">SET</button>
         </div>
 
-        <!-- Mode Buttons -->
+        <!-- ═══ Mode Buttons ═══ -->
         <div class="mode-row">
             <button class="btn mode-btn" data-mode="LSB">LSB</button>
             <button class="btn mode-btn active" data-mode="USB">USB</button>
@@ -168,7 +167,7 @@
             <button class="btn mode-btn" data-mode="DATA">DATA</button>
         </div>
 
-        <!-- DSP Row -->
+        <!-- ═══ DSP Row ═══ -->
         <div class="dsp-row">
             <button class="btn dsp-btn" data-dsp="ATT">ATT</button>
             <button class="btn dsp-btn" data-dsp="NB">NB</button>
@@ -179,15 +178,15 @@
             <button class="btn dsp-btn" id="btn-agc">AGC: SLOW</button>
         </div>
 
-        <!-- Power Slider -->
+        <!-- ═══ Power Slider ═══ -->
         <div class="pwr-row">
             <span class="pwr-label" id="pwr-label">PWR: 5.0W</span>
-            <input type="range" class="pwr-slider" id="pwr-slider" min="0" max="255" value="128">
+            <input type="range" id="pwr-slider" min="0" max="255" value="128">
         </div>
 
-        <!-- S-Meter -->
+        <!-- ═══ S-Meter ═══ -->
         <div class="smeter-section">
-            <div class="smeter-info" id="smeter-info">S-METER: S7 | P1</div>
+            <div class="smeter-info" id="smeter-info">S-METER: --- | OFF</div>
             <div class="smeter-labels">
                 <span>S1</span><span>S2</span><span>S3</span><span>S4</span><span>S5</span>
                 <span>S6</span><span>S7</span><span>S8</span><span>S9</span>
@@ -198,51 +197,33 @@
             </div>
         </div>
 
-        <!-- TX Meter -->
+        <!-- ═══ TX Meter ═══ -->
         <div class="tx-section">
-            <div class="tx-info">TX: -33 dBFS</div>
+            <div class="tx-info" id="tx-info">TX: --- dBFS</div>
             <div class="tx-bar-bg">
                 <div class="tx-bar" id="tx-bar"></div>
             </div>
         </div>
 
-        <!-- PTT Button -->
+        <!-- ═══ PTT Button ═══ -->
         <button class="ptt-btn" id="btn-ptt">RX (SPACE)</button>
 
-        <!-- Status Bar -->
-        <div class="status-bar">
+        <!-- ═══ Status Bar ═══ -->
+        <div class="status-bar" id="status-bar">
             <span class="status-text" id="status-text">SYSTEM READY</span>
-            <span class="version" id="version-text">v2.0.8 — DEMO</span>
+            <span class="version" id="version-text">v2.0.8</span>
         </div>
-    </div>
 
-    <!-- Kontakt Overlay -->
-    <div class="overlay" id="contact-overlay" style="display:none;">
-        <div class="overlay-panel">
-            <h3>Kontakt</h3>
-            <label>Name / Rufzeichen</label>
-            <input type="text" id="contact-name" placeholder="z.B. DL1ABC">
-            <label>E-Mail</label>
-            <input type="text" id="contact-email" placeholder="deine@email.de">
-            <label>Nachricht</label>
-            <textarea id="contact-msg" rows="4" placeholder="Deine Nachricht..."></textarea>
-            <div class="overlay-buttons">
-                <button class="btn" id="btn-contact-close">Abbrechen</button>
-                <button class="btn btn-accent" id="btn-contact-send">Senden</button>
-            </div>
-            <div class="contact-status" id="contact-status"></div>
+        <!-- ═══ Legal Footer ═══ -->
+        <div class="legal-footer">
+            <span>Verantwortlich: DO4NRW | <a href="mailto:do4nrw@darc.de">do4nrw@darc.de</a></span>
+            <span class="legal-sep">|</span>
+            <span><a href="#" id="link-contact">Kontaktformular</a></span>
+            <span class="legal-sep">|</span>
+            <span>Diese Demo sammelt keine persönlichen Daten. Fehlerberichte werden anonymisiert gesendet.</span>
+            <span class="legal-sep">|</span>
+            <span><a href="https://github.com/DO4NRW/RigLink">GitHub</a></span>
         </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="legal-footer">
-        <span>Verantwortlich: DO4NRW | <a href="mailto:do4nrw@darc.de">do4nrw@darc.de</a></span>
-        <span class="legal-sep">|</span>
-        <span><a href="#" id="link-contact">Kontaktformular</a></span>
-        <span class="legal-sep">|</span>
-        <span>Diese Demo sammelt keine persönlichen Daten. Fehlerberichte werden anonymisiert an raport.pcore.de gesendet.</span>
-        <span class="legal-sep">|</span>
-        <span><a href="https://github.com/DO4NRW/RigLink">GitHub</a></span>
     </div>
 
     <script src="serial.js"></script>
