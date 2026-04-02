@@ -51,7 +51,7 @@ window.addEventListener('unhandledrejection', e => {
 });
 
 // State
-let currentFreq = 14200000; // Hz
+let currentFreq = 14200000;
 let currentMode = 'USB';
 let connected = false;
 let pttActive = false;
@@ -59,6 +59,11 @@ let smeterValue = 0;
 let spectrum = new Float32Array(475);
 let wfData = [];
 const WF_LINES = 200;
+
+// Demo-Daten Playback
+let demoData = null;
+let demoIndex = 0;
+let demoPlaying = true;
 
 // Waterfall Palette (SDR-Style)
 const PALETTE_STOPS = [
@@ -670,16 +675,60 @@ function setupContact() {
     });
 }
 
+// Demo-Daten laden
+async function loadDemoData() {
+    try {
+        const resp = await fetch('demo_data.json');
+        demoData = await resp.json();
+        console.log(`Demo-Daten geladen: ${demoData.length} Frames`);
+    } catch (e) {
+        console.warn('Demo-Daten nicht verfügbar, nutze Simulation');
+        demoData = null;
+    }
+}
+
+// Demo-Frame abspielen
+function playDemoFrame() {
+    if (!demoData || demoData.length === 0) {
+        generateSpectrum();
+        return;
+    }
+
+    const frame = demoData[demoIndex];
+    demoIndex = (demoIndex + 1) % demoData.length;
+
+    if (frame.sp) {
+        for (let i = 0; i < Math.min(475, frame.sp.length); i++) {
+            spectrum[i] = spectrum[i] * 0.3 + frame.sp[i] * 0.7;
+        }
+    }
+    if (frame.f) {
+        currentFreq = frame.f;
+        updateFreqDisplay();
+    }
+    if (frame.s !== undefined) {
+        smeterValue = frame.s / 2.55;
+    }
+    if (frame.m) {
+        currentMode = frame.m;
+        document.querySelectorAll('.mode-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.mode === frame.m);
+        });
+    }
+    if (frame.sc && frame.ss) {
+        currentSpanHz = frame.ss;
+    }
+}
+
 // Main loop
 let frameSkip = 0;
 function tick() {
     frameSkip++;
     if (!connected) {
-        // Demo-Mode: volle Geschwindigkeit
-        generateSpectrum();
+        // Demo-Mode: echte aufgenommene Daten oder Simulation
+        if (frameSkip % 2 === 0) playDemoFrame();
         drawWaterfall();
     } else {
-        // Connected: nur jeden 3. Frame rendern (weniger Main-Thread Last)
         if (frameSkip % 3 === 0) drawWaterfall();
     }
     updateSMeter();
@@ -692,6 +741,7 @@ async function init() {
     buildPalette();
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
     await loadTheme();
+    await loadDemoData();
     updateFreqDisplay();
     setupSettings();
     setupModeButtons();
