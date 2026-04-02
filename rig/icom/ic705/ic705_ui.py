@@ -885,7 +885,8 @@ class IC705Widget(QWidget):
 
     def _apply_span(self):
         """Span am TRX setzen wenn Slider losgelassen wird."""
-        print(f"[SPAN] _apply_span aufgerufen, idx={self.slider_span.value()}", flush=True)
+        idx_val = self.slider_span.value()
+        print(f"[SPAN] _apply_span idx={idx_val} span={self._SPAN_VALUES[idx_val][0] if idx_val < len(self._SPAN_VALUES) else '?'}", flush=True)
         # Polling-Update 2s blockieren damit der TRX Zeit hat
         self._span_lock = True
         QTimer.singleShot(2000, lambda: setattr(self, '_span_lock', False))
@@ -912,9 +913,14 @@ class IC705Widget(QWidget):
         self._cat._civ_send(0x27, sub=0x11, data=bytes([0x01]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
-            self.waterfall._wf_data[:] = [8, 12, 35]
-            self.waterfall._display_spectrum[:] = 0
-            self.waterfall._last_spectrum[:] = 0
+            try:
+                self.waterfall._wf_data[:, :, 0] = 8
+                self.waterfall._wf_data[:, :, 1] = 12
+                self.waterfall._wf_data[:, :, 2] = 35
+                self.waterfall._display_spectrum[:] = 0
+                self.waterfall._last_spectrum[:] = 0
+            except Exception:
+                pass
 
     def _cycle_agc(self):
         if not self._cat or not self._cat.connected:
