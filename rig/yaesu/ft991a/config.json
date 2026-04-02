@@ -28,12 +28,12 @@
             "channels": 1
         },
         "trx_mic": {
-            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2903B Audio CODEC Analoges Stereo (Eingang)",
+            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2903B Audio CODEC Analoges Stereo",
             "rate": 48000,
             "channels": 1
         },
         "trx_speaker": {
-            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2903B Audio CODEC Analoges Stereo (Ausgabe)",
+            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2903B Audio CODEC Analoges Stereo",
             "rate": 48000,
             "channels": 1
         },

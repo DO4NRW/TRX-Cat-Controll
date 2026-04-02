@@ -10,21 +10,21 @@
         "ERROR": "Connection Failed"
     },
     "last_rig": "Icom IC-705",
-    "last_theme": "dark",
+    "last_theme": "light",
     "configured_rigs": [
         "Yaesu FT-991A",
         "Icom IC-705"
     ],
     "sliders": {
         "volume": 1,
-        "signal_gain": 52,
-        "noise_floor": 25
+        "signal_gain": 30,
+        "noise_floor": 3
     },
     "dsp_state": {
         "ATT": false,
         "NB": true,
-        "NR": true,
-        "NOTCH": true,
+        "NR": false,
+        "NOTCH": false,
         "COMP": false,
         "AGC": "MID"
     }

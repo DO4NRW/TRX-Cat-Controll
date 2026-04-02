@@ -101,27 +101,27 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 
 ## Screenshots
 
-### Main GUI (FT-991A, Light Theme)
-![Main GUI](Screenshot0.png)
-
-### Radio Setup (CAT + PTT)
-![Radio Setup](Screenshot1.png)
-
-### Audio Matrix
-![Audio Matrix](Screenshot2.png)
-
-### Theme Editor + Color Picker
-![Theme Editor](Screenshot3.png)
-![Color Picker](Screenshot7.png)
-
 ### IC-705 Wasserfall / Spektrum (Dark Theme, Click-to-Tune)
-![IC-705 Waterfall](Screenshot4.png)
+![IC-705 Waterfall](screenshots/Screenshot4.png)
+
+### Main GUI (FT-991A, Light Theme)
+![Main GUI](screenshots/Screenshot0.png)
 
 ### Light Theme mit Menü
-![Light Theme](Screenshot5.png)
+![Light Theme](screenshots/Screenshot5.png)
+
+### Radio Setup (CAT + PTT)
+![Radio Setup](screenshots/Screenshot1.png)
+
+### Audio Matrix
+![Audio Matrix](screenshots/Screenshot2.png)
+
+### Theme Editor + Color Picker
+![Theme Editor](screenshots/Screenshot3.png)
+![Color Picker](screenshots/Screenshot7.png)
 
 ### Bug Report Dialog (Hardware-Info)
-![Bug Report](Screenshot6.png)
+![Bug Report](screenshots/Screenshot6.png)
 
 ---
 
