@@ -94,6 +94,9 @@ class IC705Widget(QWidget):
         self._vox_lockout = 0
         self._vox_lockout_ms = 500
         self._config_path = None
+        self._demo_recording = False
+        self._demo_frames = []
+        self._demo_start = 0
 
         self._build_ui()
 
@@ -388,6 +391,18 @@ class IC705Widget(QWidget):
                 self.waterfall.update_spectrum(spectrum)
                 if self._poll_count % 30 == 0:
                     print(f"SCOPE: {sum(1 for v in spectrum if v>0)}/475 max={max(spectrum)}")
+                # Demo-Recorder: Scope + aktuelle Werte mitschneiden
+                if self._demo_recording:
+                    import time
+                    frame = {'sp': spectrum[:], 't': round(time.time() - self._demo_start, 2)}
+                    frame['f'] = self._current_freq
+                    frame['s'] = int(self._smeter_smooth)
+                    frame['m'] = self._current_mode
+                    sc = getattr(self._cat, '_scope_center_hz', 0)
+                    ss = getattr(self._cat, '_scope_span_hz', 0)
+                    if sc > 0: frame['sc'] = sc
+                    if ss > 0: frame['ss'] = ss
+                    self._demo_frames.append(frame)
                 # Freq+Span an Wasserfall (echtes Scope-Center für genaues Click-to-Tune)
                 scope_center = getattr(self._cat, '_scope_center_hz', 0) or self._current_freq
                 if scope_center > 0 and hasattr(self._cat, '_scope_span_hz'):
@@ -746,6 +761,45 @@ class IC705Widget(QWidget):
                     self._on_waterfall_scroll(int(steps * self.waterfall._step_hz))
                 return True
         return super().eventFilter(obj, event)
+
+    # ══════════════════════════════════════════════════════════════════
+    # DEMO RECORDER (F9 Start/Stop)
+    # ══════════════════════════════════════════════════════════════════
+
+    def start_demo_recording(self):
+        import time
+        self._demo_frames = []
+        self._demo_start = time.time()
+        self._demo_recording = True
+        log_event("Demo-Aufnahme gestartet")
+        print("🔴 DEMO RECORDING GESTARTET — F9 zum Stoppen")
+
+    def stop_demo_recording(self):
+        self._demo_recording = False
+        log_event(f"Demo-Aufnahme gestoppt: {len(self._demo_frames)} Frames")
+        print(f"⬜ DEMO RECORDING GESTOPPT — {len(self._demo_frames)} Frames")
+
+        if not self._demo_frames:
+            return
+
+        import json, os
+        output = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))), "docs", "demo_data.json")
+        with open(output, 'w') as f:
+            json.dump(self._demo_frames, f, separators=(',', ':'))
+        size = os.path.getsize(output) / 1024
+        print(f"💾 Gespeichert: {output} ({size:.0f} KB, {len(self._demo_frames)} Frames)")
+
+    def keyPressEvent(self, event):
+        from PySide6.QtCore import Qt
+        if event.key() == Qt.Key_F9:
+            if self._demo_recording:
+                self.stop_demo_recording()
+            else:
+                self.start_demo_recording()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     # ══════════════════════════════════════════════════════════════════
     # WATERFALL CLICK / SCROLL
