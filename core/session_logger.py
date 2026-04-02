@@ -101,7 +101,52 @@ def get_system_info():
             if "VGA" in line or "3D" in line:
                 gpu = line.split(": ", 1)[-1] if ": " in line else line
                 info.append(f"GPU: {gpu}")
-                break
+    except Exception:
+        pass
+
+    # Disks
+    try:
+        result = subprocess.run(["lsblk", "-d", "-o", "NAME,SIZE,MODEL,TYPE"],
+                                capture_output=True, text=True, timeout=3)
+        for line in result.stdout.splitlines()[1:]:  # Header überspringen
+            parts = line.split()
+            if len(parts) >= 2 and parts[-1] == "disk":
+                name = parts[0]
+                size = parts[1]
+                model = " ".join(parts[2:-1]) if len(parts) > 3 else "unbekannt"
+                info.append(f"Disk: /dev/{name} {size} ({model})")
+    except Exception:
+        pass
+
+    # Monitore (über xrandr)
+    try:
+        result = subprocess.run(["xrandr", "--current"], capture_output=True, text=True, timeout=3)
+        for line in result.stdout.splitlines():
+            if " connected" in line:
+                parts = line.split()
+                name = parts[0]
+                # Auflösung finden (z.B. 1920x1080+0+0)
+                res = ""
+                for p in parts:
+                    if "x" in p and "+" in p:
+                        res = p.split("+")[0]
+                        break
+                info.append(f"Monitor: {name} {res}")
+    except Exception:
+        pass
+
+    # USB-Geräte (TRX, Soundkarten)
+    try:
+        result = subprocess.run(["lsusb"], capture_output=True, text=True, timeout=3)
+        for line in result.stdout.splitlines():
+            low = line.lower()
+            if any(k in low for k in ["audio", "serial", "icom", "yaesu", "kenwood",
+                                       "elecraft", "burr-brown", "focusrite", "scarlett",
+                                       "codec", "sound", "ft-", "ic-", "usb-uart", "cp210",
+                                       "ch340", "pl2303", "ftdi"]):
+                # Bus/Device Prefix entfernen
+                dev = line.split(": ", 1)[-1] if ": " in line else line
+                info.append(f"USB: {dev}")
     except Exception:
         pass
 
