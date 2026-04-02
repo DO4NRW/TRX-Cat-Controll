@@ -1,6 +1,6 @@
 {
     "cat": {
-        "port": "/dev/ttyACM0",
+        "port": "/dev/ttyACM1",
         "baud": 115200,
         "data_bits": 8,
         "stop_bits": 2,
@@ -10,7 +10,7 @@
         "protocol": "icom"
     },
     "ptt": {
-        "port": "/dev/ttyACM1",
+        "port": "/dev/ttyACM2",
         "method": "CAT",
         "invert": false
     },
@@ -28,12 +28,12 @@
             "channels": 1
         },
         "trx_mic": {
-            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "device": "[pw:alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
             "rate": 44100,
             "channels": 1
         },
         "trx_speaker": {
-            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
+            "device": "[pw:alsa_output.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.2.analog-stereo] PCM2901 Audio Codec Analoges Stereo",
             "rate": 44100,
             "channels": 1
         },

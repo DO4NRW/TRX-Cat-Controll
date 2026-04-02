@@ -65,19 +65,30 @@ class WaterfallWidget(QWidget):
         self.setFocusPolicy(Qt.ClickFocus)
         self.setCursor(QCursor(Qt.CrossCursor))
 
-    def _build_palette(self):
-        """SDR-Style Farbpalette: schwarz → blau → cyan → grün → gelb → rot → weiß."""
-        stops = [
-            (0.00, (8, 12, 35)),
-            (0.05, (10, 20, 70)),
-            (0.15, (0, 40, 160)),
-            (0.30, (0, 150, 180)),
-            (0.45, (0, 220, 100)),
-            (0.60, (180, 220, 0)),
-            (0.75, (255, 140, 0)),
-            (0.88, (255, 40, 0)),
-            (1.00, (255, 255, 255)),
-        ]
+    PALETTES = {
+        "sdr": [
+            (0.00, (8, 12, 35)), (0.05, (10, 20, 70)), (0.15, (0, 40, 160)),
+            (0.30, (0, 150, 180)), (0.45, (0, 220, 100)), (0.60, (180, 220, 0)),
+            (0.75, (255, 140, 0)), (0.88, (255, 40, 0)), (1.00, (255, 255, 255)),
+        ],
+        "viridis": [  # Farbenblind-sicher
+            (0.00, (68, 1, 84)), (0.13, (72, 36, 117)), (0.25, (56, 88, 140)),
+            (0.38, (39, 130, 142)), (0.50, (31, 158, 137)), (0.63, (53, 183, 121)),
+            (0.75, (110, 206, 88)), (0.88, (181, 222, 43)), (1.00, (253, 231, 37)),
+        ],
+        "inferno": [  # Farbenblind-sicher (warm)
+            (0.00, (0, 0, 4)), (0.13, (40, 11, 84)), (0.25, (101, 21, 110)),
+            (0.38, (159, 42, 99)), (0.50, (212, 72, 66)), (0.63, (245, 125, 21)),
+            (0.75, (250, 186, 12)), (0.88, (229, 228, 90)), (1.00, (252, 255, 164)),
+        ],
+        "graustufen": [  # Universell
+            (0.00, (0, 0, 0)), (0.50, (128, 128, 128)), (1.00, (255, 255, 255)),
+        ],
+    }
+
+    def _build_palette(self, name="sdr"):
+        """Farbpalette aufbauen. name: 'sdr', 'viridis', 'inferno', 'graustufen'"""
+        stops = self.PALETTES.get(name, self.PALETTES["sdr"])
         palette = np.zeros((256, 3), dtype=np.uint8)
         for i in range(256):
             frac = i / 255.0
@@ -148,6 +159,11 @@ class WaterfallWidget(QWidget):
             self._display_spectrum = new.copy()
             self._spectrum = new.copy()
         self._last_spectrum = new
+
+    def set_palette(self, name):
+        """Wasserfall-Palette wechseln: 'sdr', 'viridis', 'inferno', 'graustufen'"""
+        if name in self.PALETTES:
+            self._palette = self._build_palette(name)
 
     def set_step_hz(self, step):
         """Tuning-Schrittweite für Mausrad setzen."""
