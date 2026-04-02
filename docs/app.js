@@ -671,11 +671,19 @@ function setupContact() {
 }
 
 // Main loop
+let frameSkip = 0;
 function tick() {
-    if (!liveScope) generateSpectrum();
-    drawWaterfall();
+    frameSkip++;
+    if (!connected) {
+        // Demo-Mode: volle Geschwindigkeit
+        generateSpectrum();
+        drawWaterfall();
+    } else {
+        // Connected: nur jeden 3. Frame rendern (weniger Main-Thread Last)
+        if (frameSkip % 3 === 0) drawWaterfall();
+    }
     updateSMeter();
-    updateTXMeter();
+    if (frameSkip % 2 === 0) updateTXMeter();
     requestAnimationFrame(tick);
 }
 

@@ -57,12 +57,10 @@ class IcomCIV {
 
             if (this.onConnect) this.onConnect();
 
-            // Scope aktivieren (IC-705: 0x27 0x10 0x01 = Scope ON)
-            await this._send(0x27, 0x10, [0x01]);
-            // Scope Output ON (0x27 0x11 0x01)
-            await this._send(0x27, 0x11, [0x01]);
+            // Scope NICHT aktivieren — erstmal nur CAT-Basics pollen
+            // Scope-Daten kommen wenn der User den Scope am TRX einschaltet
 
-            // Start polling
+            // Start polling (Frequenz, Mode, S-Meter)
             this._startPolling();
 
             return true;
