@@ -36,7 +36,8 @@ body {
     font-size: 18px;
     color: var(--text);
 }
-.menu-btn:hover { border-color: var(--accent); }
+.menu-btn { box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.menu-btn:hover { border-color: var(--accent); box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
 .vox-controls, .vol-controls {
     display: flex; align-items: center; gap: 6px;
@@ -92,7 +93,8 @@ input[type="range"]::-moz-range-thumb {
     cursor: pointer;
     font-size: 18px;
 }
-.mute-btn:hover { border-color: var(--border-hover); }
+.mute-btn { box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.mute-btn:hover { border-color: var(--border-hover); box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
 .rig-select select {
     background: var(--bg-mid); color: var(--text-secondary);
@@ -111,8 +113,9 @@ input[type="range"]::-moz-range-thumb {
     cursor: pointer;
     font-size: 18px;
 }
-.connect-btn.connected { border-color: var(--accent); }
-.connect-btn:hover { border-color: var(--border-hover); }
+.connect-btn { box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.connect-btn.connected { border-color: var(--accent); box-shadow: 0 2px 8px rgba(6,198,164,0.3); }
+.connect-btn:hover { border-color: var(--border-hover); box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
 .spacer { flex: 1; }
 
@@ -155,12 +158,27 @@ input[type="range"]::-moz-range-thumb {
     padding: 6px 12px; font-size: 12px;
     cursor: pointer; min-height: 32px;
     flex: 1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: all 0.15s ease;
 }
-.btn:hover { border-color: var(--border-hover); background: var(--bg-light); }
+.btn:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-light);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+    transform: translateY(-1px);
+}
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
 .btn.active, .btn-accent {
     border: 2px solid var(--accent); font-weight: bold;
+    box-shadow: 0 2px 8px rgba(6,198,164,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
 }
-.btn.active:hover, .btn-accent:hover { background: var(--bg-light); }
+.btn.active:hover, .btn-accent:hover {
+    background: var(--bg-light);
+    box-shadow: 0 3px 10px rgba(6,198,164,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+}
 
 /* Mode + DSP Rows */
 .mode-row, .dsp-row {
