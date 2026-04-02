@@ -892,7 +892,10 @@ class IC705Widget(QWidget):
             return
         if not self._cat or not self._cat.connected:
             return
-        # Span setzen: Index 0-7 direkt (wie wfview)
+        # Span setzen: 0x27 0x14 0x00 <index> (Scope Main, Center/Fixed Mode)
+        # Dann 0x27 0x15 0x00 <index> (Span Index)
+        self._cat._civ_send(0x27, sub=0x14, data=bytes([0x00, 0x00]))  # Center mode
+        import time; time.sleep(0.05)
         self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, idx]))
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
