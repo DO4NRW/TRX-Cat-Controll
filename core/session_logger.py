@@ -104,17 +104,18 @@ def get_system_info():
     except Exception:
         pass
 
-    # Disks
+    # Disks (nur mit Modellname)
     try:
         result = subprocess.run(["lsblk", "-d", "-o", "NAME,SIZE,MODEL,TYPE"],
                                 capture_output=True, text=True, timeout=3)
-        for line in result.stdout.splitlines()[1:]:  # Header überspringen
+        for line in result.stdout.splitlines()[1:]:
             parts = line.split()
-            if len(parts) >= 2 and parts[-1] == "disk":
+            if len(parts) > 3 and parts[-1] == "disk":
                 name = parts[0]
                 size = parts[1]
-                model = " ".join(parts[2:-1]) if len(parts) > 3 else "unbekannt"
-                info.append(f"Disk: /dev/{name} {size} ({model})")
+                model = " ".join(parts[2:-1])
+                if model.strip():
+                    info.append(f"Disk: /dev/{name} {size} ({model})")
     except Exception:
         pass
 
