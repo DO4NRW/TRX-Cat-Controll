@@ -103,8 +103,8 @@ input[type="range"]::-moz-range-progress {
 .btn {
     background: var(--bg-mid, #2a2a2a); color: var(--text, #fff);
     border: 1px solid var(--border, #555); border-radius: 4px;
-    padding: 4px 8px; font-size: 12px;
-    cursor: pointer; min-height: 28px; flex: 1;
+    padding: 6px 10px; font-size: 12px;
+    cursor: pointer; min-height: 32px; flex: 1;
 }
 .btn:hover { border-color: var(--border-hover, #888); background: var(--bg-light, #3a3a3a); }
 .btn.active {
