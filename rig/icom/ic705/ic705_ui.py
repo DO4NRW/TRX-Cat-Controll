@@ -192,7 +192,7 @@ class IC705Widget(QWidget):
         # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
         from core.smeter_gauge import SMeterGauge
         self.smeter_gauge = SMeterGauge(self)
-        self.smeter_gauge.setFixedHeight(55)
+        self.smeter_gauge.setFixedHeight(45)
         root.addWidget(self.smeter_gauge)
 
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
@@ -441,10 +441,9 @@ class IC705Widget(QWidget):
 
         root.addLayout(pbt_row)
 
-        # ── 6. S-Meter (nur Info-Label, Gauge ist oben) ─────────────
-        self.lbl_smeter_info = QLabel("S-METER: ---")
-        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        root.addWidget(self.lbl_smeter_info)
+        # ── 6. S-Meter (Gauge oben zeigt alles) ──────────────────────
+        self.lbl_smeter_info = QLabel("")  # Dummy für Kompatibilität
+        self.lbl_smeter_info.setFixedHeight(0)
         # Dummy für Kompatibilität
         self.s_labels = []
         self.smeter_bar = type('_Dummy', (), {'setValue': lambda s, v: None, 'update': lambda s: None})()
