@@ -43,11 +43,21 @@ class WaterfallWidget(QWidget):
         self._spectrum_frac = 0.25
         self._fill_alpha = 0.75
 
-        # Farbpalette — aus Theme wf_color_1-9 wenn vorhanden, sonst Preset
+        # Farbpalette — aus Theme wf_color_1-9 wenn vorhanden
+        wf_pal = T.get('wf_palette', 'sdr')
         if T.get('wf_color_1'):
-            self.set_palette("theme")
+            stops = []
+            for i in range(1, 10):
+                color_str = T.get(f'wf_color_{i}')
+                if color_str:
+                    r, g, b, a = rgba_parts(color_str)
+                    stops.append(((i - 1) / 8.0, (r, g, b)))
+            if stops:
+                self._palette = self._build_palette_from_stops(stops)
+            else:
+                self._palette = self._build_palette(wf_pal)
         else:
-            self._palette = self._build_palette(T.get('wf_palette', 'sdr'))
+            self._palette = self._build_palette(wf_pal)
 
         self._last_spectrum = np.zeros(num_points, dtype=np.float32)
         self._display_spectrum = np.zeros(num_points, dtype=np.float32)
