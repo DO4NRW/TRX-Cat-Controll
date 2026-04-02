@@ -3,6 +3,52 @@
  */
 
 const THEME_URL = 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/configs/theme.json';
+const REPORT_URL = 'https://raport.pcore.de/api/report';
+const HMAC_SECRET = 'RigLink_Report_V2_DO4NRW';
+
+// Web-Report an den Server senden
+async function sendWebReport(title, body) {
+    try {
+        // HMAC-SHA256 signieren
+        const ts = Math.floor(Date.now() / 1000).toString();
+        const enc = new TextEncoder();
+        const key = await crypto.subtle.importKey('raw', enc.encode(HMAC_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(`${ts}:${body}`));
+        const sig = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+
+        const resp = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, body, ts, sig })
+        });
+        return await resp.json();
+    } catch (e) {
+        console.warn('Report senden fehlgeschlagen:', e);
+        return null;
+    }
+}
+
+// Browser-Info sammeln
+function getBrowserInfo() {
+    return [
+        `Browser: ${navigator.userAgent}`,
+        `Platform: ${navigator.platform}`,
+        `WebSerial: ${('serial' in navigator) ? 'ja' : 'nein'}`,
+        `Sprache: ${navigator.language}`,
+        `Bildschirm: ${screen.width}x${screen.height}`,
+        `Fenster: ${window.innerWidth}x${window.innerHeight}`,
+    ].join('\n');
+}
+
+// Error-Handler: fängt alle unbehandelten Fehler
+let errorLog = [];
+window.addEventListener('error', e => {
+    errorLog.push(`[${new Date().toISOString()}] ${e.message} (${e.filename}:${e.lineno})`);
+});
+window.addEventListener('unhandledrejection', e => {
+    errorLog.push(`[${new Date().toISOString()}] Promise: ${e.reason}`);
+});
 
 // State
 let currentFreq = 14200000; // Hz
@@ -376,6 +422,13 @@ function setupConnect() {
                 btn.classList.remove('connected');
                 bar.classList.remove('connected');
                 status.textContent = 'SYSTEM READY';
+
+                // Errors während der Session? Automatisch reporten
+                if (errorLog.length > 0) {
+                    const body = `## Web Demo Fehler\n\n## Browser\n\`\`\`\n${getBrowserInfo()}\n\`\`\`\n\n## Errors\n\`\`\`\n${errorLog.join('\n')}\n\`\`\``;
+                    sendWebReport('[WEB] Fehler in Browser-Demo', body);
+                    errorLog = [];
+                }
             };
 
             const ok = await civ.connect();
