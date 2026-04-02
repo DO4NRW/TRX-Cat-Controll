@@ -2852,7 +2852,7 @@ class MainWindow(QMainWindow):
             self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
             self._rig_switching = False
         # Rig-Widget sofort laden (GUI wechseln)
-        self._load_rig_widget(rig_name)
+        self._load_rig_widget()
         # last_rig speichern
         try:
             cfg = {}
