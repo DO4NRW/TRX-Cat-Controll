@@ -1,0 +1,69 @@
+{
+    "_comment": "RigLink Rig Config Template — Kopiere dieses File nach rig/<hersteller>/<modell>/config.json",
+
+    "cat": {
+        "protocol": "icom",
+        "port": "/dev/ttyUSB0",
+        "baud": 115200,
+        "data_bits": 8,
+        "stop_bits": 2,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": "None",
+        "_comment": "protocol: 'icom', 'yaesu', 'kenwood'"
+    },
+
+    "ptt": {
+        "method": "CAT",
+        "port": "/dev/ttyUSB1",
+        "invert": false,
+        "_comment": "method: 'CAT', 'RTS', 'DTR', 'VOX'"
+    },
+
+    "features": {
+        "modes": ["LSB", "USB", "CW", "CW-R", "FM", "RTTY", "RTTY-R"],
+        "digi_modes": ["DATA"],
+        "dsp": {
+            "att": true,
+            "nb": true,
+            "nr": true,
+            "notch": true,
+            "comp": true
+        },
+        "agc": ["OFF", "SLOW", "MID", "FAST"],
+        "preamp": ["OFF", "AMP1", "AMP2"],
+        "power": {
+            "min": 0,
+            "max": 255,
+            "unit": "raw",
+            "max_watts": 10,
+            "_comment": "unit: 'raw' (0-255 direkt) oder 'percent' (0-100)"
+        },
+        "pbt": true,
+        "split": true,
+        "rit": true,
+        "xit": true,
+        "vfo_ab": true,
+        "scope": true,
+        "scope_points": 475,
+        "_comment_scope": "scope: true wenn TRX Wasserfall-Daten über CAT liefert"
+    },
+
+    "smeter": {
+        "s9_raw": 100,
+        "max_raw": 241,
+        "steps_over_s9": ["S9+10", "S9+20", "S9+40", "S9+60"]
+    },
+
+    "audio": {
+        "pc_mic": { "device": "", "rate": 44100, "channels": 1 },
+        "trx_mic": { "device": "", "rate": 44100, "channels": 1 },
+        "trx_speaker": { "device": "", "rate": 44100, "channels": 1 },
+        "pc_speaker": { "device": "", "rate": 44100, "channels": 1 }
+    },
+
+    "vox": {
+        "threshold": -25.0,
+        "hold_ms": 700
+    }
+}

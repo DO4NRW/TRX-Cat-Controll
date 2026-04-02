@@ -25,5 +25,41 @@
     "vox": {
         "threshold": -25.0,
         "hold_ms": 700
+    },
+    "features": {
+        "modes": [
+            "LSB",
+            "USB",
+            "CW",
+            "CW-R",
+            "FM",
+            "AM",
+            "RTTY",
+            "RTTY-R"
+        ],
+        "digi_modes": [
+            "DATA"
+        ],
+        "dsp": [
+            "ATT",
+            "NB",
+            "NR",
+            "NOTCH",
+            "COMP",
+            "APF"
+        ],
+        "agc": [
+            "SLOW",
+            "MID",
+            "FAST"
+        ],
+        "preamp": [],
+        "power": {
+            "min": 0,
+            "max": 255,
+            "max_watts": 100
+        },
+        "pbt": true,
+        "scope": true
     }
 }

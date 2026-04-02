@@ -19,5 +19,13 @@
         "volume": 1,
         "signal_gain": 52,
         "noise_floor": 25
+    },
+    "dsp_state": {
+        "ATT": false,
+        "NB": true,
+        "NR": true,
+        "NOTCH": true,
+        "COMP": false,
+        "AGC": "MID"
     }
 }

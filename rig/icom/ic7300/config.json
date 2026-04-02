@@ -1,16 +1,63 @@
 {
     "cat": {
         "port": "/dev/ttyUSB0",
-        "baud": 38400,
-        "data_bits": null,
-        "stop_bits": null,
-        "handshake": null,
+        "baud": 19200,
+        "data_bits": 8,
+        "stop_bits": 1,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": "None",
         "protocol": "icom"
     },
     "ptt": {
-        "method": "RTS",
-        "port": "/dev/ttyUSB1",
+        "method": "CAT",
+        "port": "/dev/ttyUSB0",
         "invert": false
+    },
+    "features": {
+        "modes": [
+            "LSB",
+            "USB",
+            "CW",
+            "CW-R",
+            "FM",
+            "AM",
+            "RTTY",
+            "RTTY-R"
+        ],
+        "digi_modes": [
+            "DATA"
+        ],
+        "dsp": [
+            "ATT",
+            "NB",
+            "NR",
+            "NOTCH",
+            "COMP"
+        ],
+        "agc": [
+            "SLOW",
+            "MID",
+            "FAST"
+        ],
+        "preamp": [],
+        "power": {
+            "min": 0,
+            "max": 255,
+            "max_watts": 100
+        },
+        "pbt": true,
+        "scope": true
+    },
+    "smeter": {
+        "s9_raw": 120,
+        "max_raw": 241,
+        "steps_over_s9": [
+            "S9+10",
+            "S9+20",
+            "S9+40",
+            "S9+60"
+        ]
     },
     "rig": {
         "mode": "USB",
