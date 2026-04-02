@@ -732,8 +732,9 @@ function playDemoFrame() {
     demoIndex = (demoIndex + 1) % demoData.length;
 
     if (frame.sp) {
+        // Blend wie Python: display += 0.10 * (target - display)
         for (let i = 0; i < Math.min(475, frame.sp.length); i++) {
-            spectrum[i] = spectrum[i] * 0.3 + frame.sp[i] * 0.7;
+            spectrum[i] += 0.10 * (frame.sp[i] - spectrum[i]);
         }
     }
     if (frame.f) {
