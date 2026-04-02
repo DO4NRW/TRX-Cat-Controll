@@ -1807,9 +1807,15 @@ class ThemeEditorOverlay(QWidget):
             row_layout.addWidget(dot)
             self._color_dots[key] = dot
 
-            # Label
-            lbl = QLabel(label)
-            lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
+            # Label (klickbar → Highlight)
+            lbl = QPushButton(label)
+            lbl.setCursor(Qt.PointingHandCursor)
+            lbl.setStyleSheet(f"""
+                QPushButton {{ background: transparent; border: none;
+                    color: {T['text_secondary']}; font-size: 11px; text-align: left; padding: 0; }}
+                QPushButton:hover {{ color: {T['text']}; }}
+            """)
+            lbl.clicked.connect(lambda checked, k=key: self._select_color(k))
             row_layout.addWidget(lbl, stretch=1)
 
             # Edit Button (Schraubenschlüssel Icon)
@@ -1866,12 +1872,7 @@ class ThemeEditorOverlay(QWidget):
         btn_presets = QPushButton()
         btn_presets.setFixedSize(32, 32)
         btn_presets.setCursor(Qt.PointingHandCursor)
-        # Arrow SVG laden und 270° drehen (Pfeil nach oben)
-        icon = themed_icon(os.path.join(_ICONS, "arrow.svg"))
-        pixmap = icon.pixmap(QSize(18, 18))
-        rotated = pixmap.transformed(QTransform().rotate(270))
-        btn_presets.setIcon(QIcon(rotated))
-        btn_presets.setIconSize(QSize(18, 18))
+        self._update_arrow_icon(btn_presets)
         btn_presets.setStyleSheet(f"""
             QPushButton {{ background: {T['bg_mid']};
                 border: 1px solid {T['border']}; border-radius: 5px; }}
@@ -1966,6 +1967,27 @@ class ThemeEditorOverlay(QWidget):
         for key in self._color_rows:
             self._update_color_row(key, selected=(key == self._selected_key))
 
+    def _update_arrow_icon(self, btn):
+        """Arrow-Icon laden und 270° drehen (nach oben)."""
+        from PySide6.QtGui import QTransform
+        icon = themed_icon(os.path.join(_ICONS, "arrow.svg"))
+        pixmap = icon.pixmap(QSize(18, 18))
+        rotated = pixmap.transformed(QTransform().rotate(270))
+        btn.setIcon(QIcon(rotated))
+        btn.setIconSize(QSize(18, 18))
+
+    def _update_edit_icons(self):
+        """Edit-Icons (Schraubenschlüssel) neu laden für Theme-Wechsel."""
+        for key in self._color_rows:
+            row_data = self._color_rows[key]
+            if len(row_data) >= 3:
+                btn_edit = row_data[2]
+                btn_edit.setIcon(themed_icon(os.path.join(_ICONS, "build.svg")))
+                btn_edit.setStyleSheet(f"""
+                    QPushButton {{ background: transparent; border: none; }}
+                    QPushButton:hover {{ background: {T['bg_light']}; border-radius: 3px; }}
+                """)
+
     def _show_preset_menu(self, btn):
         """Preset-Menü als Popup unter dem ▼ Button anzeigen."""
         self._preset_menu.clear()
@@ -2016,6 +2038,12 @@ class ThemeEditorOverlay(QWidget):
                 self._update_color_row(k)
             self._show_delete_btn()
 
+    def _select_color(self, key):
+        """Farbe in der Liste highlighten."""
+        self._selected_key = key
+        for k in self._color_rows:
+            self._update_color_row(k, selected=(k == key))
+
     def _edit_color(self, key):
         """Edit-Button geklickt → Farbrad Popup öffnen."""
         self._selected_key = key
@@ -2047,10 +2075,13 @@ class ThemeEditorOverlay(QWidget):
         dot.setFixedSize(20, 20)
         dot.setStyleSheet(f"background: rgba({r},{g},{b},{a}); border: 2px solid {T['border']}; border-radius: 10px;")
         if selected:
-            lbl.setStyleSheet(f"color: {T['text']}; font-size: 11px; font-weight: bold; border: none;")
+            lbl.setStyleSheet(f"""QPushButton {{ background: transparent; border: none;
+                color: {T['text']}; font-size: 11px; font-weight: bold; text-align: left; padding: 0; }}""")
             widget.setStyleSheet(f"background: {T['bg_light']}; border: 1px solid {T['accent']}; border-radius: 4px;")
         else:
-            lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
+            lbl.setStyleSheet(f"""QPushButton {{ background: transparent; border: none;
+                color: {T['text_secondary']}; font-size: 11px; text-align: left; padding: 0; }}
+                QPushButton:hover {{ color: {T['text']}; }}""")
             widget.setStyleSheet("background: transparent; border: none; border-radius: 4px;")
 
     def _select_color(self, key):
@@ -2315,9 +2346,17 @@ class ThemeEditorOverlay(QWidget):
         self._title_lbl.setStyleSheet(f"color: {T['text']}; font-size: 16px; font-weight: bold; border: none;")
         self._preset_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 12px; border: none;")
         self._color_name_lbl.setStyleSheet(f"color: {T['text']}; font-size: 14px; font-weight: bold; border: none;")
-        # Farbliste aktualisieren
+        # Farbliste + Icons aktualisieren
         for key in self._color_rows:
             self._update_color_row(key, selected=(key == self._selected_key))
+        self._update_edit_icons()
+        if hasattr(self, '_btn_presets'):
+            self._update_arrow_icon(self._btn_presets)
+            self._btn_presets.setStyleSheet(f"""
+                QPushButton {{ background: {T['bg_mid']};
+                    border: 1px solid {T['border']}; border-radius: 5px; }}
+                QPushButton:hover {{ border-color: {T['accent']}; }}
+            """)
         # Input-Feld + Delete Button
         self.input_theme_name.setStyleSheet(f"""
             QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
