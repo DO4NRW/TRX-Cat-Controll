@@ -441,7 +441,7 @@ function setupConnect() {
                 }
             };
 
-            const ok = await civ.connect(cfg.baud);
+            const ok = await civ.connect(cfg.baud, cfg.stopBits);
             if (!ok) {
                 status.textContent = 'Verbindung fehlgeschlagen';
                 setTimeout(() => { status.textContent = 'SYSTEM READY'; }, 3000);

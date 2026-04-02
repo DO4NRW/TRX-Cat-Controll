@@ -35,13 +35,13 @@ class IcomCIV {
         'ic7100': 0x88,
     };
 
-    async connect(baudRate = 115200) {
+    async connect(baudRate = 115200, stopBits = 2) {
         try {
             this.port = await navigator.serial.requestPort();
             await this.port.open({
                 baudRate: baudRate,
                 dataBits: 8,
-                stopBits: 2,
+                stopBits: stopBits,
                 parity: 'none',
                 flowControl: 'none',
             });
@@ -53,6 +53,11 @@ class IcomCIV {
 
             // Start reading
             this._readLoop();
+
+            // Scope aktivieren (IC-705: 0x27 0x10 0x01 = Scope ON)
+            await this._send(0x27, 0x10, [0x01]);
+            // Scope Output ON (0x27 0x11 0x01)
+            await this._send(0x27, 0x11, [0x01]);
 
             // Start polling
             this._startPolling();
@@ -172,7 +177,8 @@ class IcomCIV {
     _parseFrame(frame) {
         if (frame.length < 5) return;
         const cmd = frame[4];
-        const data = frame.slice(5, -1); // Everything between cmd and FD
+        const data = frame.slice(5, -1);
+        console.log(`[CIV] cmd=0x${cmd.toString(16)} len=${data.length} data=${Array.from(data.slice(0,6)).map(b=>'0x'+b.toString(16)).join(' ')}`);
 
         switch (cmd) {
             case 0x03: // Frequency response

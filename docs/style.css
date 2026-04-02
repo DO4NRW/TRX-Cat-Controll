@@ -125,7 +125,7 @@ input[type="range"]::-moz-range-thumb {
     padding: 2px 12px;
 }
 .span-label { color: var(--text-secondary); font-size: 10px; min-width: 80px; }
-.span-slider { flex: 1; }
+.span-slider { flex: 1; width: 100%; }
 
 /* Waterfall */
 .waterfall-container {
