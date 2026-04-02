@@ -899,8 +899,9 @@ class IC705Widget(QWidget):
         time.sleep(0.2)
         if self._cat._ser and self._cat._ser.is_open:
             self._cat._ser.reset_input_buffer()
-        # Span setzen: Receiver(0x00) + Span-Index (0-7)
-        # Index aus SPAN_VALUES: 0=2.5k, 1=5k, 2=10k, 3=25k, 4=50k, 5=100k, 6=250k, 7=500k
+        # Span setzen: cmd=0x27, sub=0x15, data=[receiver=0x00, span_index]
+        frame = self._cat._build_frame(0x27, 0x15, bytes([0x00, idx]))
+        print(f"[SPAN] Frame: {frame.hex(' ')}", flush=True)
         result = self._cat._civ_query(0x27, sub=0x15, data=bytes([0x00, idx]))
         print(f"[SPAN] idx={idx} ({span_hz} Hz) → result={result}", flush=True)
         if result and result[0] == 0xFA:
