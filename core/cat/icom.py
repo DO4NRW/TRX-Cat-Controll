@@ -123,8 +123,11 @@ class IcomCat(CatBase):
                     if f[2] == self._ctrl_addr and f[4] in (0xFB, 0xFA):
                         result = self._parse_response(f)
                         continue
-                    # Antwort muss zum gesendeten Command passen
+                    # Antwort muss zum gesendeten Command + Sub passen
                     if f[2] == self._ctrl_addr and f[4] == cmd and result is None:
+                        # Sub-Command auch prüfen wenn vorhanden
+                        if sub is not None and len(f) >= 6 and f[5] != sub:
+                            continue  # Falscher Sub-Command
                         result = self._parse_response(f)
 
                 return result
