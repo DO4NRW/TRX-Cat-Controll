@@ -344,6 +344,64 @@ class IcomCat(CatBase):
     def set_dnf(self, on: bool):
         self._civ_send(0x16, sub=0x32, data=bytes([0x01 if on else 0x00]))
 
+    # ── AGC ───────────────────────────────────────────────────────────
+
+    _AGC_MAP = {0x00: "OFF", 0x01: "SLOW", 0x02: "MID", 0x03: "FAST"}
+    _AGC_REV = {"OFF": 0x00, "SLOW": 0x01, "MID": 0x02, "FAST": 0x03}
+
+    def get_agc(self) -> str | None:
+        result = self._civ_query(0x16, sub=0x12)
+        if result:
+            cmd, data = result
+            if len(data) >= 2 and data[0] == 0x12:
+                return self._AGC_MAP.get(data[1], "SLOW")
+        return None
+
+    def set_agc(self, mode: str):
+        val = self._AGC_REV.get(mode.upper(), 0x01)
+        self._civ_query(0x16, sub=0x12, data=bytes([val]))
+
+    # ── Compressor ────────────────────────────────────────────────────
+
+    def get_comp(self) -> bool | None:
+        result = self._civ_query(0x16, sub=0x44)
+        if result:
+            cmd, data = result
+            if len(data) >= 2 and data[0] == 0x44:
+                return data[1] == 0x01
+        return None
+
+    def set_comp(self, on: bool):
+        self._civ_query(0x16, sub=0x44, data=bytes([0x01 if on else 0x00]))
+
+    # ── Split / VFO ───────────────────────────────────────────────────
+
+    def get_split(self) -> bool | None:
+        result = self._civ_query(0x0F)
+        if result:
+            cmd, data = result
+            if len(data) >= 1:
+                return data[0] == 0x01
+        return None
+
+    def set_split(self, on: bool):
+        self._civ_query(0x0F, data=bytes([0x01 if on else 0x00]))
+
+    def set_vfo(self, vfo: str):
+        val = 0x00 if vfo.upper() == "A" else 0x01
+        self._civ_query(0x07, data=bytes([val]))
+
+    def swap_vfo(self):
+        self._civ_query(0x07, data=bytes([0xB0]))
+
+    # ── RIT ───────────────────────────────────────────────────────────
+
+    def set_rit(self, on: bool):
+        self._civ_query(0x21, sub=0x01, data=bytes([0x01 if on else 0x00]))
+
+    def set_xit(self, on: bool):
+        self._civ_query(0x21, sub=0x02, data=bytes([0x01 if on else 0x00]))
+
     # ── Scope / Waterfall ─────────────────────────────────────────────
 
     def scope_enable(self, on=True):

@@ -118,3 +118,61 @@ class KenwoodCat(CatBase):
 
     def set_dnf(self, on: bool):
         self._send("NT1;" if on else "NT0;")
+
+    # ── AGC ───────────────────────────────────────────────────────────
+
+    def get_agc(self) -> str | None:
+        resp = self._query("GT;")
+        if resp and resp.startswith("GT"):
+            val = resp[2:5].strip() if len(resp) > 4 else "0"
+            return {"000": "OFF", "001": "SLOW", "002": "MID", "003": "FAST"}.get(val, "SLOW")
+        return None
+
+    def set_agc(self, mode: str):
+        val = {"OFF": "000", "SLOW": "001", "MID": "002", "FAST": "003"}.get(mode.upper(), "001")
+        self._send(f"GT{val};")
+
+    # ── Compressor ────────────────────────────────────────────────────
+
+    def get_comp(self) -> bool | None:
+        resp = self._query("PR;")
+        if resp and resp.startswith("PR"):
+            return resp[2] == "1"
+        return None
+
+    def set_comp(self, on: bool):
+        self._send("PR1;" if on else "PR0;")
+
+    # ── Split / VFO ───────────────────────────────────────────────────
+
+    def get_split(self) -> bool | None:
+        resp = self._query("FT;")
+        if resp and resp.startswith("FT"):
+            return resp[2] == "1"
+        return None
+
+    def set_split(self, on: bool):
+        self._send("FT1;" if on else "FT0;")
+
+    def set_vfo(self, vfo: str):
+        self._send("FR0;" if vfo.upper() == "A" else "FR1;")
+
+    def swap_vfo(self):
+        # VFO toggle: wenn A dann B, sonst A
+        resp = self._query("FR;")
+        if resp and resp.startswith("FR"):
+            self._send("FR1;" if resp[2] == "0" else "FR0;")
+
+    # ── RIT / XIT ─────────────────────────────────────────────────────
+
+    def set_rit(self, on: bool):
+        self._send("RT1;" if on else "RT0;")
+
+    def set_xit(self, on: bool):
+        self._send("XT1;" if on else "XT0;")
+
+    def set_rit_offset(self, hz: int):
+        if hz >= 0:
+            self._send(f"RU{hz:05d};")
+        else:
+            self._send(f"RD{abs(hz):05d};")

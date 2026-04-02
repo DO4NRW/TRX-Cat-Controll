@@ -158,6 +158,81 @@ class CatBase:
     def set_dnf(self, on: bool):
         pass
 
+    # ── AGC ──────────────────────────────────────────────────────────
+
+    def get_agc(self) -> str | None:
+        """AGC Mode: 'OFF', 'SLOW', 'MID', 'FAST'"""
+        return None
+
+    def set_agc(self, mode: str):
+        pass
+
+    # ── Compressor ───────────────────────────────────────────────────
+
+    def get_comp(self) -> bool | None:
+        return None
+
+    def set_comp(self, on: bool):
+        pass
+
+    # ── Split / VFO ──────────────────────────────────────────────────
+
+    def get_split(self) -> bool | None:
+        return None
+
+    def set_split(self, on: bool):
+        pass
+
+    def get_vfo(self) -> str | None:
+        """Aktiver VFO: 'A' oder 'B'"""
+        return None
+
+    def set_vfo(self, vfo: str):
+        pass
+
+    def swap_vfo(self):
+        """VFO A/B wechseln."""
+        pass
+
+    # ── RIT / XIT ────────────────────────────────────────────────────
+
+    def get_rit(self) -> bool | None:
+        return None
+
+    def set_rit(self, on: bool):
+        pass
+
+    def get_rit_offset(self) -> int | None:
+        """RIT Offset in Hz."""
+        return None
+
+    def set_rit_offset(self, hz: int):
+        pass
+
+    def get_xit(self) -> bool | None:
+        return None
+
+    def set_xit(self, on: bool):
+        pass
+
+    # ── Filter ───────────────────────────────────────────────────────
+
+    def get_filter(self) -> int | None:
+        """Filter-Bandbreite in Hz."""
+        return None
+
+    def set_filter(self, bw_hz: int):
+        pass
+
+    # ── Notch Frequenz ───────────────────────────────────────────────
+
+    def get_notch_freq(self) -> int | None:
+        """Notch-Frequenz in Hz."""
+        return None
+
+    def set_notch_freq(self, hz: int):
+        pass
+
     def get_info(self) -> dict:
         return {
             "frequency": self.get_frequency(),

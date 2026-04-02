@@ -132,3 +132,58 @@ class YaesuCat(CatBase):
 
     def set_dnf(self, on: bool):
         self._send("BC01;" if on else "BC00;")
+
+    # ── AGC ───────────────────────────────────────────────────────────
+
+    def get_agc(self) -> str | None:
+        resp = self._query("GT0;")
+        if resp and resp.startswith("GT0"):
+            val = int(resp[3:4]) if len(resp) > 3 else 0
+            return {0: "OFF", 1: "FAST", 2: "MID", 3: "MID", 4: "SLOW"}.get(val, "SLOW")
+        return None
+
+    def set_agc(self, mode: str):
+        val = {"OFF": "0", "FAST": "1", "MID": "2", "SLOW": "4"}.get(mode.upper(), "4")
+        self._send(f"GT0{val};")
+
+    # ── Compressor ────────────────────────────────────────────────────
+
+    def get_comp(self) -> bool | None:
+        resp = self._query("PL;")
+        if resp and resp.startswith("PL"):
+            return resp[2:5] != "000"
+        return None
+
+    def set_comp(self, on: bool):
+        self._send("PR01;" if on else "PR00;")
+
+    # ── Split / VFO ───────────────────────────────────────────────────
+
+    def get_split(self) -> bool | None:
+        resp = self._query("FT;")
+        if resp and resp.startswith("FT"):
+            return resp[2] != "0"
+        return None
+
+    def set_split(self, on: bool):
+        self._send("FT2;" if on else "FT0;")
+
+    def set_vfo(self, vfo: str):
+        self._send("VS0;" if vfo.upper() == "A" else "VS1;")
+
+    def swap_vfo(self):
+        self._send("SV;")
+
+    # ── RIT / XIT ─────────────────────────────────────────────────────
+
+    def set_rit(self, on: bool):
+        self._send("RT1;" if on else "RT0;")
+
+    def set_xit(self, on: bool):
+        self._send("XT1;" if on else "XT0;")
+
+    def set_rit_offset(self, hz: int):
+        if hz >= 0:
+            self._send(f"RU{hz:04d};")
+        else:
+            self._send(f"RD{abs(hz):04d};")
