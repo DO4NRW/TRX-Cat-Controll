@@ -530,10 +530,16 @@ class IC705Widget(QWidget):
                     if sc > 0: frame['sc'] = sc
                     if ss > 0: frame['ss'] = ss
                     self._demo_frames.append(frame)
-                # Freq+Span an Wasserfall (echtes Scope-Center für genaues Click-to-Tune)
+                # Freq+Span+Passband an Wasserfall (bei jedem Scope-Update)
                 scope_center = getattr(self._cat, '_scope_center_hz', 0) or self._current_freq
                 if scope_center > 0 and hasattr(self._cat, '_scope_span_hz'):
-                    self.waterfall.set_freq_info(scope_center, self._cat._scope_span_hz)
+                    bw = {"USB": 2700, "LSB": 2700, "CW": 500, "CW-R": 500,
+                          "FM": 15000, "RTTY": 500, "RTTY-R": 500, "AM": 6000}
+                    side = {"USB": "upper", "LSB": "lower", "CW": "upper", "CW-R": "lower",
+                            "FM": "both", "RTTY": "lower", "RTTY-R": "upper", "AM": "both"}
+                    fw = bw.get(self._current_mode, 2700)
+                    fs = side.get(self._current_mode, "upper")
+                    self.waterfall.set_freq_info(scope_center, self._cat._scope_span_hz, fw, fs)
                 if hasattr(self._cat, '_scope_span_hz') and not self.slider_span.isSliderDown():
                     span_hz = self._cat._scope_span_hz
                     if span_hz > 0:
@@ -689,6 +695,15 @@ class IC705Widget(QWidget):
             self._cat.set_mode(mode)
         self._current_mode = mode
         self._update_mode_buttons()
+        # Passband im Wasserfall sofort updaten
+        if hasattr(self, 'waterfall') and hasattr(self._cat, '_scope_span_hz'):
+            bw = {"USB": 2700, "LSB": 2700, "CW": 500, "CW-R": 500,
+                  "FM": 15000, "RTTY": 500, "RTTY-R": 500, "AM": 6000}
+            side = {"USB": "upper", "LSB": "lower", "CW": "upper", "CW-R": "lower",
+                    "FM": "both", "RTTY": "lower", "RTTY-R": "upper", "AM": "both"}
+            sc = getattr(self._cat, '_scope_center_hz', 0) or self._current_freq
+            self.waterfall.set_freq_info(sc, self._cat._scope_span_hz,
+                                         bw.get(mode, 2700), side.get(mode, "upper"))
 
     def _toggle_digi_mode(self, digi):
         if not self._cat or not self._cat.connected:
