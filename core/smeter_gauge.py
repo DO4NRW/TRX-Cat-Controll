@@ -55,7 +55,7 @@ class SMeterGauge(QWidget):
         cx = w * 0.5
         radius = h * 0.7
         cy = h * 0.95
-        needle_cy = h * 0.95
+        needle_cy = h * 0.80
 
         arc_start_rad = math.radians(ARC_START_DEG)
         arc_end_rad = math.radians(ARC_END_DEG)
