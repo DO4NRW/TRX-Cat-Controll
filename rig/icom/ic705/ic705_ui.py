@@ -224,19 +224,44 @@ class IC705Widget(QWidget):
         wf_row.setSpacing(4)
         wf_row.addWidget(self.waterfall, stretch=1)
 
-        # Contrast Slider (vertikal, rechts neben Wasserfall)
-        self.slider_contrast = QSlider(Qt.Vertical)
-        self.slider_contrast.setRange(10, 60)  # color_gain * 10 (1.0 - 6.0)
-        self.slider_contrast.setValue(30)       # Default 3.0
-        self.slider_contrast.setFixedWidth(20)
-        self.slider_contrast.setToolTip("Wasserfall Kontrast")
-        self.slider_contrast.setFocusPolicy(Qt.NoFocus)
-        self.slider_contrast.setStyleSheet(f"""
+        # Wasserfall-Regler (vertikal, rechts neben Wasserfall)
+        slider_col = QVBoxLayout()
+        slider_col.setSpacing(2)
+
+        _vslider_style = f"""
             QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
-            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 14px; margin: 0 -5px; border-radius: 7px; }}
-            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}""")
-        self.slider_contrast.valueChanged.connect(self._apply_contrast)
-        wf_row.addWidget(self.slider_contrast)
+            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 12px; margin: 0 -4px; border-radius: 6px; }}
+            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}"""
+
+        lbl_sig = QLabel("SIG")
+        lbl_sig.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        lbl_sig.setAlignment(Qt.AlignCenter)
+        slider_col.addWidget(lbl_sig)
+        self.slider_signal = QSlider(Qt.Vertical)
+        self.slider_signal.setRange(10, 60)  # color_gain * 10 (1.0 - 6.0)
+        self.slider_signal.setValue(30)       # Default 3.0
+        self.slider_signal.setFixedWidth(16)
+        self.slider_signal.setToolTip("Signal Kontrast")
+        self.slider_signal.setFocusPolicy(Qt.NoFocus)
+        self.slider_signal.setStyleSheet(_vslider_style)
+        self.slider_signal.valueChanged.connect(self._apply_signal_gain)
+        slider_col.addWidget(self.slider_signal, stretch=1)
+
+        lbl_nf = QLabel("NF")
+        lbl_nf.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        lbl_nf.setAlignment(Qt.AlignCenter)
+        slider_col.addWidget(lbl_nf)
+        self.slider_noise = QSlider(Qt.Vertical)
+        self.slider_noise.setRange(0, 30)  # black_level 0-30
+        self.slider_noise.setValue(3)      # Default 3
+        self.slider_noise.setFixedWidth(16)
+        self.slider_noise.setToolTip("Rausch-Filter (Black Level)")
+        self.slider_noise.setFocusPolicy(Qt.NoFocus)
+        self.slider_noise.setStyleSheet(_vslider_style)
+        self.slider_noise.valueChanged.connect(self._apply_noise_floor)
+        slider_col.addWidget(self.slider_noise, stretch=1)
+
+        wf_row.addLayout(slider_col)
 
         root.addLayout(wf_row, stretch=1)
 
@@ -851,10 +876,13 @@ class IC705Widget(QWidget):
                 return True
         return super().eventFilter(obj, event)
 
-    def _apply_contrast(self, val):
-        """Wasserfall Kontrast anpassen (color_gain)."""
-        gain = val / 10.0  # 10→1.0, 30→3.0, 60→6.0
-        self.waterfall._color_gain = gain
+    def _apply_signal_gain(self, val):
+        """Signal-Kontrast (color_gain)."""
+        self.waterfall._color_gain = val / 10.0
+
+    def _apply_noise_floor(self, val):
+        """Rausch-Filter (black_level)."""
+        self.waterfall._black_level = val
 
     # ══════════════════════════════════════════════════════════════════
     # DEMO RECORDER (F9 Start/Stop)
@@ -1262,10 +1290,11 @@ class IC705Widget(QWidget):
         # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
         self.slider_span.setStyleSheet(_SLIDER_STYLE())
-        self.slider_contrast.setStyleSheet(f"""
-            QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
-            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 14px; margin: 0 -5px; border-radius: 7px; }}
-            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}""")
+        _vs = f"""QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
+            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 12px; margin: 0 -4px; border-radius: 6px; }}
+            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}"""
+        self.slider_signal.setStyleSheet(_vs)
+        self.slider_noise.setStyleSheet(_vs)
 
         # S-Meter
         self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
