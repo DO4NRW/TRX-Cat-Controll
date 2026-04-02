@@ -693,37 +693,21 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP Status auslesen via CI-V
-        dsp_queries = {
-            "NB":    (0x16, 0x22),
-            "NR":    (0x16, 0x40),
-            "NOTCH": (0x16, 0x41),
-            "COMP":  (0x16, 0x44),
-        }
-        for name, (cmd, sub) in dsp_queries.items():
-            if name not in self.dsp_buttons:
-                continue
-            result = self._cat._civ_query(cmd, sub=sub)
-            on = False
-            if result:
-                c, data = result
-                print(f"[DSP SYNC] {name}: cmd=0x{c:02x} data={data.hex(' ')} len={len(data)}", flush=True)
-                on = len(data) >= 2 and data[0] == sub and data[1] > 0
-            else:
-                print(f"[DSP SYNC] {name}: KEINE ANTWORT", flush=True)
-            self.dsp_buttons[name].setChecked(on)
-            self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
-
-        att = self._cat.get_att()
-        print(f"[DSP SYNC] ATT: {att}", flush=True)
-        if att is not None and "ATT" in self.dsp_buttons:
-            self.dsp_buttons["ATT"].setChecked(att)
-            self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
-
-        agc = self._cat.get_agc()
-        print(f"[DSP SYNC] AGC: {agc}", flush=True)
-        if agc and hasattr(self, 'btn_agc'):
-            self.btn_agc.setText(f"AGC: {agc}")
+        # DSP: Gespeicherte States laden → Buttons setzen → an TRX senden
+        self._load_dsp_state()
+        # Gespeicherte States an den TRX pushen (App ist die Quelle der Wahrheit)
+        for name, btn in self.dsp_buttons.items():
+            on = btn.isChecked()
+            if name == "ATT":
+                self._cat.set_att(on)
+            elif name == "NB":
+                self._cat.set_nb(on)
+            elif name == "NR":
+                self._cat.set_dnr(on)
+            elif name == "NOTCH":
+                self._cat.set_dnf(on)
+            elif name == "COMP":
+                self._cat.set_comp(on)
 
     def _read_dsp_from_trx(self):
         """Einmal bei Connect: DSP-States direkt vom TRX lesen (kein Scope aktiv!)."""
