@@ -46,5 +46,15 @@
     "wf_freq_bar": "rgba(20, 25, 35, 255)",
     "wf_freq_text": "rgba(160, 170, 180, 255)",
     "wf_freq_tick": "rgba(60, 70, 80, 255)",
-    "wf_cursor": "rgba(0, 220, 100, 255)"
+    "wf_cursor": "rgba(0, 220, 100, 255)",
+    "wf_palette": "sdr",
+    "wf_color_1": "rgba(8, 12, 35, 255)",
+    "wf_color_2": "rgba(10, 20, 70, 255)",
+    "wf_color_3": "rgba(0, 40, 160, 255)",
+    "wf_color_4": "rgba(0, 150, 180, 255)",
+    "wf_color_5": "rgba(0, 220, 100, 255)",
+    "wf_color_6": "rgba(180, 220, 0, 255)",
+    "wf_color_7": "rgba(255, 140, 0, 255)",
+    "wf_color_8": "rgba(255, 40, 0, 255)",
+    "wf_color_9": "rgba(255, 255, 255, 255)"
 }

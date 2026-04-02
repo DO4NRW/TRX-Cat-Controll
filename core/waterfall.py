@@ -32,10 +32,11 @@ class WaterfallWidget(QWidget):
 
         # Wasserfall als numpy Array (RGB) — fließt von oben nach unten
         self._wf_data = np.zeros((self._wf_lines, num_points, 3), dtype=np.uint8)
-        # Dunkelblauer Hintergrund
-        self._wf_data[:, :, 0] = 8   # R
-        self._wf_data[:, :, 1] = 12  # G
-        self._wf_data[:, :, 2] = 35  # B
+        # Hintergrund aus Theme
+        bg_r, bg_g, bg_b, _ = rgba_parts(T.get('wf_bg', 'rgba(18,22,30,255)'))
+        self._wf_data[:, :, 0] = bg_r
+        self._wf_data[:, :, 1] = bg_g
+        self._wf_data[:, :, 2] = bg_b
 
         # Display Settings
         self._color_gain = 3.0

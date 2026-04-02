@@ -313,8 +313,7 @@ class IcomCat(CatBase):
         return None
 
     def set_preamp(self, mode: str):
-        # IC-705: nur OFF/ON (0x00/0x01), kein AMP2
-        codes = {"OFF": 0x00, "IPO": 0x00, "AMP1": 0x01, "AMP2": 0x01}
+        codes = {"OFF": 0x00, "IPO": 0x00, "AMP1": 0x01, "AMP2": 0x02}
         code = codes.get(mode.upper(), 0x00)
         self._civ_send(0x16, sub=0x02, data=bytes([code]))
 

@@ -43,9 +43,9 @@ _INPUT_STYLE = lambda: f"""QLineEdit {{ background-color: {T['bg_mid']}; color: 
     border: 1px solid {T['border']}; border-radius: 4px; padding: 4px 8px; }}
     QLineEdit:focus {{ border-color: {T['text']}; }}"""
 
-_SLIDER_STYLE = lambda: f"""QSlider::groove:horizontal {{ background: {T['slider_groove']}; height: 6px; border-radius: 3px; }}
-    QSlider::handle:horizontal {{ background: {T['slider_handle']}; width: 16px; margin: -5px 0; border-radius: 8px; }}
-    QSlider::sub-page:horizontal {{ background: {T['slider_fill']}; border-radius: 3px; }}"""
+_SLIDER_STYLE = lambda: f"""QSlider::groove:horizontal {{ background: {T['slider_groove']}; height: 4px; border-radius: 2px; }}
+    QSlider::handle:horizontal {{ background: {T['slider_handle']}; width: 12px; margin: -4px 0; border-radius: 6px; }}
+    QSlider::sub-page:horizontal {{ background: {T['slider_fill']}; border-radius: 2px; }}"""
 
 
 class _SegmentedMeter(QWidget):
@@ -302,30 +302,19 @@ class IC705Widget(QWidget):
         self.lbl_span.setText("50k")
         slider_col.addWidget(self.lbl_span)  # Wert unten
 
-        # Palette-Button (cycled durch die Paletten)
+        # Palette wird über Theme gesteuert
         self._palette_names = list(self.waterfall.PALETTES.keys())
         self._palette_idx = 0
-        self.btn_palette = QPushButton("SDR")
-        self.btn_palette.setFixedSize(30, 20)
-        self.btn_palette.setCursor(Qt.PointingHandCursor)
-        self.btn_palette.setStyleSheet(f"""
-            QPushButton {{ background: {T['bg_mid']}; color: {T['text_muted']};
-                border: 1px solid {T['border']}; border-radius: 3px; font-size: 7px; }}
-            QPushButton:hover {{ border-color: {T['accent']}; }}
-        """)
-        self.btn_palette.setToolTip("Wasserfall-Palette wechseln")
-        self.btn_palette.clicked.connect(self._cycle_palette)
-        slider_col.addWidget(self.btn_palette)
 
         wf_row.addLayout(slider_col)
 
         root.addLayout(wf_row, stretch=1)
 
-        # ── Teal Separator ───────────────────────────────────────────
-        sep = QFrame()
-        sep.setFixedHeight(2)
-        sep.setStyleSheet(f"background-color: {T['accent']}; border: none;")
-        root.addWidget(sep)
+        # ── Accent Separator ─────────────────────────────────────────
+        self._sep_accent = QFrame()
+        self._sep_accent.setFixedHeight(2)
+        self._sep_accent.setStyleSheet(f"background-color: {T['accent']}; border: none;")
+        root.addWidget(self._sep_accent)
 
         # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
         self.lbl_freq = QLabel("")
@@ -918,9 +907,11 @@ class IC705Widget(QWidget):
         # Wasserfall leeren (alte Span-Daten passen nicht mehr)
         if hasattr(self, 'waterfall'):
             try:
-                self.waterfall._wf_data[:, :, 0] = 8
-                self.waterfall._wf_data[:, :, 1] = 12
-                self.waterfall._wf_data[:, :, 2] = 35
+                from core.theme import rgba_parts
+                bg_r, bg_g, bg_b, _ = rgba_parts(T.get('wf_bg', 'rgba(18,22,30,255)'))
+                self.waterfall._wf_data[:, :, 0] = bg_r
+                self.waterfall._wf_data[:, :, 1] = bg_g
+                self.waterfall._wf_data[:, :, 2] = bg_b
                 self.waterfall._display_spectrum[:] = 0
                 self.waterfall._last_spectrum[:] = 0
             except Exception:
@@ -1071,11 +1062,7 @@ class IC705Widget(QWidget):
                         self.btn_agc.setText(f"AGC: {on}")
                     continue
                 if name == "PREAMP":
-                    self._current_preamp = on
-                    if hasattr(self, 'btn_preamp'):
-                        pamp_map = {"OFF": "OFF", "AMP1": "P1", "AMP2": "P2"}
-                        self.btn_preamp.setText(f"P.AMP: {pamp_map.get(on, on)}")
-                    continue
+                    continue  # Preamp kommt direkt vom TRX via get_preamp()
                 if name in self.dsp_buttons:
                     self.dsp_buttons[name].setChecked(on)
                     self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
@@ -1086,7 +1073,6 @@ class IC705Widget(QWidget):
         self._palette_idx = (self._palette_idx + 1) % len(self._palette_names)
         name = self._palette_names[self._palette_idx]
         self.waterfall.set_palette(name)
-        self.btn_palette.setText(name.upper()[:4])
 
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
@@ -1484,6 +1470,8 @@ class IC705Widget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def refresh_theme(self):
+        # Accent Separator
+        self._sep_accent.setStyleSheet(f"background-color: {T['accent']}; border: none;")
         # Frequenz + Tuning
         self.lbl_freq.setStyleSheet(f"color: {T['text']}; font-size: 32px; border: none;")
         self.btn_step_down.setStyleSheet(_BTN_DARK())
@@ -1513,10 +1501,10 @@ class IC705Widget(QWidget):
 
         # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
-        self.slider_span.setStyleSheet(_SLIDER_STYLE())
         _vs = f"""QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
             QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 12px; margin: 0 -4px; border-radius: 6px; }}
             QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}"""
+        self.slider_span.setStyleSheet(_vs)
         self.slider_signal.setStyleSheet(_vs)
         self.slider_noise.setStyleSheet(_vs)
 
@@ -1524,26 +1512,37 @@ class IC705Widget(QWidget):
         self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         for lbl in self.s_labels:
             lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
+        self.smeter_bar.update()
+        if hasattr(self, 'smeter_gauge'):
+            self.smeter_gauge.update()
 
         # TX Meter
         self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
         self.tx_bar.setStyleSheet(f"""
             QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
             QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}""")
+        self.tx_bar_v.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
+            QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 2px; }}""")
+        self.lbl_tx_db.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
 
         # PTT Button
         if not self._ptt_active:
             self.btn_ptt.setStyleSheet(f"""QPushButton {{ background-color: {T['ptt_rx_bg']}; color: {T['text']};
                 border: 2px solid {T['ptt_rx_border']}; border-radius: 8px; }}""")
 
-        # Wasserfall-Palette aus Theme (nutze wf_color_1-9 wenn vorhanden)
+        # Wasserfall-Palette + Hintergrund aus Theme
         wf_pal = T.get('wf_palette', 'sdr')
         if hasattr(self, 'waterfall'):
+            # Pixel-Hintergrund auf neue wf_bg Farbe setzen
+            from core.theme import rgba_parts as _rp
+            bg_r, bg_g, bg_b, _ = _rp(T.get('wf_bg', 'rgba(18,22,30,255)'))
+            self.waterfall._wf_data[:, :, 0] = bg_r
+            self.waterfall._wf_data[:, :, 1] = bg_g
+            self.waterfall._wf_data[:, :, 2] = bg_b
             # Wenn Theme wf_color_1-9 hat, nutze die custom Farben
             if T.get('wf_color_1'):
                 self.waterfall.set_palette("theme")
             else:
                 self.waterfall.set_palette(wf_pal)
             self._palette_idx = list(self.waterfall.PALETTES.keys()).index(wf_pal) if wf_pal in self.waterfall.PALETTES else 0
-            if hasattr(self, 'btn_palette'):
-                self.btn_palette.setText(wf_pal.upper()[:4])

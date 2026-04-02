@@ -2244,6 +2244,19 @@ class ThemeEditorOverlay(QWidget):
         for key in self._color_rows:
             self._update_color_row(key, selected=(key == self._selected_key))
 
+        # Live-Preview: Theme sofort anwenden (ohne zu speichern)
+        T.clear()
+        T.update(self._theme_data)
+        main_win = self.parent().window() if self.parent() else None
+        if main_win and hasattr(main_win, "refresh_theme"):
+            main_win.refresh_theme()
+        from core.theme import _refresh_callbacks
+        for cb in _refresh_callbacks[:]:
+            try:
+                cb()
+            except Exception:
+                pass
+
     def _detect_current_preset(self):
         """Preset-Dropdown auf das aktuell geladene Theme setzen."""
         self.combo_preset.blockSignals(True)

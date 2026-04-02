@@ -72,6 +72,11 @@ def save_theme(data=None, path=None):
         full = {}
 
     src = data or T
+    # Alte Theme-Keys entfernen die nicht im neuen Theme sind (außer _comment)
+    old_keys = [k for k in full if not k.startswith("_")]
+    for k in old_keys:
+        if k not in src:
+            del full[k]
     for k, v in src.items():
         if not k.startswith("_"):
             full[k] = v
@@ -275,12 +280,12 @@ PRESETS = {
         "vu_green":            "rgba(76, 175, 80, 255)",
         "vu_yellow":           "rgba(255, 193, 7, 255)",
         "vu_red":              "rgba(244, 67, 54, 255)",
-        "wf_bg":               "rgba(24, 28, 36, 255)",
-        "wf_grid":             "rgba(38, 44, 52, 255)",
-        "wf_freq_bar":         "rgba(28, 32, 40, 255)",
-        "wf_freq_text":        "rgba(140, 150, 165, 255)",
-        "wf_freq_tick":        "rgba(55, 62, 72, 255)",
-        "wf_cursor":           "rgba(0, 150, 80, 255)",
+        "wf_bg":               "rgba(230, 232, 238, 255)",
+        "wf_grid":             "rgba(200, 205, 215, 255)",
+        "wf_freq_bar":         "rgba(220, 224, 230, 255)",
+        "wf_freq_text":        "rgba(60, 65, 80, 255)",
+        "wf_freq_tick":        "rgba(170, 175, 185, 255)",
+        "wf_cursor":           "rgba(0, 120, 100, 255)",
         "wf_palette":          "sdr",
     },
 
