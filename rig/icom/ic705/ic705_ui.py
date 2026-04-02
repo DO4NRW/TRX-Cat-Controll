@@ -218,8 +218,27 @@ class IC705Widget(QWidget):
         self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
         self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
         self.waterfall.installEventFilter(self)
-        # Scroll Timer startet erst beim CAT Connect
-        root.addWidget(self.waterfall, stretch=1)
+
+        # Wasserfall + Contrast-Slider in HLayout
+        wf_row = QHBoxLayout()
+        wf_row.setSpacing(4)
+        wf_row.addWidget(self.waterfall, stretch=1)
+
+        # Contrast Slider (vertikal, rechts neben Wasserfall)
+        self.slider_contrast = QSlider(Qt.Vertical)
+        self.slider_contrast.setRange(10, 60)  # color_gain * 10 (1.0 - 6.0)
+        self.slider_contrast.setValue(30)       # Default 3.0
+        self.slider_contrast.setFixedWidth(20)
+        self.slider_contrast.setToolTip("Wasserfall Kontrast")
+        self.slider_contrast.setFocusPolicy(Qt.NoFocus)
+        self.slider_contrast.setStyleSheet(f"""
+            QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
+            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 14px; margin: 0 -5px; border-radius: 7px; }}
+            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}""")
+        self.slider_contrast.valueChanged.connect(self._apply_contrast)
+        wf_row.addWidget(self.slider_contrast)
+
+        root.addLayout(wf_row, stretch=1)
 
         # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
         self.lbl_freq = QLabel("")
@@ -832,6 +851,11 @@ class IC705Widget(QWidget):
                 return True
         return super().eventFilter(obj, event)
 
+    def _apply_contrast(self, val):
+        """Wasserfall Kontrast anpassen (color_gain)."""
+        gain = val / 10.0  # 10→1.0, 30→3.0, 60→6.0
+        self.waterfall._color_gain = gain
+
     # ══════════════════════════════════════════════════════════════════
     # DEMO RECORDER (F9 Start/Stop)
     # ══════════════════════════════════════════════════════════════════
@@ -1235,9 +1259,13 @@ class IC705Widget(QWidget):
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
 
-        # Span/Ref Slider
+        # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
         self.slider_span.setStyleSheet(_SLIDER_STYLE())
+        self.slider_contrast.setStyleSheet(f"""
+            QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
+            QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 14px; margin: 0 -5px; border-radius: 7px; }}
+            QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}""")
 
         # S-Meter
         self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")
