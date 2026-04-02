@@ -317,9 +317,13 @@ function drawWaterfall() {
     // Wasserfall auf Zielbereich skalieren (nur Höhe)
     ctx.drawImage(window._wfCanvas, 0, 0, w, wfBufH, 0, wfY, w, wfH);
 
-    // Center marker + passband
+    // Center marker + passband (aus Theme wie waterfall.py)
     const cx = Math.floor(w / 2);
-    ctx.strokeStyle = 'rgba(6, 198, 164, 0.4)';
+    // Parse accent für alpha-Varianten
+    const accentMatch = accent.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const [ar, ag, ab] = accentMatch ? [+accentMatch[1], +accentMatch[2], +accentMatch[3]] : [6, 198, 164];
+
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.4)`;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
 
@@ -753,9 +757,9 @@ function playDemoFrame() {
     demoIndex = (demoIndex + 1) % demoData.length;
 
     if (frame.sp) {
-        // Blend wie Python: display += 0.10 * (target - display)
+        // Blend — etwas stärker als Python damit die Daten nicht zu verwaschen sind
         for (let i = 0; i < Math.min(475, frame.sp.length); i++) {
-            spectrum[i] += 0.10 * (frame.sp[i] - spectrum[i]);
+            spectrum[i] = spectrum[i] * 0.3 + frame.sp[i] * 0.7;
         }
     }
     if (frame.f) {
@@ -810,9 +814,14 @@ async function init() {
     await loadTheme();
     await loadDemoData();
     updateFreqDisplay();
-    // VOX Toggle
-    document.getElementById('tgl-vox').addEventListener('click', function() {
-        this.classList.toggle('active');
+    // VOX Toggle (nutzt SVG Icons aus dem Repo)
+    const tglVox = document.getElementById('tgl-vox');
+    tglVox.addEventListener('click', function() {
+        const active = this.classList.toggle('active');
+        const img = this.querySelector('.toggle-icon');
+        img.src = active
+            ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_on.svg'
+            : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg';
     });
 
     setupSettings();
