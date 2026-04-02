@@ -106,17 +106,18 @@ def polling_loop():
 
 async def broadcast_loop():
     """Sendet Live-Daten an alle verbundenen Clients (80ms)."""
+    global clients
     while True:
-        if clients and connected:
+        if len(clients) > 0 and connected:
             msg = json.dumps(live_data, separators=(',', ':'))
             dead = set()
-            for ws in clients:
+            for ws in clients.copy():
                 try:
                     await ws.send_text(msg)
                 except Exception:
                     dead.add(ws)
             clients -= dead
-        await asyncio.sleep(0.08)  # 80ms wie App Scroll-Timer
+        await asyncio.sleep(0.08)
 
 
 # ── API Endpoints ──────────────────────────────────────────────────
@@ -187,20 +188,10 @@ async def websocket_endpoint(ws: WebSocket):
         print(f"Client disconnected ({len(clients)} total)")
 
 
-@app.get("/")
-async def index():
-    """Serve Web-GUI."""
-    gui_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "docs", "index.html")
-    if os.path.exists(gui_path):
-        return FileResponse(gui_path)
-    return {"error": "Web GUI not found. Run from RigLink directory."}
-
-
-# Static files (CSS, JS)
+# Static files (CSS, JS, HTML) — muss NACH allen API routes kommen
 docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
 if os.path.isdir(docs_dir):
-    app.mount("/", StaticFiles(directory=docs_dir), name="static")
+    app.mount("/", StaticFiles(directory=docs_dir, html=True), name="static")
 
 
 # ── Startup ────────────────────────────────────────────────────────
@@ -221,15 +212,10 @@ def main():
     args = parser.parse_args()
 
     if args.auto_connect:
-        import requests
-        # Connect nach Server-Start
+        _auto_cfg = {"rig": args.rig, "port": args.serial, "baud": args.baud}
         @app.on_event("startup")
         async def auto_connect():
-            await connect_rig({
-                "rig": args.rig,
-                "port": args.serial,
-                "baud": args.baud,
-            })
+            await connect_rig(_auto_cfg)
 
     print(f"RigLink Server starting on http://{args.host}:{args.port}")
     print(f"Rig: {args.rig} | Serial: {args.serial} @ {args.baud}")
