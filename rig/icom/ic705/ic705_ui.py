@@ -210,7 +210,7 @@ class IC705Widget(QWidget):
         self.slider_span.setValue(3)
         self.slider_span.setFixedWidth(16)
         self.slider_span.setInvertedAppearance(True)  # Oben = großer Span
-        self.slider_span.valueChanged.connect(self._update_span_label)
+        self.slider_span.valueChanged.connect(self._on_span_changed)
         self.slider_span.sliderReleased.connect(self._apply_span)
 
         self._SPAN_VALUES = [
@@ -875,13 +875,15 @@ class IC705Widget(QWidget):
         pamp_map = {"OFF": "OFF", "AMP1": "P1", "AMP2": "P2"}
         self.btn_preamp.setText(f"P.AMP: {pamp_map.get(new_mode, new_mode)}")
 
-    def _update_span_label(self, idx):
-        """Nur Label updaten beim Slider-Bewegen."""
+    def _on_span_changed(self, idx):
+        """Slider bewegt → Lock + Label updaten."""
+        self._span_lock = True  # Polling sofort blocken
         if idx < len(self._SPAN_VALUES):
             self.lbl_span.setText(self._SPAN_VALUES[idx][1].replace(" kHz", "k"))
 
     def _apply_span(self):
         """Span am TRX setzen wenn Slider losgelassen wird."""
+        print(f"[SPAN] _apply_span aufgerufen, idx={self.slider_span.value()}", flush=True)
         # Polling-Update 2s blockieren damit der TRX Zeit hat
         self._span_lock = True
         QTimer.singleShot(2000, lambda: setattr(self, '_span_lock', False))
