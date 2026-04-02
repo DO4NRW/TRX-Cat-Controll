@@ -767,22 +767,61 @@ class IC705Widget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def start_demo_recording(self):
-        import time
+        import time, subprocess, os
         self._demo_frames = []
         self._demo_start = time.time()
         self._demo_recording = True
+        self._demo_audio_proc = None
+
+        # RX-Audio parallel aufnehmen (TRX USB Audio → WAV)
+        docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))), "docs")
+        audio_path = os.path.join(docs_dir, "demo_audio.wav")
+
+        # TRX Audio-Device aus Config lesen
+        trx_mic = ""
+        if self._config_path:
+            try:
+                with open(self._config_path) as f:
+                    cfg = json.load(f)
+                dev = cfg.get("audio", {}).get("trx_mic", {}).get("device", "")
+                # node.name aus "[pw:node.name] ..." extrahieren
+                if "[pw:" in dev:
+                    trx_mic = dev.split("[pw:")[1].split("]")[0]
+            except Exception:
+                pass
+
+        if trx_mic:
+            try:
+                self._demo_audio_proc = subprocess.Popen(
+                    ["pw-record", "--target", trx_mic, "--rate", "44100",
+                     "--channels", "1", "--format", "s16", audio_path],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                print(f"🎙️ Audio-Aufnahme: {trx_mic}")
+            except Exception as e:
+                print(f"Audio-Aufnahme fehlgeschlagen: {e}")
+
         log_event("Demo-Aufnahme gestartet")
-        print("🔴 DEMO RECORDING GESTARTET — F9 zum Stoppen")
+        print("🔴 DEMO RECORDING GESTARTET")
 
     def stop_demo_recording(self):
         self._demo_recording = False
+
+        # Audio stoppen
+        if self._demo_audio_proc:
+            self._demo_audio_proc.terminate()
+            self._demo_audio_proc.wait(timeout=3)
+            self._demo_audio_proc = None
+            print("🎙️ Audio-Aufnahme gestoppt")
+
         log_event(f"Demo-Aufnahme gestoppt: {len(self._demo_frames)} Frames")
         print(f"⬜ DEMO RECORDING GESTOPPT — {len(self._demo_frames)} Frames")
 
         if not self._demo_frames:
             return
 
-        import json, os
+        import os
         output = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))))), "docs", "demo_data.json")
         with open(output, 'w') as f:

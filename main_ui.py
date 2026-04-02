@@ -2332,6 +2332,20 @@ class MainWindow(QMainWindow):
 
         self.top_layout.addStretch()
 
+        # ── REC Button (Demo-Aufnahme) ───────────────────────────────
+        self.btn_rec = QPushButton("REC")
+        self.btn_rec.setFixedSize(50, 30)
+        self.btn_rec.setFocusPolicy(Qt.NoFocus)
+        self.btn_rec.setCursor(Qt.PointingHandCursor)
+        self._rec_off_style = f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
+            border: 1px solid {T['border']}; border-radius: 4px; font-size: 11px; font-weight: bold; }}
+            QPushButton:hover {{ border-color: {T['error']}; }}"""
+        self._rec_on_style = f"""QPushButton {{ background-color: {T['error']}; color: {T['text']};
+            border: 2px solid {T['error']}; border-radius: 4px; font-size: 11px; font-weight: bold; }}"""
+        self.btn_rec.setStyleSheet(self._rec_off_style)
+        self.btn_rec.clicked.connect(self._toggle_demo_rec)
+        self.top_layout.addWidget(self.btn_rec)
+
         # ── VOX Controls ─────────────────────────────────────────────
         self.tgl_vox = ToggleButton("VOX")
         self.tgl_vox.toggled.connect(self._toggle_vox)
@@ -2826,6 +2840,18 @@ class MainWindow(QMainWindow):
                 json.dump(cfg, f, indent=4)
         except Exception:
             pass
+
+    def _toggle_demo_rec(self):
+        if not self.rig_widget or not hasattr(self.rig_widget, '_demo_recording'):
+            return
+        if self.rig_widget._demo_recording:
+            self.rig_widget.stop_demo_recording()
+            self.btn_rec.setStyleSheet(self._rec_off_style)
+            self.btn_rec.setText("REC")
+        else:
+            self.rig_widget.start_demo_recording()
+            self.btn_rec.setStyleSheet(self._rec_on_style)
+            self.btn_rec.setText("⬛ STOP")
 
     def _toggle_vox(self, checked):
         log_action(f"VOX {'aktiviert' if checked else 'deaktiviert'}")
