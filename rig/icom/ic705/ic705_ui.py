@@ -894,15 +894,10 @@ class IC705Widget(QWidget):
         if not self._cat or not self._cat.connected:
             return
         import time
-        # Scope Output pausieren + Buffer leeren
-        self._cat._civ_query(0x27, sub=0x11, data=bytes([0x00]))
-        time.sleep(0.2)
-        if self._cat._ser and self._cat._ser.is_open:
-            self._cat._ser.reset_input_buffer()
-        # Span setzen: cmd=0x27, sub=0x15, data=[receiver=0x00, span_index]
+        # Span setzen OHNE Scope zu pausieren
         frame = self._cat._build_frame(0x27, 0x15, bytes([0x00, idx]))
         print(f"[SPAN] Frame: {frame.hex(' ')}", flush=True)
-        result = self._cat._civ_query(0x27, sub=0x15, data=bytes([0x00, idx]))
+        result = self._cat._civ_send(0x27, sub=0x15, data=bytes([0x00, idx]))
         print(f"[SPAN] idx={idx} ({span_hz} Hz) → result={result}", flush=True)
         if result and result[0] == 0xFA:
             # NAK — versuche mit BCD
