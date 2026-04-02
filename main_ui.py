@@ -2290,7 +2290,7 @@ class MainWindow(QMainWindow):
         self.action_theme.setIcon(themed_icon(os.path.join(_ICONS, "settings.svg")))
 
         self.action_report = QAction("Bug Report", self)
-        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug.svg")))
+        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug_report.svg")))
 
         self.main_menu.addAction(self.action_settings)
         self.main_menu.addAction(self.action_audio)
@@ -2628,7 +2628,7 @@ class MainWindow(QMainWindow):
         self.lbl_version.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; padding-right: 8px;")
 
         # Report-Action Icon
-        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug.svg")))
+        self.action_report.setIcon(themed_icon(os.path.join(_ICONS, "bug_report.svg")))
 
         # Alle ToggleButtons: Icons + Style neu laden
         for tb in self.findChildren(ToggleButton):
