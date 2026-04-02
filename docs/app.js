@@ -343,12 +343,22 @@ function drawWaterfall() {
 }
 
 // S-Meter — gleiche Berechnung wie ic705_ui.py
-const S9_RAW = 130;
+const S9_RAW = 100;
 const MAX_RAW = 241;
-const S9_STEPS = ['S9+20', 'S9+40', 'S9+60'];
+const S_SEGMENTS = 13;
+const S9_STEPS = ['S9+10', 'S9+20', 'S9+40', 'S9+60'];
+
+function initSMeter() {
+    // Tick-Marks erzeugen
+    const ticks = document.getElementById('smeter-ticks');
+    for (let i = 0; i < S_SEGMENTS; i++) {
+        const t = document.createElement('div');
+        t.className = 'tick';
+        ticks.appendChild(t);
+    }
+}
 
 function updateSMeter() {
-    // smeterValue = Raw-Wert vom TRX (0-241)
     const val = smeterValue;
     let sStr, frac;
 
@@ -367,9 +377,48 @@ function updateSMeter() {
         frac = (9 + dbOver / 60 * 4) / 13;
     }
 
-    const barPct = Math.min(100, frac * 100);
-    document.getElementById('smeter-bar').style.width = barPct + '%';
     document.getElementById('smeter-info').textContent = `S-METER: ${sStr} | P1`;
+
+    // Segmentiertes S-Meter zeichnen
+    const canvas = document.getElementById('smeter-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.parentElement.clientWidth;
+    const h = 20;
+    canvas.height = h;
+
+    const cs = getComputedStyle(document.documentElement);
+    const bgColor = cs.getPropertyValue('--bg-dark').trim() || '#1a1a1a';
+    const borderColor = cs.getPropertyValue('--border').trim() || '#555';
+    const barColor = cs.getPropertyValue('--smeter-bar').trim() || '#06c6a4';
+
+    const gap = 2;
+    const segW = w / S_SEGMENTS;
+    const fillSegs = frac * S_SEGMENTS;
+
+    for (let i = 0; i < S_SEGMENTS; i++) {
+        const x = Math.floor(i * segW) + gap / 2;
+        const sw = Math.floor(segW) - gap;
+
+        if (i < Math.floor(fillSegs)) {
+            ctx.fillStyle = barColor;
+        } else if (i < fillSegs) {
+            ctx.fillStyle = barColor;
+            // Teilweise — zeichne nur den gefüllten Teil
+            ctx.fillRect(x, 0, Math.floor(sw * (fillSegs - Math.floor(fillSegs))), h);
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(x + Math.floor(sw * (fillSegs - Math.floor(fillSegs))), 0,
+                sw - Math.floor(sw * (fillSegs - Math.floor(fillSegs))), h);
+            ctx.strokeStyle = borderColor;
+            ctx.strokeRect(x, 0, sw, h);
+            continue;
+        } else {
+            ctx.fillStyle = bgColor;
+        }
+        ctx.fillRect(x, 0, sw, h);
+        ctx.strokeStyle = borderColor;
+        ctx.strokeRect(x, 0, sw, h);
+    }
 }
 
 // Frequency display
@@ -813,6 +862,7 @@ async function init() {
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
     await loadTheme();
     await loadDemoData();
+    initSMeter();
     updateFreqDisplay();
     // VOX Toggle (nutzt SVG Icons aus dem Repo)
     const tglVox = document.getElementById('tgl-vox');
