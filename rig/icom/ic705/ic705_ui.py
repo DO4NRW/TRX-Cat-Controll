@@ -484,12 +484,7 @@ class IC705Widget(QWidget):
     def set_cat_handler(self, cat):
         self._cat = cat
         self._poll_count = 0
-
-        # Alles syncen BEVOR Scope angeht (saubere CI-V Queries)
-        self._sync_rig_basics()
-        self._read_dsp_from_trx()
-
-        # Scope erst JETZT aktivieren
+        self._sync_rig_state()
         if hasattr(cat, 'scope_enable'):
             cat.scope_enable(True)
         # Wasserfall Scroll starten
@@ -531,9 +526,9 @@ class IC705Widget(QWidget):
 
         self._poll_count += 1
 
-        # Mode/Preamp/Power Sync in den ersten Ticks (OHNE DSP — das passiert einmal in set_cat_handler)
-        if self._poll_count <= 5:
-            self._sync_rig_basics()
+        # Voller Sync bei den ersten Ticks
+        if self._poll_count <= 3:
+            self._sync_rig_state()
 
         # Scope-Daten lesen: bei Query-Ticks aus dem Buffer, sonst direkt vom Port
         if self._poll_count % 5 != 0 and hasattr(self._cat, '_flush_scope_from_serial'):
@@ -632,8 +627,7 @@ class IC705Widget(QWidget):
 
         # Scope-Daten werden oben im Poll gelesen
 
-    def _sync_rig_basics(self):
-        """Mode, Preamp, Power, PBT syncen (sicher mit Scope)."""
+    def _sync_rig_state(self):
         if not self._cat:
             return
         mode = self._cat.get_mode()
@@ -698,6 +692,32 @@ class IC705Widget(QWidget):
                     slider.setValue(val)
                     slider.blockSignals(False)
         self._update_pbt_labels()
+
+        # DSP Status auslesen via CI-V (hardcodiert — funktioniert zuverlässig)
+        dsp_queries = {
+            "NB":    (0x16, 0x22),
+            "NR":    (0x16, 0x40),
+            "NOTCH": (0x16, 0x41),
+            "COMP":  (0x16, 0x44),
+        }
+        for name, (cmd, sub) in dsp_queries.items():
+            if name not in self.dsp_buttons:
+                continue
+            result = self._cat._civ_query(cmd, sub=sub)
+            if result:
+                _, data = result
+                on = len(data) >= 2 and data[0] == sub and data[1] > 0
+                self.dsp_buttons[name].setChecked(on)
+                self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
+
+        att = self._cat.get_att()
+        if att is not None and "ATT" in self.dsp_buttons:
+            self.dsp_buttons["ATT"].setChecked(att)
+            self.dsp_buttons["ATT"].setStyleSheet(_BTN_ACTIVE() if att else _BTN_DARK())
+
+        agc = self._cat.get_agc()
+        if agc and hasattr(self, 'btn_agc'):
+            self.btn_agc.setText(f"AGC: {agc}")
 
     def _read_dsp_from_trx(self):
         """Einmal bei Connect: DSP-States direkt vom TRX lesen (kein Scope aktiv!)."""
