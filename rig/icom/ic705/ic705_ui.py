@@ -210,8 +210,10 @@ class IC705Widget(QWidget):
         self.slider_span.setValue(3)
         self.slider_span.setFixedWidth(16)
         self.slider_span.setInvertedAppearance(True)  # Oben = großer Span
+        self.slider_span.sliderPressed.connect(lambda: setattr(self, '_span_lock', True))
         self.slider_span.valueChanged.connect(self._on_span_changed)
         self.slider_span.sliderReleased.connect(self._apply_span)
+        self._span_lock = False
 
         self._SPAN_VALUES = [
             (2500, "2.5 kHz"), (5000, "5 kHz"), (10000, "10 kHz"),
