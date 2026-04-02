@@ -51,11 +51,11 @@ class SMeterGauge(QWidget):
         r, g, b, a = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
         p.fillRect(0, 0, w, h, QColor(r, g, b, a))
 
-        # Arc Geometrie — flacher Bogen, volle Breite
+        # Arc Geometrie — kompakt, auf Höhe begrenzt
         cx = w * 0.5
-        radius = min(w * 0.48, h * 3.0)  # Begrenzt bei kleiner Höhe
-        cy = h + radius * 0.4
-        needle_cy = h + 4.0
+        radius = min(w * 0.4, h * 1.5)
+        cy = h * 1.1
+        needle_cy = h + 2.0
 
         arc_start_rad = math.radians(ARC_START_DEG)
         arc_end_rad = math.radians(ARC_END_DEG)
@@ -102,7 +102,7 @@ class SMeterGauge(QWidget):
             p.drawLine(p1, p2)
 
         # ── Ticks + Labels ───────────────────────────────────────────
-        font_size = max(8, h // 10)
+        font_size = max(6, h // 12)
         p.setFont(QFont("Consolas", font_size, QFont.Bold))
 
         # S-Units: S1, S3, S5, S7, S9
@@ -115,13 +115,13 @@ class SMeterGauge(QWidget):
             ay = cy - radius * math.sin(angle)
 
             # Tick-Linie (nach außen)
-            inner = QPointF(ax + 2 * ux, ay + 2 * uy)
-            outer = QPointF(ax + 12 * ux, ay + 12 * uy)
+            inner = QPointF(ax + 1 * ux, ay + 1 * uy)
+            outer = QPointF(ax + 8 * ux, ay + 8 * uy)
             p.setPen(QPen(white_c, 1.5))
             p.drawLine(inner, outer)
 
             # Label
-            lp = QPointF(ax + 22 * ux, ay + 22 * uy)
+            lp = QPointF(ax + 14 * ux, ay + 14 * uy)
             p.setPen(white_c)
             p.drawText(int(lp.x()) - 4, int(lp.y()) + 4, label)
 
@@ -133,12 +133,12 @@ class SMeterGauge(QWidget):
             ax = cx + radius * math.cos(angle)
             ay = cy - radius * math.sin(angle)
 
-            inner = QPointF(ax + 2 * ux, ay + 2 * uy)
-            outer = QPointF(ax + 12 * ux, ay + 12 * uy)
+            inner = QPointF(ax + 1 * ux, ay + 1 * uy)
+            outer = QPointF(ax + 8 * ux, ay + 8 * uy)
             p.setPen(QPen(red_c, 1.5))
             p.drawLine(inner, outer)
 
-            lp = QPointF(ax + 22 * ux, ay + 22 * uy)
+            lp = QPointF(ax + 14 * ux, ay + 14 * uy)
             p.setPen(red_c)
             p.drawText(int(lp.x()) - 8, int(lp.y()) + 4, label)
 
