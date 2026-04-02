@@ -565,28 +565,67 @@ class FT991AWidget(QWidget):
         return None
 
     def _get_pw_node_name(self, device_str):
-        """PipeWire node.name direkt aus Config-String lesen.
-        Format: '[pw:alsa_output.usb-...] Display Name' → 'alsa_output.usb-...'
-        Legacy: '[pw:57]' (numerische ID) → Fallback pw-cli lookup."""
+        """PipeWire node.name aus Config-String lesen.
+        Fuzzy-Match: wenn exakter Node nicht existiert, suche ähnlichen."""
         m = re.search(r"\[pw:([^\]]+)\]", device_str)
         if not m:
             return None
         pw_val = m.group(1)
-        # Neues Format: node.name direkt gespeichert (nicht-numerisch)
-        if not pw_val.isdigit():
-            return pw_val
-        # Legacy: numerische ID → node.name via pw-cli auflösen
+        if pw_val.isdigit():
+            try:
+                out = subprocess.run(["pw-cli", "info", pw_val],
+                    capture_output=True, text=True, timeout=2).stdout
+                for line in out.splitlines():
+                    if "node.name" in line and "node.nick" not in line:
+                        nm = re.search(r'"(.+?)"', line)
+                        if nm:
+                            pw_val = nm.group(1)
+            except Exception:
+                pass
+        return self._resolve_pw_node(pw_val)
+
+    def _resolve_pw_node(self, node_name):
+        """Node existiert? Wenn nicht, Fuzzy-Match über aktive PipeWire Nodes."""
         try:
-            out = subprocess.run(["pw-cli", "info", pw_val],
-                capture_output=True, text=True, timeout=2).stdout
-            for line in out.splitlines():
-                if "node.name" in line and "node.nick" not in line:
-                    nm = re.search(r'"(.+?)"', line)
-                    if nm:
-                        return nm.group(1)
+            out = subprocess.run(["pw-cli", "list-objects"],
+                capture_output=True, text=True, timeout=3).stdout
+            active_nodes = re.findall(r'node\.name\s*=\s*"([^"]+)"', out)
         except Exception:
-            pass
-        return pw_val
+            return node_name
+        if node_name in active_nodes:
+            return node_name
+        # Fuzzy: Basisname ohne Nummer-Suffix matchen
+        base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', node_name)
+        is_input = "input" in node_name or "source" in node_name
+        for n in active_nodes:
+            n_base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', n)
+            n_is_input = "input" in n or "source" in n
+            if n_base == base and n_is_input == is_input:
+                print(f"[AUDIO] Fuzzy-Match: {node_name} → {n}")
+                return n
+        print(f"[AUDIO] Node nicht gefunden: {node_name}")
+        return node_name
+
+    def _update_audio_nodes(self, config_path, resolved, audio_cfg):
+        """Config updaten wenn Fuzzy-Match neue Node-Names gefunden hat."""
+        changed = False
+        for key, new_node in resolved.items():
+            old_device = audio_cfg.get(key, {}).get("device", "")
+            old_m = re.search(r"\[pw:([^\]]+)\]", old_device)
+            old_node = old_m.group(1) if old_m else ""
+            if old_node and new_node and old_node != new_node:
+                audio_cfg[key]["device"] = old_device.replace(f"[pw:{old_node}]", f"[pw:{new_node}]")
+                changed = True
+        if changed:
+            try:
+                with open(config_path) as f:
+                    full_cfg = json.load(f)
+                full_cfg["audio"] = audio_cfg
+                with open(config_path, "w") as f:
+                    json.dump(full_cfg, f, indent=4)
+                print("[AUDIO] Config aktualisiert (Node-Names geändert)")
+            except Exception as e:
+                print(f"[AUDIO] Config update fehlgeschlagen: {e}")
 
     def start_audio(self, config_path):
         """Audio-Streams öffnen basierend auf der Rig-Config."""
@@ -673,6 +712,12 @@ class FT991AWidget(QWidget):
                 if missing:
                     print(f"Audio: PipeWire-IDs fehlen: {', '.join(missing)}")
                     return False
+
+                # Config updaten wenn sich Node-Names geändert haben (USB umgesteckt)
+                self._update_audio_nodes(config_path, {
+                    "pc_mic": pw_pc_mic, "trx_mic": pw_trx_mic,
+                    "trx_speaker": pw_trx_spk, "pc_speaker": pw_pc_spk,
+                }, audio)
 
                 # RX: TRX Mic → PC Speaker
                 self._pw_rx_rec = subprocess.Popen(

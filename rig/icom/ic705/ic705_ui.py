@@ -1283,25 +1283,75 @@ class IC705Widget(QWidget):
     # ══════════════════════════════════════════════════════════════════
 
     def _get_pw_node_name(self, device_str):
-        """PipeWire node.name aus Config-String lesen."""
+        """PipeWire node.name aus Config-String lesen.
+        Fuzzy-Match: wenn exakter Node nicht existiert, suche ähnlichen
+        (gleicher Basisname, andere Nummer z.B. -00 vs -00.2)."""
         m = re.search(r"\[pw:([^\]]+)\]", device_str)
         if not m:
             return None
         pw_val = m.group(1)
-        if not pw_val.isdigit():
-            return pw_val
-        # Legacy: numerische ID
+        if pw_val.isdigit():
+            # Legacy: numerische ID
+            try:
+                out = subprocess.run(["pw-cli", "info", pw_val],
+                    capture_output=True, text=True, timeout=2).stdout
+                for line in out.splitlines():
+                    if "node.name" in line and "node.nick" not in line:
+                        nm = re.search(r'"(.+?)"', line)
+                        if nm:
+                            pw_val = nm.group(1)
+            except Exception:
+                pass
+        # Prüfe ob Node existiert, sonst Fuzzy-Match
+        return self._resolve_pw_node(pw_val)
+
+    def _resolve_pw_node(self, node_name):
+        """Node existiert? Wenn nicht, Fuzzy-Match über aktive PipeWire Nodes."""
         try:
-            out = subprocess.run(["pw-cli", "info", pw_val],
-                capture_output=True, text=True, timeout=2).stdout
-            for line in out.splitlines():
-                if "node.name" in line and "node.nick" not in line:
-                    nm = re.search(r'"(.+?)"', line)
-                    if nm:
-                        return nm.group(1)
+            out = subprocess.run(["pw-cli", "list-objects"],
+                capture_output=True, text=True, timeout=3).stdout
+            active_nodes = re.findall(r'node\.name\s*=\s*"([^"]+)"', out)
         except Exception:
-            pass
-        return pw_val
+            return node_name  # Fallback: Config-Wert verwenden
+        # Exakter Match
+        if node_name in active_nodes:
+            return node_name
+        # Fuzzy: Basisname ohne Nummer-Suffix matchen
+        # "alsa_input.usb-Burr-Brown...-00.2.analog-stereo" → Basis "alsa_input.usb-Burr-Brown..."
+        # Entferne -XX oder -XX.Y vor .analog-stereo
+        base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', node_name)
+        # Gleichen Typ (input/output) beibehalten
+        is_input = "input" in node_name or "source" in node_name
+        for n in active_nodes:
+            n_base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', n)
+            n_is_input = "input" in n or "source" in n
+            if n_base == base and n_is_input == is_input:
+                print(f"[AUDIO] Fuzzy-Match: {node_name} → {n}")
+                return n
+        print(f"[AUDIO] Node nicht gefunden: {node_name}")
+        return node_name  # Fallback
+
+    def _update_audio_nodes(self, config_path, resolved, audio_cfg):
+        """Config updaten wenn Fuzzy-Match neue Node-Names gefunden hat."""
+        changed = False
+        for key, new_node in resolved.items():
+            old_device = audio_cfg.get(key, {}).get("device", "")
+            old_m = re.search(r"\[pw:([^\]]+)\]", old_device)
+            old_node = old_m.group(1) if old_m else ""
+            if old_node and new_node and old_node != new_node:
+                # Node-Name in device string ersetzen
+                audio_cfg[key]["device"] = old_device.replace(f"[pw:{old_node}]", f"[pw:{new_node}]")
+                changed = True
+        if changed:
+            try:
+                with open(config_path) as f:
+                    full_cfg = json.load(f)
+                full_cfg["audio"] = audio_cfg
+                with open(config_path, "w") as f:
+                    json.dump(full_cfg, f, indent=4)
+                print("[AUDIO] Config aktualisiert (Node-Names geändert)")
+            except Exception as e:
+                print(f"[AUDIO] Config update fehlgeschlagen: {e}")
 
     def start_audio(self, config_path):
         """Audio-Streams starten basierend auf Rig-Config."""
@@ -1380,6 +1430,12 @@ class IC705Widget(QWidget):
                 if missing:
                     print(f"Audio: PipeWire Nodes fehlen: {', '.join(missing)}")
                     return False
+
+                # Config updaten wenn sich Node-Names geändert haben (USB umgesteckt)
+                self._update_audio_nodes(config_path, {
+                    "pc_mic": pw_pc_mic, "trx_mic": pw_trx_mic,
+                    "trx_speaker": pw_trx_spk, "pc_speaker": pw_pc_spk,
+                }, audio)
 
                 pc_mic_sr = int(pc_mic.get("rate", 44100))
                 trx_mic_sr = int(trx_mic.get("rate", 44100))

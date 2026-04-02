@@ -2942,15 +2942,24 @@ class MainWindow(QMainWindow):
             self._connect_cat()
 
     def _connect_cat(self):
-        """CAT-Verbindung herstellen mit Config aus Radio Setup."""
-        # Config laden
+        """CAT-Verbindung herstellen mit Config aus Top-Bar Rig-Combo."""
+        # Rig-Name aus Top-Bar (die ist immer synchron)
         rig_name = "Yaesu FT-991A"
+        if hasattr(self, "combo_rig_select"):
+            rig_name = self.combo_rig_select.currentText()
+        # Radio Setup Combo synchronisieren
         if hasattr(self, "radio_setup_overlay") and hasattr(self.radio_setup_overlay, "combo_rig"):
-            rig_name = self.radio_setup_overlay.combo_rig.currentText()
+            self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
 
-        config_path = ""
-        if hasattr(self, "radio_setup_overlay"):
-            config_path = self.radio_setup_overlay._config_path()
+        # Config-Pfad direkt aus rig_name ableiten (nicht über Overlay)
+        parts = rig_name.split(" ", 1)
+        if len(parts) == 2:
+            maker = parts[0].lower()
+            model = parts[1].lower().replace("-", "")
+            config_path = os.path.join(_RIG_DIR, maker, model, "config.json")
+        else:
+            config_path = ""
+        log_event(f"Connect: {rig_name} → {config_path}")
 
         if not config_path or not os.path.exists(config_path):
             self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
@@ -2972,10 +2981,9 @@ class MainWindow(QMainWindow):
         cat_cfg = cfg.get("cat", {})
         protocol = cat_cfg.get("protocol", "yaesu")
 
-        # Live-Werte aus Radio Settings Dropdowns lesen (nicht gespeicherte Config)
-        rs = self.radio_setup_overlay
-        port = rs.combo_cat_port.currentText() if hasattr(rs, "combo_cat_port") else cat_cfg.get("port", "/dev/ttyUSB0")
-        baud = int(rs.combo_baud.currentText()) if hasattr(rs, "combo_baud") else cat_cfg.get("baud", 38400)
+        # Port + Baud aus Config lesen (nicht aus Radio Setup Dropdowns — die könnten veraltet sein)
+        port = cat_cfg.get("port", "/dev/ttyUSB0")
+        baud = int(cat_cfg.get("baud", 38400))
 
         # Globalen CAT-Handler nach Protokoll erstellen
         try:
@@ -3047,9 +3055,18 @@ class MainWindow(QMainWindow):
         if self._cat_handler:
             self._cat_handler.connected = False
 
-        # 2. Polling sofort stoppen + GUI zurücksetzen
-        if self.rig_widget and hasattr(self.rig_widget, "stop_polling"):
-            self.rig_widget.stop_polling()
+        # 2. Polling + Audio sofort stoppen + GUI zurücksetzen
+        if self.rig_widget:
+            if hasattr(self.rig_widget, "stop_polling"):
+                self.rig_widget.stop_polling()
+            if hasattr(self.rig_widget, "stop_audio"):
+                self.rig_widget.stop_audio()
+        # Alle pw-cat Prozesse sicherheitshalber killen
+        try:
+            subprocess.run(["pkill", "-9", "-f", "pw-cat"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
 
         # 3. Serial schließen im Hintergrund (falls Lock blockiert)
         def close_serial():
@@ -3071,41 +3088,24 @@ class MainWindow(QMainWindow):
         self.tgl_vox.setChecked(False)
 
     def _on_rig_combo_changed(self, rig_name):
-        """Rig-Wechsel über Top-Bar Combo."""
-        if self._rig_switching:
-            return
-        # Radio Setup Combo synchronisieren
-        self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
-        self._on_rig_changed()
-
-    def _on_rig_changed(self):
-        """Rig-Widget neu laden nach Rig-Wechsel."""
-        # Wenn verbunden, erst disconnecten
-        if self._cat_connected:
-            self._disconnect_cat()
-        self._load_rig_widget()
-
-        # last_rig in status_conf.json speichern
-        rig_name = self.combo_rig_select.currentText()
-        try:
-            with open(self._status_conf_path) as f:
-                cfg = json.load(f)
-            cfg["last_rig"] = rig_name
-            with open(self._status_conf_path, "w") as f:
-                json.dump(cfg, f, indent=4)
-        except Exception:
-            pass
-
-    def _on_rig_combo_changed(self, rig_name):
-        """Top-Bar Rig-Combo geändert → Radio Setup sync + Rig-Widget laden."""
+        """Top-Bar Rig-Combo geändert → Disconnect, Radio Setup sync, Rig-Widget laden."""
         if self._rig_switching or not rig_name:
             return
+        # Erst sauber disconnecten wenn verbunden
+        if self._cat_connected:
+            self._disconnect_cat()
+        # Audio + Polling vom alten Widget sicherheitshalber stoppen
+        if self.rig_widget:
+            if hasattr(self.rig_widget, "stop_polling"):
+                self.rig_widget.stop_polling()
+            if hasattr(self.rig_widget, "stop_audio"):
+                self.rig_widget.stop_audio()
         # Radio Setup Combo synchronisieren
         if hasattr(self, 'radio_setup_overlay'):
             self._rig_switching = True
             self.radio_setup_overlay.combo_rig.setCurrentText(rig_name)
             self._rig_switching = False
-        # Rig-Widget sofort laden (GUI wechseln)
+        # Rig-Widget laden
         self._load_rig_widget()
         # last_rig speichern
         try:
