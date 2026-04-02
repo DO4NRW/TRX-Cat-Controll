@@ -376,23 +376,36 @@ class IC705Widget(QWidget):
 
         root.addLayout(dsp_row)
 
-        # ── 5. Power Slider ──────────────────────────────────────────
-        pwr_row = QHBoxLayout()
-        pwr_row.setSpacing(10)
+        # ── 5. Power + Notch Slider (nebeneinander) ────────────────
+        pwr_notch_row = QHBoxLayout()
+        pwr_notch_row.setSpacing(6)
 
         self.lbl_pwr = QLabel("PWR: 50")
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        pwr_row.addWidget(self.lbl_pwr)
+        pwr_notch_row.addWidget(self.lbl_pwr)
 
         self.slider_pwr = QSlider(Qt.Horizontal)
-        self.slider_pwr.setRange(0, 255)  # IC-705: 0-255 raw (= 0-10W)
+        self.slider_pwr.setRange(0, 255)
         self.slider_pwr.setValue(128)
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
         self.slider_pwr.valueChanged.connect(lambda v: self.lbl_pwr.setText(f"PWR: {v * 10 / 255:.1f}W"))
         self.slider_pwr.sliderReleased.connect(self._apply_power)
-        pwr_row.addWidget(self.slider_pwr, stretch=1)
+        pwr_notch_row.addWidget(self.slider_pwr, stretch=1)
 
-        root.addLayout(pwr_row)
+        # Notch Frequency Slider
+        self.lbl_notch = QLabel("NOTCH: OFF")
+        self.lbl_notch.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        pwr_notch_row.addWidget(self.lbl_notch)
+
+        self.slider_notch = QSlider(Qt.Horizontal)
+        self.slider_notch.setRange(0, 3200)
+        self.slider_notch.setValue(1000)
+        self.slider_notch.setStyleSheet(_SLIDER_STYLE())
+        self.slider_notch.valueChanged.connect(lambda v: self.lbl_notch.setText(f"NOTCH: {v} Hz"))
+        self.slider_notch.sliderReleased.connect(self._apply_notch)
+        pwr_notch_row.addWidget(self.slider_notch, stretch=1)
+
+        root.addLayout(pwr_notch_row)
 
         # ── 6. S-Meter ───────────────────────────────────────────────
         self.lbl_smeter_info = QLabel("S-METER: ---")
@@ -859,6 +872,10 @@ class IC705Widget(QWidget):
                 return True
         return super().eventFilter(obj, event)
 
+    def _apply_notch(self):
+        if self._cat and self._cat.connected:
+            self._cat.set_notch_freq(self.slider_notch.value())
+
     def _apply_signal_gain(self, val):
         """Signal-Kontrast (color_gain)."""
         self.waterfall._color_gain = val / 10.0
@@ -1266,9 +1283,11 @@ class IC705Widget(QWidget):
         self.btn_preamp.setStyleSheet(_BTN_DARK())
         self.btn_agc.setStyleSheet(_BTN_DARK())
 
-        # Power
+        # Power + Notch
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
+        self.lbl_notch.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
+        self.slider_notch.setStyleSheet(_SLIDER_STYLE())
 
         # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")

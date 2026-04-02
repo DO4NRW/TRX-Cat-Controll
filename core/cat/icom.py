@@ -402,6 +402,15 @@ class IcomCat(CatBase):
     def set_xit(self, on: bool):
         self._civ_query(0x21, sub=0x02, data=bytes([0x01 if on else 0x00]))
 
+    # ── Notch Frequency ────────────────────────────────────────────────
+
+    def set_notch_freq(self, hz: int):
+        """Notch-Frequenz setzen (IC-705: 0x14 0x0D, 0-255 BCD MSB)."""
+        # IC-705: 0-3200 Hz → 0-255 raw
+        raw = min(255, max(0, round(hz / 3200 * 255)))
+        data = self._int_to_bcd_msb(raw, 2)
+        self._civ_query(0x14, sub=0x0D, data=data)
+
     # ── Scope / Waterfall ─────────────────────────────────────────────
 
     def scope_enable(self, on=True):
