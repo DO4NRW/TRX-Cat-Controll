@@ -704,10 +704,13 @@ class IC705Widget(QWidget):
         # Basics zuerst (Mode, Preamp, Power, PBT)
         self._sync_rig_basics()
 
-        # DSP-States: Scope pausieren für saubere CI-V Queries
+        # DSP-States: Scope pausieren + Buffer leeren für saubere CI-V Queries
         if hasattr(self._cat, 'scope_enable'):
             self._cat.scope_enable(False)
-        import time; time.sleep(0.15)
+        import time; time.sleep(0.3)
+        # Serial Buffer komplett leeren
+        if hasattr(self._cat, '_ser') and self._cat._ser and self._cat._ser.is_open:
+            self._cat._ser.reset_input_buffer()
 
         dsp_queries = {
             "NB":    (0x16, 0x22),
