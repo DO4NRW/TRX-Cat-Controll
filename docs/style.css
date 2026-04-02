@@ -119,6 +119,14 @@ input[type="range"]::-moz-range-thumb {
 
 .spacer { flex: 1; }
 
+/* Span Slider */
+.span-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 2px 12px;
+}
+.span-label { color: var(--text-secondary); font-size: 10px; min-width: 80px; }
+.span-slider { flex: 1; }
+
 /* Waterfall */
 .waterfall-container {
     flex: 1;

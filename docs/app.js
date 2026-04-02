@@ -230,7 +230,7 @@ function drawWaterfall() {
     ctx.fillStyle = 'rgb(20, 25, 35)';
     ctx.fillRect(0, freqY, w, freqBarH);
 
-    const spanHz = 50000;
+    const spanHz = currentSpanHz;
     const startFreq = currentFreq - spanHz / 2;
     const endFreq = currentFreq + spanHz / 2;
     ctx.font = '9px Roboto, sans-serif';
@@ -518,6 +518,28 @@ function setupStepButtons() {
     });
 }
 
+// Span slider
+const SPAN_VALUES = [
+    { hz: 2500, label: '2.5 kHz' },
+    { hz: 5000, label: '5 kHz' },
+    { hz: 10000, label: '10 kHz' },
+    { hz: 50000, label: '50 kHz' },
+    { hz: 100000, label: '100 kHz' },
+    { hz: 250000, label: '250 kHz' },
+    { hz: 500000, label: '500 kHz' },
+];
+let currentSpanHz = 50000;
+
+function setupSpan() {
+    const slider = document.getElementById('span-slider');
+    const label = document.getElementById('span-label');
+    slider.addEventListener('input', () => {
+        const idx = parseInt(slider.value);
+        currentSpanHz = SPAN_VALUES[idx].hz;
+        label.textContent = `SPAN: ${SPAN_VALUES[idx].label}`;
+    });
+}
+
 // Power slider
 function setupPower() {
     const slider = document.getElementById('pwr-slider');
@@ -536,7 +558,7 @@ function setupWaterfallClick() {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const w = canvas.width;
-        const spanHz = 50000;
+        const spanHz = currentSpanHz;
         const startFreq = currentFreq - spanHz / 2;
         const step = parseInt(document.getElementById('step-select').value);
         let freq = startFreq + (x / w) * spanHz;
@@ -584,6 +606,7 @@ async function init() {
     setupPTT();
     setupConnect();
     setupStepButtons();
+    setupSpan();
     setupPower();
     setupWaterfallClick();
     // Web Serial Hinweis
