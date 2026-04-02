@@ -42,6 +42,18 @@ class WaterfallWidget(QWidget):
         self._black_level = 3
         self._spectrum_frac = 0.25
         self._fill_alpha = 0.75
+        self._last_spectrum = np.zeros(num_points, dtype=np.float32)
+        self._display_spectrum = np.zeros(num_points, dtype=np.float32)
+        self._scroll_timer = None
+        self._center_freq = 0
+        self._span_hz = 0
+        self._filter_width = 2700
+        self._filter_side = "upper"
+        self._step_hz = 100
+        self._scroll_accum = 0
+        self._hover_x = -1
+        self._dragging_filter = False
+        self._drag_edge = None
 
         # Farbpalette — aus Theme wf_color_1-9 wenn vorhanden
         wf_pal = T.get('wf_palette', 'sdr')
@@ -58,19 +70,6 @@ class WaterfallWidget(QWidget):
                 self._palette = self._build_palette(wf_pal)
         else:
             self._palette = self._build_palette(wf_pal)
-
-        self._last_spectrum = np.zeros(num_points, dtype=np.float32)
-        self._display_spectrum = np.zeros(num_points, dtype=np.float32)
-        self._scroll_timer = None
-        self._center_freq = 0
-        self._span_hz = 0
-        self._filter_width = 2700
-        self._filter_side = "upper"
-        self._step_hz = 100
-        self._scroll_accum = 0
-        self._hover_x = -1
-        self._dragging_filter = False  # Filter-Kante wird gezogen
-        self._drag_edge = None         # "left" oder "right"
 
         self.setMinimumHeight(150)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
