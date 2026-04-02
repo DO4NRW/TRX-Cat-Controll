@@ -18,11 +18,18 @@ from core.session_logger import get_session_log, get_system_info, clear_old_log
 REPORT_REPO = "DO4NRW/RigLink"
 REPORT_API = f"https://api.github.com/repos/{REPORT_REPO}/issues"
 
-# Report-Token (nur Issues erstellen auf DO4NRW/RigLink, sonst keine Rechte)
-import base64 as _b64
-_TOKEN = _b64.b64decode("Z2l0aHViX3BhdF8xMUI3TUQyVVkwTG5RdTR0M1pkUXdaX0l2UHlXRURvNkRzQ0U0Qk1DQlppME9nelM4UTZPSTJsRzliOGE3Mk9UVjQ2VExZQjZSTkREZnRVazls").decode()
+# Report-Token aus lokaler Datei (gitignored, wird nie committed)
+import os as _os
+_TOKEN_PATH = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                            "configs", "report_token.txt")
+try:
+    with open(_TOKEN_PATH) as _f:
+        _TOKEN = _f.read().strip()
+except FileNotFoundError:
+    _TOKEN = ""
 
 # HMAC Secret für Verifizierung (nur RigLink kennt diesen Salt)
+import base64 as _b64
 _HMAC_SECRET = _b64.b64decode("UmlnTGlua19SZXBvcnRfVjJfRE80TlJX").decode()
 
 
@@ -88,6 +95,8 @@ def _themed_report_style():
 
 def _send_issue(title, body):
     """GitHub Issue erstellen. Gibt (ok, message, url) zurück."""
+    if not _TOKEN:
+        return False, "Kein Report-Token gefunden. Bitte RigLink neu installieren.", ""
     # HMAC-Signatur anhängen (unsichtbar im Markdown)
     ts, sig = _sign_report(body)
     body += f"\n\n<!-- riglink-verify ts={ts} sig={sig} -->"
