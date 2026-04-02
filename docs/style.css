@@ -277,6 +277,19 @@ input[type="range"]::-moz-range-thumb {
 .status-text { color: var(--text); font-size: 12px; font-family: 'Consolas', monospace; }
 .version { color: var(--text-secondary); font-size: 11px; }
 
+/* Legal Footer */
+.legal-footer {
+    padding: 6px 12px;
+    font-size: 9px;
+    color: var(--text-muted, #666);
+    text-align: center;
+    border-top: 1px solid var(--border, #333);
+    background: var(--bg-dark, #1a1a1a);
+}
+.legal-footer a { color: var(--text-secondary, #aaa); text-decoration: none; }
+.legal-footer a:hover { color: var(--accent, #06c6a4); }
+.legal-sep { margin: 0 6px; }
+
 /* Settings Overlay */
 .overlay {
     position: fixed;
