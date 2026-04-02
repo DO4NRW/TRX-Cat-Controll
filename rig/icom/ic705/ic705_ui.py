@@ -393,19 +393,6 @@ class IC705Widget(QWidget):
         self.slider_pwr.sliderReleased.connect(self._apply_power)
         pwr_notch_row.addWidget(self.slider_pwr, stretch=1)
 
-        # Notch Frequency Slider
-        self.lbl_notch = QLabel("NOTCH: OFF")
-        self.lbl_notch.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        pwr_notch_row.addWidget(self.lbl_notch)
-
-        self.slider_notch = QSlider(Qt.Horizontal)
-        self.slider_notch.setRange(0, 3200)
-        self.slider_notch.setValue(1000)
-        self.slider_notch.setStyleSheet(_SLIDER_STYLE())
-        self.slider_notch.valueChanged.connect(lambda v: self.lbl_notch.setText(f"NOTCH: {v} Hz"))
-        self.slider_notch.sliderReleased.connect(self._apply_notch)
-        pwr_notch_row.addWidget(self.slider_notch, stretch=1)
-
         root.addLayout(pwr_notch_row)
 
         # ── 6. S-Meter ───────────────────────────────────────────────
@@ -1305,11 +1292,9 @@ class IC705Widget(QWidget):
         self.btn_preamp.setStyleSheet(_BTN_DARK())
         self.btn_agc.setStyleSheet(_BTN_DARK())
 
-        # Power + Notch
+        # Power
         self.lbl_pwr.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
         self.slider_pwr.setStyleSheet(_SLIDER_STYLE())
-        self.lbl_notch.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        self.slider_notch.setStyleSheet(_SLIDER_STYLE())
 
         # Span/Ref Slider + Contrast
         self.lbl_span.setStyleSheet(f"color: {T['text_secondary']}; font-size: 10px; border: none;")
