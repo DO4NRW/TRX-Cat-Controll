@@ -1746,96 +1746,111 @@ class ThemeEditorOverlay(QWidget):
         if parent:
             parent.installEventFilter(self)
 
-        # Früh initialisieren — werden von _refresh_own_styles / _detect_current_preset gebraucht
         self.btn_delete = QPushButton()
         self.btn_delete.setFixedSize(0, 0)
         self.btn_delete.setVisible(False)
         self._user_edited_name = False
         self._name_block_signal = False
+        self._selected_key = None
 
         self.panel = QWidget(self)
-        self.panel.setFixedSize(500, 580)
+        self.panel.setFixedSize(400, 520)
         self.panel.setObjectName("themepanel")
         self._apply_panel_style()
 
         root = QVBoxLayout(self.panel)
-        root.setContentsMargins(20, 16, 20, 16)
+        root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(6)
 
-        # ── Title Row ─────────────────────────────────────────────────
-        title_row = QHBoxLayout()
+        # ── Title + Preset Row ────────────────────────────────────────
+        top_row = QHBoxLayout()
         self._title_lbl = QLabel("Theme Editor")
         self._title_lbl.setStyleSheet(f"color: {T['text']}; font-size: 16px; font-weight: bold; border: none;")
-        title_row.addWidget(self._title_lbl)
-        title_row.addStretch()
-        root.addLayout(title_row)
+        top_row.addWidget(self._title_lbl)
+        top_row.addStretch()
 
-        # ── Preset Dropdown (öffnet nach unten) ──────────────────────
-        preset_row = QHBoxLayout()
         self._preset_lbl = QLabel("Vorlage:")
         self._preset_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 12px; border: none;")
-        preset_row.addWidget(self._preset_lbl)
+        top_row.addWidget(self._preset_lbl)
 
         self.combo_preset = DropDownComboBox()
-        # Wird dynamisch befüllt via _rebuild_preset_combo()
+        self.combo_preset.setMinimumWidth(150)
         self.combo_preset.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {T['bg_mid']};
-                color: {T['text_secondary']};
-                border: 1px solid {T['border']};
-                border-radius: 5px;
-                padding: 4px 10px;
-                font-size: 12px;
-                min-height: 28px;
-            }}
+            QComboBox {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
+                border: 1px solid {T['border']}; border-radius: 5px;
+                padding: 4px 10px; font-size: 12px; min-height: 28px; }}
             QComboBox::drop-down {{ border: none; width: 24px; }}
-            QComboBox QAbstractItemView {{
-                background-color: {T['bg_mid']};
-                color: {T['text_secondary']};
-                selection-background-color: {T['bg_light']};
-                border: 1px solid {T['border']};
-            }}
+            QComboBox QAbstractItemView {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
+                selection-background-color: {T['bg_light']}; border: 1px solid {T['border']}; }}
         """)
         self.combo_preset.currentIndexChanged.connect(self._on_preset_selected)
-        preset_row.addWidget(self.combo_preset, stretch=1)
-        root.addLayout(preset_row)
+        top_row.addWidget(self.combo_preset)
+        root.addLayout(top_row)
 
-        # ── Scrollbare Farbfelder ────────────────────────────────────
+        # ── Farbliste mit Punkten + Edit-Button pro Zeile ─────────
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("""
             QScrollArea { border: none; background: transparent; }
-            QScrollBar:vertical { width: 8px; background: transparent; border: none; }
-            QScrollBar::handle:vertical { background: rgba(128,128,128,80); border-radius: 4px; min-height: 20px; }
+            QScrollBar:vertical { width: 6px; background: transparent; }
+            QScrollBar::handle:vertical { background: rgba(128,128,128,60); border-radius: 3px; min-height: 20px; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
         """)
         scroll_widget = QWidget()
-        self._grid = QGridLayout(scroll_widget)
-        self._grid.setSpacing(4)
+        color_list = QVBoxLayout(scroll_widget)
+        color_list.setContentsMargins(4, 4, 4, 4)
+        color_list.setSpacing(1)
 
         self._color_buttons = {}
+        self._color_rows = {}
+        self._color_dots = {}
         self._theme_data = {}
 
-        for row, (key, label) in enumerate(_THEME_FIELDS):
+        for key, label in _THEME_FIELDS:
+            row_widget = QWidget()
+            row_widget.setFixedHeight(26)
+            row_widget.setCursor(Qt.PointingHandCursor)
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(6, 0, 6, 0)
+            row_layout.setSpacing(6)
+
+            # Farbpunkt (rundes Widget mit Border)
+            dot = QLabel("")
+            dot.setFixedSize(14, 14)
+            dot.setStyleSheet(f"background: {T['accent']}; border: 1px solid {T['border_hover']}; border-radius: 7px;")
+            row_layout.addWidget(dot)
+            self._color_dots[key] = dot
+
+            # Label
             lbl = QLabel(label)
             lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
-            self._grid.addWidget(lbl, row, 0)
+            row_layout.addWidget(lbl, stretch=1)
 
-            btn = QPushButton()
-            btn.setFixedSize(60, 24)
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.clicked.connect(lambda checked, k=key: self._pick_color(k))
-            self._grid.addWidget(btn, row, 1)
+            # Edit Button
+            btn_edit = QPushButton("Edit")
+            btn_edit.setFixedSize(40, 20)
+            btn_edit.setCursor(Qt.PointingHandCursor)
+            btn_edit.setStyleSheet(f"""
+                QPushButton {{ background: {T['bg_mid']}; color: {T['text_muted']};
+                    border: 1px solid {T['border']}; border-radius: 3px; font-size: 9px; }}
+                QPushButton:hover {{ border-color: {T['accent']}; color: {T['text']}; }}
+            """)
+            btn_edit.clicked.connect(lambda checked, k=key: self._edit_color(k))
+            row_layout.addWidget(btn_edit)
 
-            val = QLabel("")
-            val.setStyleSheet(f"color: {T['text_muted']}; font-size: 10px; border: none;")
-            self._grid.addWidget(val, row, 2)
+            color_list.addWidget(row_widget)
+            self._color_rows[key] = (row_widget, lbl, btn_edit)
 
-            self._color_buttons[key] = (btn, val)
-
+        color_list.addStretch()
         scroll.setWidget(scroll_widget)
         root.addWidget(scroll, stretch=1)
+
+        # Dummy-Attribute für Kompatibilität
+        self._color_preview = QLabel("")
+        self._color_name_lbl = QLabel("")
+        self._rgba_inputs = {"R": QLineEdit(), "G": QLineEdit(), "B": QLineEdit(), "A": QLineEdit()}
+        self._hex_input = QLineEdit()
 
         # ── Save Row: Name-Eingabe + Delete + Save ────────────────────
         save_row = QHBoxLayout()
@@ -1852,7 +1867,6 @@ class ThemeEditorOverlay(QWidget):
         self.input_theme_name.textEdited.connect(self._on_name_edited)
         save_row.addWidget(self.input_theme_name, stretch=1)
 
-        # Delete Button (nur für User-Themes sichtbar)
         self.btn_delete = QPushButton()
         self.btn_delete.setFixedSize(40, 40)
         self.btn_delete.setText("X")
@@ -1868,7 +1882,6 @@ class ThemeEditorOverlay(QWidget):
         save_row.addWidget(self.btn_delete)
         self._hide_delete_btn()
 
-        # Save Button
         btn_save = QPushButton()
         btn_save.setFixedSize(40, 40)
         btn_save.setIcon(themed_icon(os.path.join(_ICONS, "save.svg")))
@@ -1932,26 +1945,142 @@ class ThemeEditorOverlay(QWidget):
         except Exception:
             self._theme_data = {}
 
-        for key, (btn, val) in self._color_buttons.items():
-            color_str = self._theme_data.get(key, "rgba(0, 0, 0, 255)")
-            # Für Button-Hintergrund: hex konvertieren für CSS
-            hex_color = rgba_to_hex(color_str) if color_str.startswith("rgba") else color_str
-            btn.setStyleSheet(f"background-color: {color_str}; border: 1px solid {T['border']}; border-radius: 4px;")
-            val.setText(color_str)
+        for key in self._color_rows:
+            self._update_color_row(key, selected=(key == self._selected_key))
 
-    def _pick_color(self, key):
+    def _edit_color(self, key):
+        """Edit-Button geklickt → Farbrad Popup öffnen."""
+        self._selected_key = key
         color_str = self._theme_data.get(key, "rgba(0, 0, 0, 255)")
         r, g, b, a = rgba_parts(color_str)
-        current = QColor(r, g, b, a)
-        # Alpha-Kanal im Dialog aktivieren
-        color = QColorDialog.getColor(current, self, f"Farbe: {key}",
-                                       QColorDialog.ShowAlphaChannel)
-        if color.isValid():
-            rgba_str = f"rgba({color.red()}, {color.green()}, {color.blue()}, {color.alpha()})"
+
+        dlg = QColorDialog(QColor(r, g, b, a))
+        dlg.setWindowTitle(dict(_THEME_FIELDS).get(key, key))
+        dlg.setOption(QColorDialog.ShowAlphaChannel, True)
+
+        if dlg.exec() == QColorDialog.Accepted:
+            c = dlg.selectedColor()
+            rgba_str = f"rgba({c.red()}, {c.green()}, {c.blue()}, {c.alpha()})"
             self._theme_data[key] = rgba_str
-            btn, val = self._color_buttons[key]
-            btn.setStyleSheet(f"background-color: {rgba_str}; border: 1px solid {T['border']}; border-radius: 4px;")
-            val.setText(rgba_str)
+            self._update_color_row(key)
+
+    def _update_color_row(self, key, selected=False):
+        """Farbreihe aktualisieren — Punkt in Farbe, Text in Theme-Farbe."""
+        if key not in self._color_rows or key not in self._color_dots:
+            return
+        row_data = self._color_rows[key]
+        widget = row_data[0]
+        lbl = row_data[1]
+        dot = self._color_dots[key]
+        color_str = self._theme_data.get(key, "rgba(128,128,128,255)")
+        r, g, b, a = rgba_parts(color_str)
+        dot.setFixedSize(14, 14)
+        dot.setText("")
+        luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        border_c = T['border_hover'] if luminance < 60 else T['border']
+        dot.setStyleSheet(f"background: rgba({r},{g},{b},{a}); border: 1px solid {border_c}; border-radius: 7px;")
+        if selected:
+            lbl.setStyleSheet(f"color: {T['text']}; font-size: 11px; font-weight: bold; border: none;")
+            widget.setStyleSheet(f"background: {T['bg_light']}; border: 1px solid {T['accent']}; border-radius: 4px;")
+        else:
+            lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
+            widget.setStyleSheet("background: transparent; border: none; border-radius: 4px;")
+
+    def _select_color(self, key):
+        """Farbe in der linken Liste auswählen → rechts anzeigen."""
+        self._selected_key = key
+        color_str = self._theme_data.get(key, "rgba(0, 0, 0, 255)")
+        r, g, b, a = rgba_parts(color_str)
+
+        self._color_preview.setStyleSheet(
+            f"background: rgba({r},{g},{b},{a}); border-radius: 14px; border: 1px solid {T['border']};")
+        self._color_name_lbl.setText(dict(_THEME_FIELDS).get(key, key))
+        self._rgba_inputs["R"].setText(str(r))
+        self._rgba_inputs["G"].setText(str(g))
+        self._rgba_inputs["B"].setText(str(b))
+        self._rgba_inputs["A"].setText(str(a))
+        self._hex_input.setText(f"#{r:02x}{g:02x}{b:02x}")
+
+        # Alle Zeilen aktualisieren
+        for k in self._color_rows:
+            self._update_color_row(k, selected=(k == key))
+
+    def _apply_selected_color(self, r, g, b, a):
+        """Aktuelle Farbe setzen (von RGBA-Feldern, HEX oder Picker)."""
+        if not self._selected_key:
+            return
+        rgba_str = f"rgba({r}, {g}, {b}, {a})"
+        self._theme_data[self._selected_key] = rgba_str
+        self._color_preview.setStyleSheet(
+            f"background-color: rgba({r},{g},{b},{a}); border-radius: 8px; border: 1px solid {T['border']};")
+        # Farbpunkt in der Liste aktualisieren
+        self._update_color_row(self._selected_key, selected=True)
+
+    def _on_rgba_edited(self):
+        """RGBA Felder geändert → Farbe aktualisieren."""
+        try:
+            r = max(0, min(255, int(self._rgba_inputs["R"].text())))
+            g = max(0, min(255, int(self._rgba_inputs["G"].text())))
+            b = max(0, min(255, int(self._rgba_inputs["B"].text())))
+            a = max(0, min(255, int(self._rgba_inputs["A"].text())))
+            self._hex_input.setText(f"#{r:02x}{g:02x}{b:02x}")
+            self._apply_selected_color(r, g, b, a)
+        except ValueError:
+            pass
+
+    def _on_hex_edited(self):
+        """HEX Feld geändert → RGBA + Preview aktualisieren."""
+        hex_str = self._hex_input.text().strip().lstrip("#")
+        if len(hex_str) == 6:
+            try:
+                r = int(hex_str[0:2], 16)
+                g = int(hex_str[2:4], 16)
+                b = int(hex_str[4:6], 16)
+                a = int(self._rgba_inputs["A"].text() or "255")
+                self._rgba_inputs["R"].setText(str(r))
+                self._rgba_inputs["G"].setText(str(g))
+                self._rgba_inputs["B"].setText(str(b))
+                self._apply_selected_color(r, g, b, a)
+            except ValueError:
+                pass
+
+    def _open_color_dialog(self):
+        """Farbrad als Popup — nur Cancel oder Update schließt es."""
+        if not self._selected_key:
+            return
+        color_str = self._theme_data.get(self._selected_key, "rgba(0, 0, 0, 255)")
+        r, g, b, a = rgba_parts(color_str)
+
+        # Popup Farbrad — parent=None damit es ein eigenes Fenster ist
+        dlg = QColorDialog(QColor(r, g, b, a))
+        dlg.setWindowTitle(f"Farbe: {dict(_THEME_FIELDS).get(self._selected_key, self._selected_key)}")
+        dlg.setOption(QColorDialog.ShowAlphaChannel, True)
+
+        # Live-Preview bei Farbänderung
+        dlg.currentColorChanged.connect(lambda c: self._apply_selected_color(
+            c.red(), c.green(), c.blue(), c.alpha()))
+
+        if dlg.exec() == QColorDialog.Accepted:
+            color = dlg.selectedColor()
+            self._rgba_inputs["R"].setText(str(color.red()))
+            self._rgba_inputs["G"].setText(str(color.green()))
+            self._rgba_inputs["B"].setText(str(color.blue()))
+            self._rgba_inputs["A"].setText(str(color.alpha()))
+            self._hex_input.setText(f"#{color.red():02x}{color.green():02x}{color.blue():02x}")
+            self._apply_selected_color(color.red(), color.green(), color.blue(), color.alpha())
+        else:
+            # Cancel → alte Farbe zurücksetzen
+            self._apply_selected_color(r, g, b, a)
+            self._rgba_inputs["R"].setText(str(r))
+            self._rgba_inputs["G"].setText(str(g))
+            self._rgba_inputs["B"].setText(str(b))
+            self._rgba_inputs["A"].setText(str(a))
+            self._hex_input.setText(f"#{r:02x}{g:02x}{b:02x}")
+
+    def _pick_color(self, key):
+        """Legacy: wird noch von _update_color_buttons aufgerufen."""
+        self._select_color(key)
+        self._open_color_dialog()
 
     def _rebuild_preset_combo(self):
         """Dropdown neu füllen: Builtin-Presets + User-Themes."""
@@ -2004,11 +2133,9 @@ class ThemeEditorOverlay(QWidget):
                 self._user_edited_name = True
                 self._show_delete_btn()
 
-        # Farbfelder aktualisieren
-        for key, (btn, val) in self._color_buttons.items():
-            color_str = self._theme_data.get(key, "rgba(0, 0, 0, 255)")
-            btn.setStyleSheet(f"background-color: {color_str}; border: 1px solid {T['border']}; border-radius: 4px;")
-            val.setText(color_str)
+        # Farbliste aktualisieren
+        for key in self._color_rows:
+            self._update_color_row(key, selected=(key == self._selected_key))
 
     def _detect_current_preset(self):
         """Preset-Dropdown auf das aktuell geladene Theme setzen."""
@@ -2117,17 +2244,13 @@ class ThemeEditorOverlay(QWidget):
         """Theme Editor Panel + Labels mit neuen Farben aktualisieren."""
         self._apply_panel_style()
         if not getattr(self, '_init_done', False):
-            return  # Init noch nicht fertig
+            return
         self._title_lbl.setStyleSheet(f"color: {T['text']}; font-size: 16px; font-weight: bold; border: none;")
         self._preset_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 12px; border: none;")
-        # Labels in der Farbgrid aktualisieren
-        for key, (btn, val) in self._color_buttons.items():
-            val.setStyleSheet(f"color: {T['text_muted']}; font-size: 10px; border: none;")
-        # Grid-Labels (Farbnamen)
-        for i in range(self._grid.rowCount()):
-            item = self._grid.itemAtPosition(i, 0)
-            if item and item.widget():
-                item.widget().setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
+        self._color_name_lbl.setStyleSheet(f"color: {T['text']}; font-size: 14px; font-weight: bold; border: none;")
+        # Farbliste aktualisieren
+        for key in self._color_rows:
+            self._update_color_row(key, selected=(key == self._selected_key))
         # Input-Feld + Delete Button
         self.input_theme_name.setStyleSheet(f"""
             QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
