@@ -192,7 +192,7 @@ class IC705Widget(QWidget):
         # ── 0. Analog S-Meter Gauge (oben) ───────────────────────────
         from core.smeter_gauge import SMeterGauge
         self.smeter_gauge = SMeterGauge(self)
-        self.smeter_gauge.setFixedSize(200, 60)
+        self.smeter_gauge.setFixedSize(250, 60)
         gauge_row = QHBoxLayout()
         gauge_row.addWidget(self.smeter_gauge)
         gauge_row.addStretch()

@@ -146,7 +146,7 @@ class SMeterGauge(QWidget):
         frac = self._value / 1000.0
         needle_angle = frac_to_angle(frac)
         ux, uy = needle_dir(needle_angle)
-        needle_len = radius * 0.95
+        needle_len = radius * 0.75
         tip = QPointF(cx + needle_len * ux, needle_cy + needle_len * uy)
 
         # Schatten
