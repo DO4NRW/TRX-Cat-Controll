@@ -75,16 +75,16 @@ class IcomCIV {
 
         try {
             if (this.reader) {
-                await this.reader.cancel();
-                this.reader.releaseLock();
+                try { await this.reader.cancel(); } catch (_) {}
+                try { this.reader.releaseLock(); } catch (_) {}
                 this.reader = null;
             }
             if (this.writer) {
-                this.writer.releaseLock();
+                try { this.writer.releaseLock(); } catch (_) {}
                 this.writer = null;
             }
             if (this.port) {
-                await this.port.close();
+                try { await this.port.close(); } catch (_) {}
                 this.port = null;
             }
         } catch (e) {
@@ -116,17 +116,22 @@ class IcomCIV {
 
     // Read loop
     async _readLoop() {
-        const reader = this.port.readable.getReader();
-        this.reader = reader;
-
-        try {
-            while (this.connected) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                if (value) this._processBytes(value);
+        while (this.connected && this.port?.readable) {
+            const reader = this.port.readable.getReader();
+            this.reader = reader;
+            try {
+                while (this.connected) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) this._processBytes(value);
+                }
+            } catch (e) {
+                if (this.connected) console.warn('Read error (reconnecting...):', e.message);
+            } finally {
+                try { reader.releaseLock(); } catch (_) {}
             }
-        } catch (e) {
-            if (this.connected) console.error('Read error:', e);
+            // Kurz warten vor Retry
+            if (this.connected) await new Promise(r => setTimeout(r, 500));
         }
     }
 
