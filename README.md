@@ -122,6 +122,9 @@ Damit lässt sich Sprachbetrieb und Digitalbetrieb ohne extra Interface realisie
 ### Bug Report Dialog (Hardware-Info)
 ![Bug Report](Screenshot6.png)
 
+### Color Picker
+![Color Picker](Screenshot7.png)
+
 ---
 
 ## Installation
