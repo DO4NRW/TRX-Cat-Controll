@@ -272,8 +272,8 @@ function drawWaterfall() {
     for (let x = 0; x < w; x++) {
         const idx = Math.min(474, Math.floor(x * 475 / w));
         let val = spectrum[idx];
-        // Gleiche Berechnung wie Python: black_level=3, color_gain=2.0
-        val = Math.max(0, (val - 3) * 2.0);
+        // Gleiche Berechnung wie Python: black_level=3, color_gain=3.0
+        val = Math.max(0, (val - 3) * 3.0);
         const ci = Math.min(255, Math.max(0, Math.floor(val)));
         const [r, g, b] = palette[ci];
         const off = x * 4;
@@ -305,16 +305,34 @@ function drawWaterfall() {
     ctx.beginPath(); ctx.moveTo(bx + bwPx, 0); ctx.lineTo(bx + bwPx, h); ctx.stroke();
 }
 
-// S-Meter animation
-function updateSMeter() {
-    const target = connected ? 30 + Math.random() * 40 : 0;
-    smeterValue = smeterValue * 0.8 + target * 0.2;
-    const pct = Math.min(100, smeterValue);
-    document.getElementById('smeter-bar').style.width = pct + '%';
+// S-Meter — gleiche Berechnung wie ic705_ui.py
+const S9_RAW = 130;
+const MAX_RAW = 241;
+const S9_STEPS = ['S9+20', 'S9+40', 'S9+60'];
 
-    const sNum = Math.min(9, Math.floor(pct / 100 * 13));
-    const label = sNum <= 9 ? `S${sNum}` : `S9+${(sNum - 9) * 10}`;
-    document.getElementById('smeter-info').textContent = `S-METER: ${label} | P1`;
+function updateSMeter() {
+    // smeterValue = Raw-Wert vom TRX (0-241)
+    const val = smeterValue;
+    let sStr, frac;
+
+    if (val <= S9_RAW) {
+        const sNum = val * 9 / Math.max(S9_RAW, 1);
+        sStr = `S${Math.min(9, Math.round(sNum))}`;
+        frac = sNum / 13;
+    } else {
+        const dbOver = (val - S9_RAW) / Math.max(MAX_RAW - S9_RAW, 1) * 60;
+        sStr = 'S9';
+        for (let i = 0; i < S9_STEPS.length; i++) {
+            if (dbOver >= (i + 0.5) * (60 / S9_STEPS.length)) {
+                sStr = S9_STEPS[i];
+            }
+        }
+        frac = (9 + dbOver / 60 * 4) / 13;
+    }
+
+    const barPct = Math.min(100, frac * 100);
+    document.getElementById('smeter-bar').style.width = barPct + '%';
+    document.getElementById('smeter-info').textContent = `S-METER: ${sStr} | P1`;
 }
 
 // Frequency display
@@ -415,7 +433,7 @@ function setupConnect() {
                 });
             };
             civ.onSMeter = (raw) => {
-                smeterValue = raw / 2.55; // 0-255 → 0-100
+                smeterValue = smeterValue * 0.8 + raw * 0.2; // Smoothing wie App
             };
             civ.onPower = (raw) => {
                 const slider = document.getElementById('pwr-slider');
@@ -711,7 +729,8 @@ function playDemoFrame() {
         updateFreqDisplay();
     }
     if (frame.s !== undefined) {
-        smeterValue = frame.s / 2.55;
+        // Raw-Wert direkt (0-241, gleich wie ic705_ui.py)
+        smeterValue = smeterValue * 0.8 + frame.s * 0.2; // Smoothing
     }
     if (frame.m) {
         currentMode = frame.m;
