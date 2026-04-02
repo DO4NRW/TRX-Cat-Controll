@@ -695,11 +695,30 @@ class IC705Widget(QWidget):
                     slider.blockSignals(False)
         self._update_pbt_labels()
 
-        # DSP Status auslesen (generisch über Handler)
-        comp = self._cat.get_comp()
-        if comp is not None and "COMP" in self.dsp_buttons:
-            self.dsp_buttons["COMP"].setChecked(comp)
-            self.dsp_buttons["COMP"].setStyleSheet(_BTN_ACTIVE() if comp else _BTN_DARK())
+        # DSP Status auslesen via CI-V
+        dsp_queries = {
+            "ATT":   lambda: self._cat.get_att(),
+            "NB":    lambda: self._cat._civ_query(0x16, sub=0x22),
+            "NR":    lambda: self._cat._civ_query(0x16, sub=0x40),
+            "NOTCH": lambda: self._cat._civ_query(0x16, sub=0x41),
+            "COMP":  lambda: self._cat.get_comp(),
+        }
+        for name, query in dsp_queries.items():
+            if name not in self.dsp_buttons:
+                continue
+            result = query()
+            if result is None:
+                continue
+            # ATT und COMP geben direkt bool zurück
+            if isinstance(result, bool):
+                on = result
+            elif isinstance(result, tuple):
+                _, data = result
+                on = len(data) >= 2 and data[-1] > 0
+            else:
+                continue
+            self.dsp_buttons[name].setChecked(on)
+            self.dsp_buttons[name].setStyleSheet(_BTN_ACTIVE() if on else _BTN_DARK())
 
         # AGC auslesen
         agc = self._cat.get_agc()
