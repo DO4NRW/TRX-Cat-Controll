@@ -51,11 +51,11 @@ class SMeterGauge(QWidget):
         r, g, b, a = rgba_parts(T.get('bg_dark', 'rgba(26,26,26,255)'))
         p.fillRect(0, 0, w, h, QColor(r, g, b, a))
 
-        # Arc Geometrie — kompakt, auf Höhe begrenzt
+        # Arc Geometrie — passt in die Box
         cx = w * 0.5
-        radius = min(w * 0.4, h * 1.5)
-        cy = h * 1.1
-        needle_cy = h + 2.0
+        radius = h * 0.7
+        cy = h * 0.95
+        needle_cy = h * 0.95
 
         arc_start_rad = math.radians(ARC_START_DEG)
         arc_end_rad = math.radians(ARC_END_DEG)
