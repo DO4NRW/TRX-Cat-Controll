@@ -56,8 +56,9 @@ def get_session_log():
 
 
 def get_system_info():
-    """Sammelt System-Informationen für den Report."""
+    """Sammelt System- und Hardware-Informationen für den Report."""
     import sys
+    import subprocess
     info = []
     info.append(f"OS: {platform.system()} {platform.release()}")
     info.append(f"Platform: {platform.platform()}")
@@ -72,6 +73,38 @@ def get_system_info():
         info.append(f"RigLink: v{CURRENT_VERSION}")
     except Exception:
         pass
+
+    # Hardware
+    try:
+        with open("/proc/cpuinfo") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    info.append(f"CPU: {line.split(':')[1].strip()}")
+                    break
+        info.append(f"CPU Kerne: {platform.os.cpu_count()}")
+    except Exception:
+        info.append(f"CPU: {platform.processor() or 'unbekannt'}")
+
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemTotal"):
+                    kb = int(line.split()[1])
+                    info.append(f"RAM: {kb // 1024} MB ({kb // 1024 // 1024} GB)")
+                    break
+    except Exception:
+        pass
+
+    try:
+        result = subprocess.run(["lspci"], capture_output=True, text=True, timeout=3)
+        for line in result.stdout.splitlines():
+            if "VGA" in line or "3D" in line:
+                gpu = line.split(": ", 1)[-1] if ": " in line else line
+                info.append(f"GPU: {gpu}")
+                break
+    except Exception:
+        pass
+
     return "\n".join(info)
 
 
