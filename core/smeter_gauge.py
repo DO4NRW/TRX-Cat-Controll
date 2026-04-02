@@ -151,18 +151,18 @@ class SMeterGauge(QWidget):
         tip = QPointF(cx + needle_len * ux, needle_cy + needle_len * uy)
         mid = QPointF(cx + needle_len * 0.75 * ux, needle_cy + needle_len * 0.75 * uy)
 
-        # Schwarzer Teil (Basis → 75%)
-        p.setPen(QPen(QColor(20, 20, 20), 2))
+        # Grauer Schaft (Basis → 75%)
+        p.setPen(QPen(QColor(100, 100, 100), 2))
         p.drawLine(origin, mid)
 
-        # Weißer Teil (75% → Spitze)
+        # Weiße Spitze (75% → Tip)
         p.setPen(QPen(QColor(tr, tg, tb), 2))
         p.drawLine(mid, tip)
 
         # Nadel-Punkt (Drehpunkt)
-        p.setBrush(QColor(40, 40, 40))
-        p.setPen(QPen(QColor(80, 80, 80), 1))
-        p.drawEllipse(origin, 4, 4)
+        p.setBrush(QColor(80, 80, 80))
+        p.setPen(QPen(QColor(120, 120, 120), 1))
+        p.drawEllipse(origin, 3, 3)
 
         # ── Peak Hold ────────────────────────────────────────────────
         if self._peak > 10:
