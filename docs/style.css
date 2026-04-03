@@ -30,7 +30,7 @@ body {
     align-items: center;
     padding: 4px 8px;
     gap: 4px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 .spacer { flex: 1; }
 /* Icon-Buttons (wie QPushButton mit setIcon) */
