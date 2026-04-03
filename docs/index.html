@@ -181,21 +181,6 @@
         <div class="overlay" id="theme-overlay" style="display:none;">
             <div class="overlay-panel overlay-panel-tall">
                 <h3>Theme Editor</h3>
-                <div class="theme-preset-row">
-                    <select id="cfg-theme">
-                        <option value="dark" selected>Dunkel (Standard)</option>
-                        <option value="light">Hell</option>
-                        <option value="solarized_light">Solarized Hell</option>
-                        <option value="arctic">Arctic</option>
-                        <option value="sakura">Sakura</option>
-                        <option value="discord">Blurple Night</option>
-                        <option value="nord">Nord</option>
-                        <option value="dracula">Dracula</option>
-                        <option value="monokai">Monokai</option>
-                        <option value="colorblind">Farbenblind</option>
-                    </select>
-                    <button class="btn" id="btn-theme-reset"><img src="icons/reset.svg" width="16" height="16"> Reset</button>
-                </div>
 
                 <!-- Tabs -->
                 <div class="theme-tabs">
@@ -233,6 +218,25 @@
                     </div>
                 </div>
 
+                <div class="theme-save-row">
+                    <button class="btn theme-arrow-btn" id="btn-theme-presets" title="Presets"><img src="icons/arrow.svg" width="16" height="16"></button>
+                    <input type="text" class="theme-name-input" id="theme-name" placeholder="Theme-Name...">
+                    <button class="btn theme-delete-btn" id="btn-theme-delete" title="Löschen">X</button>
+                    <button class="btn theme-reset-btn" id="btn-theme-reset" title="Reset"><img src="icons/reset.svg" width="20" height="20"></button>
+                </div>
+                <!-- Preset Popup (versteckt) -->
+                <div class="theme-preset-popup" id="theme-preset-popup" style="display:none;">
+                    <div class="preset-item" data-theme="dark">Dunkel (Standard)</div>
+                    <div class="preset-item" data-theme="light">Hell</div>
+                    <div class="preset-item" data-theme="solarized_light">Solarized Hell</div>
+                    <div class="preset-item" data-theme="arctic">Arctic</div>
+                    <div class="preset-item" data-theme="sakura">Sakura</div>
+                    <div class="preset-item" data-theme="discord">Blurple Night</div>
+                    <div class="preset-item" data-theme="nord">Nord</div>
+                    <div class="preset-item" data-theme="dracula">Dracula</div>
+                    <div class="preset-item" data-theme="monokai">Monokai</div>
+                    <div class="preset-item" data-theme="colorblind">Farbenblind</div>
+                </div>
                 <div class="overlay-buttons"><button class="btn" id="btn-theme-close">Schließen</button></div>
             </div>
         </div>

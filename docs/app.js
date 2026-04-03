@@ -657,32 +657,40 @@ function setupSettings() {
         civInput.value = '0x' + addr.toString(16).toUpperCase();
     });
 
-    // Theme-Wechsel live
-    document.getElementById('cfg-theme').addEventListener('change', async (e) => {
-        const themeName = e.target.value;
-        const url = `https://raw.githubusercontent.com/DO4NRW/RigLink/main/configs/theme.json`;
-        // Lade alle Presets aus theme.py? Nein — wir nutzen die theme.json + Override
-        // Für die Demo: Theme-Name als Query an die URL oder hardcoded Presets
-        try {
-            const resp = await fetch(`https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py`);
-            const text = await resp.text();
-            // Parse das Preset aus dem Python-Code (quick & dirty)
-            const presetMatch = text.match(new RegExp(`"${themeName}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
-            if (presetMatch) {
-                const block = presetMatch[1];
-                const root = document.documentElement;
-                const pairs = block.matchAll(/"(\w+)":\s*"(rgba\([^)]+\))"/g);
-                for (const m of pairs) {
-                    const cssKey = '--' + m[1].replace(/_/g, '-');
-                    root.style.setProperty(cssKey, m[2]);
+    // Preset-Popup Toggle
+    const presetBtn = document.getElementById('btn-theme-presets');
+    const presetPopup = document.getElementById('theme-preset-popup');
+    if (presetBtn && presetPopup) {
+        presetBtn.addEventListener('click', () => {
+            presetPopup.style.display = presetPopup.style.display === 'none' ? 'block' : 'none';
+        });
+        // Preset-Items → Theme laden
+        presetPopup.querySelectorAll('.preset-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const themeName = item.dataset.theme;
+                const nameInput = document.getElementById('theme-name');
+                if (nameInput) nameInput.value = item.textContent;
+                presetPopup.style.display = 'none';
+                try {
+                    const resp = await fetch(`https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py`);
+                    const text = await resp.text();
+                    const presetMatch = text.match(new RegExp(`"${themeName}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
+                    if (presetMatch) {
+                        const block = presetMatch[1];
+                        const root = document.documentElement;
+                        const pairs = block.matchAll(/"(\w+)":\s*"(rgba\([^)]+\))"/g);
+                        for (const m of pairs) {
+                            const cssKey = '--' + m[1].replace(/_/g, '-');
+                            root.style.setProperty(cssKey, m[2]);
+                        }
+                    }
+                    refreshColorDots();
+                } catch (err) {
+                    console.warn('Theme laden fehlgeschlagen:', err);
                 }
-            }
-            // Color-Dots im Theme Editor aktualisieren
-            refreshColorDots();
-        } catch (err) {
-            console.warn('Theme laden fehlgeschlagen:', err);
-        }
-    });
+            });
+        });
+    }
 }
 
 // Color-Dots nach Theme-Wechsel aktualisieren
@@ -770,7 +778,7 @@ function setupThemeTabs() {
             const val = cs.getPropertyValue(cssKey).trim() || '#888';
             const item = document.createElement('div');
             item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${val}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
+            item.innerHTML = `<div class="color-dot" style="background:${val}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
             colorList.appendChild(item);
         });
     }
@@ -796,7 +804,7 @@ function setupThemeTabs() {
         DIGI_COLORS.forEach(([key, label, color]) => {
             const item = document.createElement('div');
             item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${color}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
+            item.innerHTML = `<div class="color-dot" style="background:${color}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
             digiList.appendChild(item);
         });
     }
