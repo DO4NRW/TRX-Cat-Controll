@@ -1,28 +1,31 @@
 """
-RigLink — Digi-Modus Panel (Platzhalter)
-Zeigt die UI-Struktur für den zukünftigen Digi-Modus (FT8/FT4/RTTY etc.).
-Noch keine Funktionalität — nur Layout.
+RigLink — Digi-Modus Panel
+FT8/FT4 Platzhalter + RTTY Decode (RTTYDecoder).
 """
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QComboBox, QTextEdit, QSplitter,
-                               QFrame, QProgressBar)
+                               QFrame, QProgressBar, QStackedWidget)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont
 
 from core.theme import T, register_refresh, themed_icon
+from core.digi.rtty import RTTYDecoder, RTTYConfig
 from ui._constants import _ICONS
 
 import os
 
 
 class DigiPanelOverlay(QWidget):
-    """Overlay für den Digi-Modus — Platzhalter-UI."""
+    """Overlay für den Digi-Modus (FT8/FT4 Platzhalter + RTTY aktiv)."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVisible(False)
+        self._rtty_decoder = RTTYDecoder(RTTYConfig())
+        self._rtty_active  = False
         self._build_ui()
+        self._rtty_decoder.decoded.connect(self._on_rtty_decoded)
         register_refresh(self.refresh_theme)
 
     def _build_ui(self):
@@ -47,7 +50,17 @@ class DigiPanelOverlay(QWidget):
         self.combo_mode.addItems(["FT8", "FT4", "RTTY", "PSK31", "CW", "JS8Call", "OLIVIA"])
         self.combo_mode.setMinimumWidth(120)
         self._apply_combo_style()
+        self.combo_mode.currentTextChanged.connect(self._on_mode_changed)
         header.addWidget(self.combo_mode)
+
+        # RTTY Start/Stop (nur sichtbar wenn RTTY aktiv)
+        self.btn_rtty = QPushButton("▶ RTTY Start")
+        self.btn_rtty.setFixedHeight(36)
+        self.btn_rtty.setStyleSheet(self._btn_style())
+        self.btn_rtty.setFocusPolicy(Qt.NoFocus)
+        self.btn_rtty.setVisible(False)
+        self.btn_rtty.clicked.connect(self._on_rtty_toggle)
+        header.addWidget(self.btn_rtty)
 
         # Schließen-Button
         self.btn_close = QPushButton("Schließen")
@@ -161,6 +174,49 @@ class DigiPanelOverlay(QWidget):
         splitter.setStretchFactor(1, 1)  # TX-Bereich kleiner
 
         root.addWidget(splitter)
+
+    # ── Modus-Wechsel ─────────────────────────────────────────────────────────
+
+    def _on_mode_changed(self, mode: str):
+        is_rtty = (mode == "RTTY")
+        self.btn_rtty.setVisible(is_rtty)
+        if not is_rtty and self._rtty_active:
+            self._stop_rtty()
+        if is_rtty:
+            self.decode_view.setPlainText("— RTTY-Decoder bereit. Start drücken —\n")
+        else:
+            self.decode_view.setPlainText(
+                "— Digi-Modus ist noch nicht implementiert —\n\n"
+                "Hier werden zukünftig FT8/FT4 Decodes angezeigt:\n\n"
+                "  UTC    dB   DT   Freq   Message\n"
+                "  12:30  -5  0.3  1234   CQ DL1ABC JO31\n"
+            )
+
+    def _on_rtty_toggle(self):
+        if self._rtty_active:
+            self._stop_rtty()
+        else:
+            self._start_rtty()
+
+    def _start_rtty(self):
+        self._rtty_decoder.reset()
+        self._rtty_active = True
+        self.btn_rtty.setText("■ RTTY Stop")
+        self.decode_view.setPlainText("— RTTY läuft — warte auf Audio-Input —\n")
+        self.lbl_tx_status.setText("RTTY RX aktiv")
+
+    def _stop_rtty(self):
+        self._rtty_active = False
+        self.btn_rtty.setText("▶ RTTY Start")
+        self.lbl_tx_status.setText("RX — Warte auf Decodes...")
+
+    def _on_rtty_decoded(self, text: str):
+        """Dekodierten RTTY-Text in decode_view anhängen."""
+        cursor = self.decode_view.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.insertText(text)
+        self.decode_view.setTextCursor(cursor)
+        self.decode_view.ensureCursorVisible()
 
     def _btn_style(self):
         return f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
