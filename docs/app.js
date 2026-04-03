@@ -898,8 +898,8 @@ function setupLock() {
         btn.classList.toggle('locked', freqLocked);
         const img = btn.querySelector('.lock-icon');
         if (img) img.src = freqLocked
-            ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/lock.svg'
-            : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/lock_open.svg';
+            ? 'icons/lock.svg'
+            : 'icons/lock_open.svg';
     });
 }
 
@@ -943,8 +943,8 @@ function setupREC() {
             const active = this.classList.toggle('active');
             const img = this.querySelector('.toggle-icon');
             img.src = active
-                ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_on.svg'
-                : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg';
+                ? 'icons/toggle_on.svg'
+                : 'icons/toggle_off.svg';
         });
     }
 }
@@ -957,8 +957,8 @@ function setupMute() {
             muted = !muted;
             const img = btn.querySelector('.mute-icon');
             if (img) img.src = muted
-                ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_off.svg'
-                : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_up.svg';
+                ? 'icons/volume_off.svg'
+                : 'icons/volume_up.svg';
             btn.classList.toggle('muted', muted);
         });
     }
@@ -1182,8 +1182,8 @@ async function init() {
         const active = this.classList.toggle('active');
         const img = this.querySelector('.toggle-icon');
         img.src = active
-            ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_on.svg'
-            : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg';
+            ? 'icons/toggle_on.svg'
+            : 'icons/toggle_off.svg';
     });
 
     setupSettings();
