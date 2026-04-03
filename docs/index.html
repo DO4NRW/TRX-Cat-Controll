@@ -23,65 +23,221 @@
 
         <!-- Radio Setup Overlay -->
         <div class="overlay" id="settings-overlay" style="display:none;">
-            <div class="overlay-panel">
+            <div class="overlay-panel overlay-panel-wide">
                 <h3>Radio Setup</h3>
-                <label>Rig</label>
-                <select id="cfg-rig">
-                    <option value="ic705">Icom IC-705</option>
-                    <option value="ic7300">Icom IC-7300</option>
-                    <option value="ic7610">Icom IC-7610</option>
-                    <option value="ic9700">Icom IC-9700</option>
-                    <option value="ic7100">Icom IC-7100</option>
-                </select>
-                <label>Baud Rate</label>
-                <select id="cfg-baud">
-                    <option>4800</option><option>9600</option><option>19200</option>
-                    <option>38400</option><option selected>115200</option>
-                </select>
-                <label>Stop Bits</label>
-                <select id="cfg-stopbits"><option>1</option><option selected>2</option></select>
-                <label>CI-V Adresse</label>
-                <input type="text" id="cfg-civ" value="0xA4" readonly>
-                <label>Server Adresse (für Remote-Betrieb)</label>
-                <input type="text" id="cfg-server-host" placeholder="raspi.local:8080">
+
+                <!-- Rig Selection -->
+                <div class="setup-rig-row">
+                    <div class="setup-field">
+                        <label>Hersteller</label>
+                        <select id="cfg-manufacturer">
+                            <option value="icom">Icom</option>
+                            <option value="yaesu">Yaesu</option>
+                            <option value="kenwood">Kenwood</option>
+                            <option value="elecraft">Elecraft</option>
+                            <option value="xiegu">Xiegu</option>
+                        </select>
+                    </div>
+                    <div class="setup-field">
+                        <label>Modell</label>
+                        <select id="cfg-rig">
+                            <option value="ic705">IC-705</option>
+                            <option value="ic7300">IC-7300</option>
+                            <option value="ic7610">IC-7610</option>
+                            <option value="ic9700">IC-9700</option>
+                            <option value="ic7100">IC-7100</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-accent" id="btn-test-cat">Test CAT</button>
+                    <button class="btn" id="btn-test-ptt">Test PTT</button>
+                </div>
+
+                <!-- 2-Spalten Layout -->
+                <div class="setup-columns">
+                    <!-- CAT Control (links) -->
+                    <div class="setup-card">
+                        <h4>CAT Control</h4>
+                        <label>Serial Port</label>
+                        <select id="cfg-port">
+                            <option>/dev/ttyACM0</option>
+                            <option>/dev/ttyUSB0</option>
+                            <option>COM3</option>
+                            <option>COM4</option>
+                        </select>
+                        <label>Baud Rate</label>
+                        <select id="cfg-baud">
+                            <option>1200</option><option>4800</option><option>9600</option><option>19200</option>
+                            <option>38400</option><option>57600</option><option selected>115200</option>
+                        </select>
+                        <label>Data Bits</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn" data-val="default">Default</button>
+                            <button class="btn tgl-btn" data-val="7">Seven</button>
+                            <button class="btn tgl-btn active" data-val="8">Eight</button>
+                        </div>
+                        <label>Stop Bits</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn" data-val="default">Default</button>
+                            <button class="btn tgl-btn" data-val="1">One</button>
+                            <button class="btn tgl-btn active" data-val="2">Two</button>
+                        </div>
+                        <label>Handshake</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn active" data-val="none">None</button>
+                            <button class="btn tgl-btn" data-val="xonxoff">XON/XOFF</button>
+                            <button class="btn tgl-btn" data-val="hw">Hardware</button>
+                        </div>
+                        <label>CI-V Adresse</label>
+                        <input type="text" id="cfg-civ" value="0xA4" readonly>
+                    </div>
+
+                    <!-- PTT / Mode (rechts) -->
+                    <div class="setup-card">
+                        <h4>PTT / Mode</h4>
+                        <label>PTT Method</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn" data-val="vox">VOX</button>
+                            <button class="btn tgl-btn" data-val="dtr">DTR</button>
+                            <button class="btn tgl-btn active" data-val="cat">CAT</button>
+                            <button class="btn tgl-btn" data-val="rts">RTS</button>
+                        </div>
+                        <label>PTT Port</label>
+                        <select id="cfg-ptt-port">
+                            <option>Same as CAT</option>
+                            <option>/dev/ttyUSB1</option>
+                            <option>COM5</option>
+                        </select>
+                        <label>PTT Invert</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn active" data-val="off">Off</button>
+                            <button class="btn tgl-btn" data-val="on">On</button>
+                        </div>
+                        <label>Mode</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn active" data-val="none">None</button>
+                            <button class="btn tgl-btn" data-val="usb">USB</button>
+                            <button class="btn tgl-btn" data-val="data">Data/Pkt</button>
+                        </div>
+                        <label>Split Operation</label>
+                        <div class="toggle-group">
+                            <button class="btn tgl-btn active" data-val="none">None</button>
+                            <button class="btn tgl-btn" data-val="rig">Rig</button>
+                            <button class="btn tgl-btn" data-val="fake">Fake It</button>
+                        </div>
+                        <label>Server Adresse</label>
+                        <input type="text" id="cfg-server-host" placeholder="raspi.local:8080">
+                    </div>
+                </div>
 
                 <div class="overlay-info">
-                    <p><b>Ohne Server:</b> Demo-Daten werden abgespielt</p>
-                    <p><b>Mit Server:</b> RigLink Server auf Raspi/PC streamt CAT + Audio über WebSocket</p>
-                    <p><code>python server/rig_server.py --auto-connect</code></p>
+                    <p><b>Demo-Modus:</b> Ohne Server werden simulierte Daten abgespielt.</p>
                 </div>
-                <div class="overlay-buttons"><button class="btn" id="btn-settings-close">Schließen</button></div>
+                <div class="overlay-buttons">
+                    <button class="btn" id="btn-settings-close">Schließen</button>
+                    <button class="btn btn-accent" id="btn-settings-save">Speichern</button>
+                </div>
             </div>
         </div>
 
-        <!-- Audio Info Overlay -->
+        <!-- Audio Setup Overlay -->
         <div class="overlay" id="audio-overlay" style="display:none;">
-            <div class="overlay-panel">
+            <div class="overlay-panel overlay-panel-wide">
                 <h3>Audio Setup</h3>
-                <div class="overlay-info">
-                    <p>Audio-Routing ist nur in der <b>Desktop-App</b> verfügbar.</p>
-                    <p><a href="https://github.com/DO4NRW/RigLink/releases" style="color:var(--accent)">RigLink herunterladen</a></p>
+                <div class="audio-toolbar">
+                    <button class="btn" id="btn-wave-test"><span class="material-symbols-outlined">play_arrow</span> Wave Test</button>
+                    <button class="btn" id="btn-rec-test"><span class="material-symbols-outlined">mic</span> Rec Test</button>
+                    <button class="btn btn-accent" id="btn-audio-save">Speichern</button>
+                </div>
+                <div class="audio-devices">
+                    <div class="audio-row">
+                        <span class="audio-label">PC MICROPHONE (Input)</span>
+                        <select class="audio-device"><option>Default Input</option><option>USB Headset Mic</option><option>Built-in Mic</option></select>
+                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <select class="audio-ch"><option>1</option><option selected>2</option></select>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">TRX MICROPHONE (Input)</span>
+                        <select class="audio-device"><option>Default Input</option><option>IC-705 USB Audio CODEC</option></select>
+                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <select class="audio-ch"><option selected>1</option><option>2</option></select>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">TRX LOUDSPEAKER (Output)</span>
+                        <select class="audio-device"><option>Default Output</option><option>IC-705 USB Audio CODEC</option></select>
+                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <select class="audio-ch"><option selected>1</option><option>2</option></select>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">PC LOUDSPEAKER (Output)</span>
+                        <select class="audio-device"><option>Default Output</option><option>USB Headset</option><option>Built-in Speaker</option></select>
+                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <select class="audio-ch"><option>1</option><option selected>2</option></select>
+                    </div>
+                </div>
+                <div class="vu-meter-section">
+                    <span class="vu-label">VU</span>
+                    <div class="vu-bar-bg"><div class="vu-bar" id="vu-bar"></div></div>
                 </div>
                 <div class="overlay-buttons"><button class="btn" id="btn-audio-close">Schließen</button></div>
             </div>
         </div>
 
-        <!-- Theme Overlay -->
+        <!-- Theme Editor Overlay -->
         <div class="overlay" id="theme-overlay" style="display:none;">
-            <div class="overlay-panel">
-                <h3>Theme</h3>
-                <label>Preset</label>
-                <select id="cfg-theme">
-                    <option value="dark" selected>Dunkel (Standard)</option>
-                    <option value="light">Hell</option>
-                    <option value="discord">Blurple Night</option>
-                    <option value="nord">Nord</option>
-                    <option value="dracula">Dracula</option>
-                    <option value="monokai">Monokai</option>
-                </select>
-                <div class="overlay-info" style="margin-top:12px;">
-                    <p>Theme wird live angewendet.</p>
+            <div class="overlay-panel overlay-panel-tall">
+                <h3>Theme Editor</h3>
+                <div class="theme-preset-row">
+                    <select id="cfg-theme">
+                        <option value="dark" selected>Dunkel (Standard)</option>
+                        <option value="light">Hell</option>
+                        <option value="solarized_light">Solarized Hell</option>
+                        <option value="arctic">Arctic</option>
+                        <option value="sakura">Sakura</option>
+                        <option value="discord">Blurple Night</option>
+                        <option value="nord">Nord</option>
+                        <option value="dracula">Dracula</option>
+                        <option value="monokai">Monokai</option>
+                        <option value="colorblind">Farbenblind</option>
+                    </select>
+                    <button class="btn" id="btn-theme-reset">Reset</button>
                 </div>
+
+                <!-- Tabs -->
+                <div class="theme-tabs">
+                    <button class="theme-tab active" data-tab="colors">Farben</button>
+                    <button class="theme-tab" data-tab="smeter">S-Meter</button>
+                    <button class="theme-tab" data-tab="digi">Digi-Modes</button>
+                </div>
+
+                <!-- Tab: Farben -->
+                <div class="theme-tab-content active" id="tab-colors">
+                    <div class="color-list" id="color-list">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+                </div>
+
+                <!-- Tab: S-Meter Styles -->
+                <div class="theme-tab-content" id="tab-smeter">
+                    <div class="smeter-style-list" id="smeter-style-list">
+                        <div class="smeter-style-item active" data-style="segment">Segmentleiste</div>
+                        <div class="smeter-style-item" data-style="gauge">Analog-Gauge</div>
+                        <div class="smeter-style-item" data-style="led">LED-Punkte</div>
+                        <div class="smeter-style-item" data-style="digit">Kompakt-Zahl</div>
+                        <div class="smeter-style-item" data-style="vu">VU-Meter</div>
+                        <div class="smeter-style-item" data-style="nixie">Nixie-Röhre</div>
+                        <div class="smeter-style-item" data-style="classic">Classic Needle</div>
+                        <div class="smeter-style-item" data-style="dual">Dual-Nadel</div>
+                        <div class="smeter-style-item" data-style="rings">Quad-Ringe</div>
+                    </div>
+                </div>
+
+                <!-- Tab: Digi-Modes Farben -->
+                <div class="theme-tab-content" id="tab-digi">
+                    <div class="color-list" id="digi-color-list">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+                </div>
+
                 <div class="overlay-buttons"><button class="btn" id="btn-theme-close">Schließen</button></div>
             </div>
         </div>

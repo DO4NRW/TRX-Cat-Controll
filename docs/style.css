@@ -319,6 +319,91 @@ input[type="range"]::-moz-range-progress {
 .overlay-buttons { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
 .contact-status { margin-top: 8px; font-size: 12px; text-align: center; color: var(--accent, #06c6a4); }
 
+/* Overlay Varianten */
+.overlay-panel-wide { max-width: 700px; min-width: 600px; }
+.overlay-panel-tall { max-width: 420px; min-width: 380px; max-height: 80vh; overflow-y: auto; }
+
+/* ═══ Radio Setup ═══ */
+.setup-rig-row {
+    display: flex; gap: 8px; align-items: flex-end; margin-bottom: 12px;
+}
+.setup-rig-row .setup-field { flex: 1; }
+.setup-rig-row .btn { height: 36px; flex-shrink: 0; }
+.setup-columns { display: flex; gap: 16px; }
+.setup-card {
+    flex: 1; background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
+    border-radius: 6px; padding: 12px;
+}
+.setup-card h4 { color: var(--accent, #06c6a4); font-size: 13px; margin-bottom: 8px; }
+.toggle-group { display: flex; gap: 4px; }
+.toggle-group .tgl-btn { flex: 1; padding: 4px 6px; font-size: 11px; min-height: 28px; }
+.toggle-group .tgl-btn.active { border: 2px solid var(--accent, #06c6a4); font-weight: bold; }
+
+/* ═══ Audio Setup ═══ */
+.audio-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+.audio-toolbar .btn { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.audio-toolbar .material-symbols-outlined { font-size: 16px; }
+.audio-devices { display: flex; flex-direction: column; gap: 8px; }
+.audio-row {
+    display: flex; gap: 6px; align-items: center;
+    background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
+    border-radius: 4px; padding: 8px;
+}
+.audio-label { font-size: 10px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 150px; flex-shrink: 0; }
+.audio-device { flex: 1; }
+.audio-rate { width: 70px; flex-shrink: 0; }
+.audio-ch { width: 40px; flex-shrink: 0; }
+.audio-row select {
+    background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
+    border: 1px solid var(--border, #555); border-radius: 3px;
+    padding: 4px; font-size: 11px;
+}
+.vu-meter-section { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.vu-label { font-size: 11px; font-weight: bold; color: var(--text, #fff); }
+.vu-bar-bg {
+    flex: 1; height: 14px; background: var(--bg-dark, #1a1a1a);
+    border: 1px solid var(--border, #555); border-radius: 3px; overflow: hidden;
+}
+.vu-bar { height: 100%; width: 0%; background: var(--vu-green, #4caf50); border-radius: 2px; transition: width 0.1s; }
+
+/* ═══ Theme Editor ═══ */
+.theme-preset-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.theme-preset-row select { flex: 1; }
+.theme-tabs { display: flex; gap: 2px; margin-bottom: 12px; }
+.theme-tab {
+    flex: 1; padding: 6px 8px; font-size: 12px; text-align: center;
+    background: var(--bg-mid, #2a2a2a); color: var(--text-muted, #aaa);
+    border: 1px solid var(--border, #555); border-radius: 4px; cursor: pointer;
+}
+.theme-tab:hover { color: var(--text, #fff); }
+.theme-tab.active { border-color: var(--accent, #06c6a4); color: var(--text, #fff); font-weight: bold; }
+.theme-tab-content { display: none; }
+.theme-tab-content.active { display: block; }
+
+/* Farbliste */
+.color-list { max-height: 300px; overflow-y: auto; }
+.color-item {
+    display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+    border-radius: 3px; cursor: pointer; font-size: 12px;
+}
+.color-item:hover { background: var(--bg-light, #3a3a3a); }
+.color-dot {
+    width: 18px; height: 18px; border-radius: 3px;
+    border: 1px solid var(--border, #555); flex-shrink: 0;
+}
+.color-name { flex: 1; color: var(--text-secondary, #ccc); }
+.color-value { font-family: Consolas, monospace; font-size: 10px; color: var(--text-muted, #aaa); }
+
+/* S-Meter Style Liste */
+.smeter-style-list { display: flex; flex-direction: column; gap: 4px; }
+.smeter-style-item {
+    padding: 8px 12px; font-size: 13px; color: var(--text-secondary, #ccc);
+    background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
+    border-radius: 4px; cursor: pointer;
+}
+.smeter-style-item:hover { border-color: var(--border-hover, #888); color: var(--text, #fff); }
+.smeter-style-item.active { border: 2px solid var(--accent, #06c6a4); color: var(--text, #fff); font-weight: bold; }
+
 /* ═══ Legal Footer ═══ */
 .legal-footer {
     padding: 4px 0; font-size: 9px; color: var(--text-muted, #666);

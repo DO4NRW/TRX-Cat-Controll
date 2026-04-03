@@ -66,6 +66,7 @@ let lastWfTime = 0;
 // UI State
 let freqLocked = false;
 let muted = false;
+let wfHoverX = -1;
 
 // Demo-Daten Playback
 let demoData = null;
@@ -225,13 +226,20 @@ function drawWaterfall() {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, specH); ctx.stroke();
     }
 
-    // Spectrum line + fill
+    // Parse accent für RGB-Komponenten
+    const accentRGB = accent.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const [aR, aG, aB] = accentRGB ? [+accentRGB[1], +accentRGB[2], +accentRGB[3]] : [6, 198, 164];
+
+    // Spectrum line + gradient fill (wie Desktop waterfall.py)
     const peak = Math.max(...displaySpectrum);
     if (peak > 0) {
         const scale = 0.85 / Math.max(peak, 1);
 
-        // Fill (alpha 30/255 ≈ 0.12 — waterfall.py nutzt 30 nach Theme-Fix)
-        ctx.fillStyle = accent + '1e';
+        // Gradient Fill (alpha 0.75 unten → 0 oben, wie Desktop)
+        const grad = ctx.createLinearGradient(0, 0, 0, specH);
+        grad.addColorStop(0, `rgba(${aR},${aG},${aB},0)`);
+        grad.addColorStop(1, `rgba(${aR},${aG},${aB},0.75)`);
+        ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.moveTo(0, specH);
         for (let px = 0; px < w; px++) {
@@ -243,9 +251,9 @@ function drawWaterfall() {
         ctx.lineTo(w, specH);
         ctx.fill();
 
-        // Line
+        // Line (2px für bessere Sichtbarkeit)
         ctx.strokeStyle = accent;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         for (let px = 0; px < w; px++) {
             const idx = Math.min(474, Math.floor(px * 475 / w));
@@ -327,27 +335,45 @@ function drawWaterfall() {
 
     // Center marker + passband (aus Theme wie waterfall.py)
     const cx = Math.floor(w / 2);
-    // Parse accent für alpha-Varianten
-    const accentMatch = accent.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    const [ar, ag, ab] = accentMatch ? [+accentMatch[1], +accentMatch[2], +accentMatch[3]] : [6, 198, 164];
 
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.4)`;
+    ctx.strokeStyle = `rgba(${aR},${aG},${aB},0.4)`;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
 
-    // Passband
-    const bwHz = currentMode === 'FM' ? 15000 : 2700;
+    // Passband (Mode-abhängige Bandbreite)
+    const bwHz = currentMode === 'FM' ? 15000 : currentMode === 'AM' ? 6000 : 2700;
     const bwPx = Math.floor(bwHz / spanHz * w);
     let bx;
     if (currentMode === 'USB' || currentMode === 'DATA') bx = cx;
     else if (currentMode === 'LSB') bx = cx - bwPx;
     else bx = cx - Math.floor(bwPx / 2);
 
-    ctx.fillStyle = 'rgba(6, 198, 164, 0.15)';
+    ctx.fillStyle = `rgba(${aR},${aG},${aB},0.15)`;
     ctx.fillRect(bx, 0, bwPx, h);
-    ctx.strokeStyle = 'rgba(6, 198, 164, 0.5)';
+    ctx.strokeStyle = `rgba(${aR},${aG},${aB},0.5)`;
     ctx.beginPath(); ctx.moveTo(bx, 0); ctx.lineTo(bx, h); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(bx + bwPx, 0); ctx.lineTo(bx + bwPx, h); ctx.stroke();
+
+    // Hover-Cursor (gestrichelte Linie + Frequenz-Tooltip)
+    if (wfHoverX >= 0 && wfHoverX < w) {
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = `rgba(${aR},${aG},${aB},0.6)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(wfHoverX, 0); ctx.lineTo(wfHoverX, h); ctx.stroke();
+        ctx.setLineDash([]);
+        // Frequenz-Label am Cursor
+        const hoverFreq = (currentFreq - spanHz / 2) + (wfHoverX / w) * spanHz;
+        const hoverLabel = (hoverFreq / 1e6).toFixed(3) + ' MHz';
+        ctx.font = '10px Consolas, monospace';
+        ctx.fillStyle = `rgba(${aR},${aG},${aB},0.9)`;
+        const labelW = ctx.measureText(hoverLabel).width + 8;
+        const labelX = Math.min(wfHoverX + 6, w - labelW);
+        ctx.fillRect(labelX, 2, labelW, 16);
+        ctx.fillStyle = '#000';
+        ctx.fillText(hoverLabel, labelX + 4, 14);
+        ctx.restore();
+    }
 }
 
 // S-Meter — gleiche Berechnung wie ic705_ui.py
@@ -652,12 +678,135 @@ function setupSettings() {
     });
 }
 
+// Toggle-Gruppen (Radio Setup)
+function setupToggleGroups() {
+    document.querySelectorAll('.toggle-group').forEach(group => {
+        group.querySelectorAll('.tgl-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                group.querySelectorAll('.tgl-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    });
+}
+
+// Hersteller → Modell Kaskade
+const RIG_MODELS = {
+    icom: [['ic705','IC-705'],['ic7100','IC-7100'],['ic7300','IC-7300'],['ic7610','IC-7610'],['ic9700','IC-9700']],
+    yaesu: [['ft991a','FT-991A'],['ft710','FT-710'],['ftdx101d','FTDX101D'],['ftdx101mp','FTDX101MP'],['ftdx10','FTDX10'],['ft891','FT-891'],['ft857','FT-857'],['ft818','FT-818'],['ft950','FT-950'],['ft450','FT-450'],['ft2000','FT-2000']],
+    kenwood: [['ts890s','TS-890S'],['ts590sg','TS-590SG'],['ts480','TS-480'],['ts2000','TS-2000']],
+    elecraft: [['k3','K3'],['k3s','K3S'],['kx3','KX3'],['kx2','KX2']],
+    xiegu: [['g90','G90'],['g106','G106'],['x5105','X5105'],['x6100','X6100'],['x6200','X6200']],
+};
+
+function setupManufacturerCascade() {
+    const mfr = document.getElementById('cfg-manufacturer');
+    const model = document.getElementById('cfg-rig');
+    if (!mfr || !model) return;
+    mfr.addEventListener('change', () => {
+        const models = RIG_MODELS[mfr.value] || [];
+        model.innerHTML = models.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+        // CI-V update
+        const civInput = document.getElementById('cfg-civ');
+        if (civInput && mfr.value === 'icom') {
+            const addr = IcomCIV.RIG_ADDRESSES[model.value] || 0xA4;
+            civInput.value = '0x' + addr.toString(16).toUpperCase();
+        } else if (civInput) {
+            civInput.value = 'N/A';
+        }
+    });
+}
+
+// Theme Editor Tabs
+function setupThemeTabs() {
+    document.querySelectorAll('.theme-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.theme-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.theme-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Farbliste befüllen
+    const THEME_COLORS = [
+        ['accent', 'Akzentfarbe'], ['accent_dark', 'Akzent dunkel'], ['error', 'Fehler'],
+        ['bg_dark', 'Hintergrund dunkel'], ['bg_mid', 'Hintergrund mittel'], ['bg_light', 'Hintergrund hell'],
+        ['border', 'Rahmen'], ['border_hover', 'Rahmen Hover'],
+        ['text', 'Text'], ['text_secondary', 'Text sekundär'], ['text_muted', 'Text gedimmt'],
+        ['slider_handle', 'Slider Punkt'], ['slider_fill', 'Slider Spur'],
+        ['smeter_bar', 'S-Meter Balken'], ['tx_bar', 'TX-Meter Balken'],
+        ['ptt_tx_bg', 'PTT TX Hintergrund'], ['ptt_tx_border', 'PTT TX Rahmen'],
+        ['wf_color_1', 'Wasserfall 1'], ['wf_color_2', 'Wasserfall 2'], ['wf_color_3', 'Wasserfall 3'],
+        ['wf_color_4', 'Wasserfall 4'], ['wf_color_5', 'Wasserfall 5'], ['wf_color_6', 'Wasserfall 6'],
+        ['wf_color_7', 'Wasserfall 7'], ['wf_color_8', 'Wasserfall 8'], ['wf_color_9', 'Wasserfall 9'],
+    ];
+    const colorList = document.getElementById('color-list');
+    if (colorList) {
+        const cs = getComputedStyle(document.documentElement);
+        THEME_COLORS.forEach(([key, label]) => {
+            const cssKey = '--' + key.replace(/_/g, '-');
+            const val = cs.getPropertyValue(cssKey).trim() || '#888';
+            const item = document.createElement('div');
+            item.className = 'color-item';
+            item.innerHTML = `<div class="color-dot" style="background:${val}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
+            colorList.appendChild(item);
+        });
+    }
+
+    // Digi-Farben
+    const DIGI_COLORS = [
+        ['digi_cq', 'CQ'], ['digi_reply', 'Reply'], ['digi_own_call', 'Own Call'],
+        ['digi_worked', 'Worked'], ['digi_new_dxcc', 'New DXCC'], ['digi_new_grid', 'New Grid'],
+        ['digi_new_call', 'New Callsign'], ['digi_alert', 'Alert'],
+        ['digi_bg', 'Hintergrund'], ['digi_text', 'Text'], ['digi_time', 'Zeitstempel'],
+        ['digi_freq', 'Frequenz'], ['digi_snr', 'SNR'],
+    ];
+    const digiList = document.getElementById('digi-color-list');
+    if (digiList) {
+        DIGI_COLORS.forEach(([key, label]) => {
+            const item = document.createElement('div');
+            item.className = 'color-item';
+            item.innerHTML = `<div class="color-dot" style="background:var(--accent, #06c6a4)"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
+            digiList.appendChild(item);
+        });
+    }
+
+    // S-Meter Style Auswahl
+    document.querySelectorAll('.smeter-style-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.smeter-style-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+        });
+    });
+}
+
+// Audio Setup VU-Meter Simulation
+function setupAudioDemo() {
+    const waveBtn = document.getElementById('btn-wave-test');
+    const recBtn = document.getElementById('btn-rec-test');
+    const vuBar = document.getElementById('vu-bar');
+    if (!waveBtn || !vuBar) return;
+
+    let vuInterval = null;
+    function startVU(duration) {
+        let t = 0;
+        vuInterval = setInterval(() => {
+            const level = 20 + Math.random() * 60;
+            vuBar.style.width = level + '%';
+            vuBar.style.background = level > 85 ? 'var(--vu-red, #f44336)' : level > 60 ? 'var(--vu-yellow, #ffeb3b)' : 'var(--vu-green, #4caf50)';
+            t += 50;
+            if (t >= duration) { clearInterval(vuInterval); vuBar.style.width = '0%'; }
+        }, 50);
+    }
+    waveBtn.addEventListener('click', () => startVU(2000));
+    recBtn.addEventListener('click', () => startVU(3000));
+}
+
 function getSerialConfig() {
     return {
         rig: document.getElementById('cfg-rig').value,
         baud: parseInt(document.getElementById('cfg-baud').value),
-        stopBits: parseInt(document.getElementById('cfg-stopbits').value),
-        civAddress: parseInt(document.getElementById('cfg-civ').value),
     };
 }
 
@@ -837,6 +986,12 @@ function setupWaterfallClick() {
         currentFreq += dir * step;
         updateFreqDisplay();
     });
+    // Hover-Cursor Tracking
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        wfHoverX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    });
+    canvas.addEventListener('mouseleave', () => { wfHoverX = -1; });
 }
 
 // TX meter during PTT (vertikal links neben Wasserfall)
@@ -965,9 +1120,9 @@ function tick() {
         playDemoFrame();
     }
 
-    // Blend: displaySpectrum nähert sich spectrum an (20% pro Tick — schneller als Python weil Browser 60fps)
+    // Blend: exponentieller gleitender Mittelwert (alpha=0.10 wie Desktop waterfall.py)
     for (let i = 0; i < 475; i++) {
-        displaySpectrum[i] += 0.20 * (spectrum[i] - displaySpectrum[i]);
+        displaySpectrum[i] = displaySpectrum[i] * 0.90 + spectrum[i] * 0.10;
     }
 
     // Wasserfall: neue Zeile nur alle 80ms (wie App scroll_timer)
@@ -1000,6 +1155,10 @@ async function init() {
     });
 
     setupSettings();
+    setupToggleGroups();
+    setupManufacturerCascade();
+    setupThemeTabs();
+    setupAudioDemo();
     setupModeButtons();
     setupDSPButtons();
     setupPTT();
