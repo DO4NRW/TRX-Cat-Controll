@@ -1026,10 +1026,32 @@ async function loadThemeFromConfig() {
 }
 
 // Init
+async function loadRigs() {
+    try {
+        const resp = await fetch('rigs.json');
+        const rigs = await resp.json();
+        const sel = document.getElementById('rig-combo');
+        sel.innerHTML = '';
+        for (const [brand, models] of Object.entries(rigs)) {
+            const grp = document.createElement('optgroup');
+            grp.label = brand;
+            models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.textContent = `${brand} ${m}`;
+                grp.appendChild(opt);
+            });
+            sel.appendChild(grp);
+        }
+    } catch (e) {
+        console.warn('rigs.json nicht gefunden — behalte hardcodierte Optionen', e);
+    }
+}
+
 async function init() {
     buildPalette();
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
     await loadThemeFromConfig();
+    await loadRigs();
     await loadDemoData();
     initSMeter();
     updateFreqDisplay();
