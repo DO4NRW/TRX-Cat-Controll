@@ -679,12 +679,6 @@ function setupConnect() {
             bar.classList.remove('connected');
             status.textContent = 'SYSTEM READY';
             demoStartTime = 0;
-            // Wasserfall-Canvas leeren
-            const wfCanvas = document.getElementById('waterfall');
-            if (wfCanvas) {
-                const wfCtx = wfCanvas.getContext('2d');
-                wfCtx.clearRect(0, 0, wfCanvas.width, wfCanvas.height);
-            }
             return;
         }
 
