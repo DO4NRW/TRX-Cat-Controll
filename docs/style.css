@@ -119,20 +119,38 @@ input[type="range"]::-moz-range-progress {
     padding: 8px 12px; font-size: 12px; font-weight: bold; height: 40px; min-width: 140px;
 }
 
-/* ═══ Span Slider ═══ */
-.span-row {
-    display: flex; align-items: center; gap: 8px; padding: 2px 0;
-}
-.span-label { color: var(--text-secondary, #aaa); font-size: 10px; min-width: 80px; flex-shrink: 0; }
-.span-row input[type="range"] { flex: 1; min-width: 0; }
-
-/* ═══ Waterfall ═══ */
+/* ═══ Waterfall ══��� */
 .waterfall-row { display: flex; flex: 1; min-height: 120px; gap: 4px; }
 .waterfall-container { flex: 1; overflow: hidden; }
 #waterfall { width: 100%; height: 100%; display: block; }
+
+/* TX-Bar vertikal (links neben Wasserfall) */
+.tx-bar-col {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    width: 14px; flex-shrink: 0;
+}
+.tx-bar-v-bg {
+    flex: 1; width: 10px;
+    background: var(--bg-dark, #1a1a1a);
+    border: 1px solid var(--border, #555);
+    border-radius: 3px;
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column-reverse;
+}
+.tx-bar-v {
+    width: 100%; height: 0%;
+    background: var(--tx-bar, #06c6a4);
+    border-radius: 2px;
+    transition: height 0.1s ease;
+}
+.tx-bar-v-label {
+    color: var(--text-muted, #aaa); font-size: 8px; text-align: center;
+}
+
+/* Slider-Spalte (rechts neben Wasserfall) */
 .wf-sliders {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
-    width: 24px; flex-shrink: 0;
+    width: 28px; flex-shrink: 0;
 }
 .wf-slider-label {
     color: var(--text-muted, #aaa); font-size: 8px; writing-mode: horizontal-tb;
@@ -155,6 +173,21 @@ input[type="range"]::-moz-range-progress {
 .wf-vslider::-moz-range-track {
     width: 4px; background: var(--slider-groove, #888); border-radius: 2px;
 }
+
+/* Lock-Button */
+.lock-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; cursor: pointer;
+    border-radius: 3px; padding: 0; flex-shrink: 0;
+}
+.lock-btn .material-symbols-outlined { font-size: 20px; color: var(--text-muted, #aaa); }
+.lock-btn:hover .material-symbols-outlined { color: var(--text, #fff); }
+.lock-btn.locked {
+    background: var(--bg-light, #3a3a3a);
+    border: 1px solid var(--accent, #06c6a4);
+}
+.lock-btn.locked .material-symbols-outlined { color: var(--accent, #06c6a4); }
 
 /* ═══ Buttons (wie PySide6 QPushButton) ═══ */
 .btn {
@@ -194,6 +227,11 @@ input[type="range"]::-moz-range-progress {
 .pwr-label { color: var(--text, #fff); font-size: 11px; min-width: 70px; }
 .pwr-row input[type="range"] { flex: 1; }
 
+/* ═══ PBT Row (Twin PBT) ═══ */
+.pbt-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.pbt-label { color: var(--text, #fff); font-size: 11px; min-width: 50px; }
+.pbt-row input[type="range"] { flex: 1; }
+
 /* ═══ S-Meter ═══ */
 .smeter-section { padding: 2px 0; }
 .smeter-info { color: var(--text, #fff); font-size: 13px; }
@@ -210,18 +248,6 @@ input[type="range"]::-moz-range-progress {
 }
 #smeter-canvas {
     width: 100%; display: block;
-}
-
-/* ═══ TX Meter ═══ */
-.tx-section { padding: 2px 0; }
-.tx-info { color: var(--text, #fff); font-size: 13px; }
-.tx-bar-bg {
-    height: 18px; background: var(--bg-dark, #1a1a1a);
-    border: 1px solid var(--border, #555); border-radius: 4px; overflow: hidden;
-}
-.tx-bar {
-    height: 100%; width: 0%; background: var(--tx-bar, #06c6a4);
-    border-radius: 3px; transition: width 0.1s ease;
 }
 
 /* ═══ PTT Button ═══ */

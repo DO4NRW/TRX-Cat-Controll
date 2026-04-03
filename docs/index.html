@@ -113,20 +113,26 @@
         <div class="top-bar">
             <div class="menu-btn"><span class="material-symbols-outlined">menu</span></div>
             <div class="spacer"></div>
+            <div class="rec-control">
+                <div class="toggle-switch" id="tgl-rec">
+                    <img class="toggle-icon" src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg" width="40" height="24">
+                    <span class="toggle-text">REC</span>
+                </div>
+            </div>
             <div class="vox-controls">
                 <div class="toggle-switch" id="tgl-vox">
                     <img class="toggle-icon" src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg" width="40" height="24">
                     <span class="toggle-text">VOX</span>
                 </div>
-                <span class="slider-label">THR:-25</span>
-                <input type="range" class="small-slider" min="-60" max="-5" value="-25">
-                <span class="slider-label">H:700</span>
-                <input type="range" class="small-slider" min="1" max="20" value="7">
+                <span class="slider-label" id="lbl-vox-thr">THR:-25dB</span>
+                <input type="range" class="small-slider" id="slider-vox-thr" min="-60" max="-5" value="-25">
+                <span class="slider-label" id="lbl-vox-hold">H:700ms</span>
+                <input type="range" class="small-slider" id="slider-vox-hold" min="1" max="20" value="7">
             </div>
             <div class="vol-controls">
                 <span class="vol-label">VOL</span>
                 <input type="range" class="vol-slider" min="0" max="20" value="5">
-                <div class="mute-btn" title="Mute"><span class="material-symbols-outlined">volume_up</span></div>
+                <div class="mute-btn" id="btn-mute" title="Mute"><span class="material-symbols-outlined">volume_up</span></div>
             </div>
             <div class="rig-select">
                 <select id="rig-combo">
@@ -137,22 +143,28 @@
             <div class="connect-btn" id="btn-connect" title="Connect"><span class="material-symbols-outlined">cable</span></div>
         </div>
 
-        <!-- ═══ Span Slider ═══ -->
-        <div class="span-row">
-            <span class="span-label" id="span-label">SPAN: 50 kHz</span>
-            <input type="range" id="span-slider" min="0" max="6" value="3">
-        </div>
-
-        <!-- ═══ Waterfall / Spectrum + Slider ═══ -->
+        <!-- ═══ Waterfall / Spectrum + TX-Bar + Slider ═══ -->
         <div class="waterfall-row">
+            <div class="tx-bar-col">
+                <div class="tx-bar-v-bg">
+                    <div class="tx-bar-v" id="tx-bar-v"></div>
+                </div>
+                <span class="tx-bar-v-label" id="tx-bar-v-label">---</span>
+            </div>
             <div class="waterfall-container">
                 <canvas id="waterfall"></canvas>
             </div>
             <div class="wf-sliders">
+                <button class="lock-btn" id="btn-lock" title="Frequenz sperren">
+                    <span class="material-symbols-outlined">lock_open</span>
+                </button>
                 <span class="wf-slider-label">SIG</span>
                 <input type="range" class="wf-vslider" id="slider-sig" orient="vertical" min="10" max="60" value="30">
                 <span class="wf-slider-label">NF</span>
                 <input type="range" class="wf-vslider" id="slider-nf" orient="vertical" min="0" max="30" value="3">
+                <span class="wf-slider-label">SPAN</span>
+                <input type="range" class="wf-vslider" id="span-slider" orient="vertical" min="0" max="7" value="4">
+                <span class="wf-slider-label" id="span-label">50k</span>
             </div>
         </div>
 
@@ -161,7 +173,8 @@
             <button class="btn" id="btn-step-down">STEP &lt;</button>
             <select id="step-select">
                 <option>10</option><option>50</option><option selected>100</option>
-                <option>500</option><option>1000</option><option>5000</option>
+                <option>500</option><option>1000</option><option>2500</option>
+                <option>5000</option><option>10000</option><option>25000</option><option>100000</option>
             </select>
             <button class="btn" id="btn-step-up">STEP &gt;</button>
             <div class="spacer"></div>
@@ -173,6 +186,7 @@
         <div class="mode-row">
             <button class="btn mode-btn" data-mode="LSB">LSB</button>
             <button class="btn mode-btn active" data-mode="USB">USB</button>
+            <button class="btn mode-btn" data-mode="AM">AM</button>
             <button class="btn mode-btn" data-mode="CW">CW</button>
             <button class="btn mode-btn" data-mode="CW-R">CW-R</button>
             <button class="btn mode-btn" data-mode="FM">FM</button>
@@ -199,24 +213,24 @@
             <input type="range" id="pwr-slider" min="0" max="255" value="128">
         </div>
 
+        <!-- ═══ PBT Row (Twin PBT: Bandbreite + Shift) ═══ -->
+        <div class="pbt-row">
+            <span class="pbt-label" id="pbt-bw-label">BW: 0</span>
+            <input type="range" id="pbt-inner" min="0" max="255" value="128">
+            <span class="pbt-label" id="pbt-sft-label">SFT: 0</span>
+            <input type="range" id="pbt-outer" min="0" max="255" value="128">
+        </div>
+
         <!-- ═══ S-Meter ═══ -->
         <div class="smeter-section">
             <div class="smeter-info" id="smeter-info">S-METER: --- | OFF</div>
             <div class="smeter-labels">
-                <span>S1</span><span>S2</span><span>S3</span><span>S4</span><span>S5</span>
+                <span>S0</span><span>S1</span><span>S2</span><span>S3</span><span>S4</span><span>S5</span>
                 <span>S6</span><span>S7</span><span>S8</span><span>S9</span>
-                <span>S9+10</span><span>S9+20</span><span>S9+40</span><span>S9+60</span>
+                <span>+10</span><span>+20</span><span>+40</span><span>+60</span>
             </div>
             <div class="smeter-ticks" id="smeter-ticks"></div>
             <canvas id="smeter-canvas" height="20"></canvas>
-        </div>
-
-        <!-- ═══ TX Meter ═══ -->
-        <div class="tx-section">
-            <div class="tx-info" id="tx-info">TX: --- dBFS</div>
-            <div class="tx-bar-bg">
-                <div class="tx-bar" id="tx-bar"></div>
-            </div>
         </div>
 
         <!-- ═══ PTT Button ═══ -->
@@ -225,7 +239,7 @@
         <!-- ═══ Status Bar ═══ -->
         <div class="status-bar" id="status-bar">
             <span class="status-text" id="status-text">SYSTEM READY</span>
-            <span class="version" id="version-text">v2.0.8</span>
+            <span class="version" id="version-text">v2.1.1</span>
         </div>
 
         <!-- ═══ Legal Footer ═══ -->

@@ -63,6 +63,10 @@ const WF_LINES = 200;
 let spectrumChanged = false;
 let lastWfTime = 0;
 
+// UI State
+let freqLocked = false;
+let muted = false;
+
 // Demo-Daten Playback
 let demoData = null;
 let demoIndex = 0;
@@ -349,8 +353,8 @@ function drawWaterfall() {
 // S-Meter — gleiche Berechnung wie ic705_ui.py
 const S9_RAW = 100;
 const MAX_RAW = 241;
-const S_SEGMENTS = 13;
-const S9_STEPS = ['S9+10', 'S9+20', 'S9+40', 'S9+60'];
+const S_SEGMENTS = 14;
+const S9_STEPS = ['+10', '+20', '+40', '+60'];
 
 function initSMeter() {
     // Tick-Marks erzeugen
@@ -369,7 +373,8 @@ function updateSMeter() {
     if (val <= S9_RAW) {
         const sNum = val * 9 / Math.max(S9_RAW, 1);
         sStr = `S${Math.min(9, Math.round(sNum))}`;
-        frac = sNum / 13;
+        // 14 Segmente: S0-S9 = 10 Segmente, +10/+20/+40/+60 = 4 Segmente
+        frac = (sNum + 1) / 14;  // +1 weil S0 = erstes Segment
     } else {
         const dbOver = (val - S9_RAW) / Math.max(MAX_RAW - S9_RAW, 1) * 60;
         sStr = 'S9';
@@ -378,12 +383,12 @@ function updateSMeter() {
                 sStr = S9_STEPS[i];
             }
         }
-        frac = (9 + dbOver / 60 * 4) / 13;
+        frac = (10 + dbOver / 60 * 4) / 14;
     }
 
     document.getElementById('smeter-info').textContent = `S-METER: ${sStr} | P1`;
 
-    // Segmentiertes S-Meter zeichnen
+    // Segmentiertes S-Meter zeichnen (14 Segmente wie Desktop)
     const canvas = document.getElementById('smeter-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -395,6 +400,7 @@ function updateSMeter() {
     const bgColor = cs.getPropertyValue('--bg-dark').trim() || '#1a1a1a';
     const borderColor = cs.getPropertyValue('--border').trim() || '#555';
     const barColor = cs.getPropertyValue('--smeter-bar').trim() || '#06c6a4';
+    const errorColor = cs.getPropertyValue('--error').trim() || '#ff4444';
 
     const gap = 2;
     const segW = w / S_SEGMENTS;
@@ -403,12 +409,13 @@ function updateSMeter() {
     for (let i = 0; i < S_SEGMENTS; i++) {
         const x = Math.floor(i * segW) + gap / 2;
         const sw = Math.floor(segW) - gap;
+        const isOver = i >= 10;  // +10, +20, +40, +60 → rot
+        const activeColor = isOver ? errorColor : barColor;
 
         if (i < Math.floor(fillSegs)) {
-            ctx.fillStyle = barColor;
+            ctx.fillStyle = activeColor;
         } else if (i < fillSegs) {
-            ctx.fillStyle = barColor;
-            // Teilweise — zeichne nur den gefüllten Teil
+            ctx.fillStyle = activeColor;
             ctx.fillRect(x, 0, Math.floor(sw * (fillSegs - Math.floor(fillSegs))), h);
             ctx.fillStyle = bgColor;
             ctx.fillRect(x + Math.floor(sw * (fillSegs - Math.floor(fillSegs))), 0,
@@ -657,11 +664,13 @@ function getSerialConfig() {
 // Step buttons
 function setupStepButtons() {
     document.getElementById('btn-step-down').addEventListener('click', () => {
+        if (freqLocked) return;
         const step = parseInt(document.getElementById('step-select').value);
         currentFreq -= step;
         updateFreqDisplay();
     });
     document.getElementById('btn-step-up').addEventListener('click', () => {
+        if (freqLocked) return;
         const step = parseInt(document.getElementById('step-select').value);
         currentFreq += step;
         updateFreqDisplay();
@@ -682,13 +691,14 @@ function setupStepButtons() {
 
 // Span slider
 const SPAN_VALUES = [
-    { hz: 2500, label: '2.5 kHz' },
-    { hz: 5000, label: '5 kHz' },
-    { hz: 10000, label: '10 kHz' },
-    { hz: 50000, label: '50 kHz' },
-    { hz: 100000, label: '100 kHz' },
-    { hz: 250000, label: '250 kHz' },
-    { hz: 500000, label: '500 kHz' },
+    { hz: 2500, label: '2.5k' },
+    { hz: 5000, label: '5k' },
+    { hz: 10000, label: '10k' },
+    { hz: 25000, label: '25k' },
+    { hz: 50000, label: '50k' },
+    { hz: 100000, label: '100k' },
+    { hz: 250000, label: '250k' },
+    { hz: 500000, label: '500k' },
 ];
 let currentSpanHz = 50000;
 
@@ -698,8 +708,79 @@ function setupSpan() {
     slider.addEventListener('input', () => {
         const idx = parseInt(slider.value);
         currentSpanHz = SPAN_VALUES[idx].hz;
-        label.textContent = `SPAN: ${SPAN_VALUES[idx].label}`;
+        label.textContent = SPAN_VALUES[idx].label;
     });
+}
+
+// Lock-Button (Frequenz sperren)
+function setupLock() {
+    const btn = document.getElementById('btn-lock');
+    btn.addEventListener('click', () => {
+        freqLocked = !freqLocked;
+        btn.classList.toggle('locked', freqLocked);
+        btn.querySelector('.material-symbols-outlined').textContent = freqLocked ? 'lock' : 'lock_open';
+    });
+}
+
+// PBT Slider Labels
+function setupPBT() {
+    const inner = document.getElementById('pbt-inner');
+    const outer = document.getElementById('pbt-outer');
+    const bwLabel = document.getElementById('pbt-bw-label');
+    const sftLabel = document.getElementById('pbt-sft-label');
+    inner.addEventListener('input', () => {
+        bwLabel.textContent = `BW: ${inner.value - 128}`;
+    });
+    outer.addEventListener('input', () => {
+        sftLabel.textContent = `SFT: ${outer.value - 128}`;
+    });
+}
+
+// VOX Slider Labels
+function setupVoxSliders() {
+    const thrSlider = document.getElementById('slider-vox-thr');
+    const holdSlider = document.getElementById('slider-vox-hold');
+    const thrLabel = document.getElementById('lbl-vox-thr');
+    const holdLabel = document.getElementById('lbl-vox-hold');
+    if (thrSlider && thrLabel) {
+        thrSlider.addEventListener('input', () => {
+            thrLabel.textContent = `THR:${thrSlider.value}dB`;
+        });
+    }
+    if (holdSlider && holdLabel) {
+        holdSlider.addEventListener('input', () => {
+            holdLabel.textContent = `H:${holdSlider.value * 100}ms`;
+        });
+    }
+}
+
+// REC Toggle
+function setupREC() {
+    const tglRec = document.getElementById('tgl-rec');
+    if (tglRec) {
+        tglRec.addEventListener('click', function() {
+            const active = this.classList.toggle('active');
+            const img = this.querySelector('.toggle-icon');
+            img.src = active
+                ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_on.svg'
+                : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/toggle_off.svg';
+        });
+    }
+}
+
+// Mute Button
+function setupMute() {
+    const btn = document.getElementById('btn-mute');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            muted = !muted;
+            const icon = btn.querySelector('.material-symbols-outlined');
+            icon.textContent = muted ? 'volume_off' : 'volume_up';
+            btn.style.borderColor = muted
+                ? (getComputedStyle(document.documentElement).getPropertyValue('--error').trim() || '#ff4444')
+                : (getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#555');
+        });
+    }
 }
 
 // Waterfall SIG/NF Slider
@@ -736,6 +817,7 @@ function setupWaterfallClick() {
     const canvas = document.getElementById('waterfall');
     canvas.style.cursor = 'crosshair';
     canvas.addEventListener('click', e => {
+        if (freqLocked) return;
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const w = canvas.width;
@@ -748,6 +830,7 @@ function setupWaterfallClick() {
         updateFreqDisplay();
     });
     canvas.addEventListener('wheel', e => {
+        if (freqLocked) return;
         e.preventDefault();
         const step = parseInt(document.getElementById('step-select').value);
         const dir = e.deltaY < 0 ? 1 : -1;
@@ -756,13 +839,17 @@ function setupWaterfallClick() {
     });
 }
 
-// TX meter during PTT
+// TX meter during PTT (vertikal links neben Wasserfall)
 function updateTXMeter() {
-    const bar = document.getElementById('tx-bar');
+    const bar = document.getElementById('tx-bar-v');
+    const label = document.getElementById('tx-bar-v-label');
     if (pttActive) {
-        bar.style.width = (30 + Math.random() * 40) + '%';
+        const level = 30 + Math.random() * 40;
+        bar.style.height = level + '%';
+        label.textContent = Math.round(-60 + level * 0.6) + '';
     } else {
-        bar.style.width = '0%';
+        bar.style.height = '0%';
+        label.textContent = '---';
     }
 }
 
@@ -862,7 +949,7 @@ function playDemoFrame() {
                 const slider = document.getElementById('span-slider');
                 if (slider) slider.value = i;
                 const label = document.getElementById('span-label');
-                if (label) label.textContent = `SPAN: ${SPAN_VALUES[i].label}`;
+                if (label) label.textContent = SPAN_VALUES[i].label;
                 break;
             }
         }
@@ -919,18 +1006,22 @@ async function init() {
     setupConnect();
     setupStepButtons();
     setupSpan();
+    setupLock();
+    setupPBT();
+    setupVoxSliders();
+    setupREC();
+    setupMute();
     setupWfSliders();
     setupPower();
     setupWaterfallClick();
-    // Kontaktformular
     setupContact();
 
     // Web Serial Hinweis
     const verLabel = document.getElementById('version-text');
     if (hasWebSerial) {
-        verLabel.textContent = 'v2.0.8 — Web Serial Ready';
+        verLabel.textContent = 'v2.1.1 — Web Serial Ready';
     } else {
-        verLabel.textContent = 'v2.0.8 — DEMO (Chrome/Edge für CAT)';
+        verLabel.textContent = 'v2.1.1 — DEMO (Chrome/Edge für CAT)';
     }
 
     tick();
