@@ -430,19 +430,6 @@ input[type="range"]::-moz-range-progress {
 .theme-arrow-btn { width: 32px; height: 32px; flex-shrink: 0; padding: 0; }
 .theme-arrow-btn img { transform: rotate(-90deg); transition: transform 0.2s; }
 .theme-arrow-btn.open img { transform: rotate(90deg); }
-.theme-name-input {
-    flex: 1; height: 32px;
-    background: var(--bg-mid, #2a2a2a); color: var(--text, #fff);
-    border: 1px solid var(--border, #555); border-radius: 5px;
-    padding: 4px 10px; font-size: 12px;
-}
-.theme-name-input:focus { border-color: var(--accent, #06c6a4); outline: none; }
-.theme-delete-btn {
-    width: 32px; height: 32px; flex-shrink: 0; padding: 0;
-    border: 2px solid var(--error, #ff4444) !important; color: var(--error, #ff4444);
-    font-weight: bold; font-size: 14px;
-}
-.theme-reset-btn { width: 32px; height: 32px; flex-shrink: 0; padding: 0; }
 
 /* Preset Popup */
 .theme-preset-popup {
