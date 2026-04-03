@@ -118,38 +118,46 @@ function parseRGBA(s) {
     return [+m[1], +m[2], +m[3], m[4] ? +m[4] : 255];
 }
 
-// Load theme.json and apply as CSS variables
-async function loadTheme() {
-    try {
-        const resp = await fetch(THEME_URL);
-        const theme = await resp.json();
-        const root = document.documentElement;
-        for (const [key, val] of Object.entries(theme)) {
-            if (key.startsWith('_')) continue;
-            const [r, g, b, a] = parseRGBA(val);
-            const cssKey = '--' + key.replace(/_/g, '-');
-            root.style.setProperty(cssKey, `rgba(${r},${g},${b},${a / 255})`);
-        }
-    } catch (e) {
-        console.warn('Theme laden fehlgeschlagen, nutze Defaults:', e);
-        applyDefaultTheme();
+// Theme-Presets aus Desktop (core/theme.py) — alle 10 Presets
+let THEMES = {};
+
+// Theme auf :root anwenden (wie Desktop apply_theme)
+function applyTheme(name) {
+    const theme = THEMES[name];
+    if (!theme) return;
+    const root = document.documentElement;
+    for (const [key, val] of Object.entries(theme)) {
+        if (typeof val !== 'string' || !val.startsWith('rgba')) continue;
+        const [r, g, b, a] = parseRGBA(val);
+        const cssKey = '--' + key.replace(/_/g, '-');
+        root.style.setProperty(cssKey, `rgba(${r},${g},${b},${a / 255})`);
     }
 }
 
-function applyDefaultTheme() {
-    const defaults = {
-        '--bg-dark': '#1a1a1a', '--bg-mid': '#2a2a2a', '--bg-light': '#3a3a3a',
-        '--bg-button': '#3d3d3d', '--bg-button-hover': '#4a4a4a',
-        '--border': '#555', '--border-hover': '#888',
-        '--accent': '#06c6a4', '--text': '#fff', '--text-secondary': '#ccc',
-        '--text-muted': '#aaa', '--smeter-bar': '#06c6a4', '--tx-bar': '#06c6a4',
-        '--smeter-label-inactive': '#888',
-        '--ptt-rx-bg': '#3d3d3d', '--ptt-rx-border': '#555',
-        '--ptt-tx-bg': '#d32f2f', '--ptt-tx-border': '#ff6659',
-        '--slider-handle': '#06c6a4',
-    };
-    const root = document.documentElement;
-    for (const [k, v] of Object.entries(defaults)) root.style.setProperty(k, v);
+// Theme laden — erst lokal, dann Fallback auf GitHub
+async function loadTheme() {
+    // Versuche Presets aus theme.py zu laden (lokal eingebettet oder remote)
+    try {
+        const resp = await fetch('https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py');
+        const text = await resp.text();
+        // Alle Presets extrahieren
+        const presetNames = ['dark','light','solarized_light','arctic','sakura','discord','nord','dracula','monokai','colorblind'];
+        for (const name of presetNames) {
+            const match = text.match(new RegExp(`"${name}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
+            if (match) {
+                const block = match[1];
+                const pairs = [...block.matchAll(/"(\w+)":\s*"([^"]+)"/g)];
+                THEMES[name] = {};
+                for (const m of pairs) THEMES[name][m[1]] = m[2];
+            }
+        }
+    } catch (e) {
+        console.warn('Remote Presets laden fehlgeschlagen:', e);
+    }
+    // Dark Preset anwenden
+    if (THEMES.dark) {
+        applyTheme('dark');
+    }
 }
 
 // Simulate spectrum with random signals
@@ -666,28 +674,13 @@ function setupSettings() {
         });
         // Preset-Items → Theme laden
         presetPopup.querySelectorAll('.preset-item').forEach(item => {
-            item.addEventListener('click', async () => {
+            item.addEventListener('click', () => {
                 const themeName = item.dataset.theme;
                 const nameInput = document.getElementById('theme-name');
                 if (nameInput) nameInput.value = item.textContent;
                 presetPopup.style.display = 'none';
-                try {
-                    const resp = await fetch(`https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py`);
-                    const text = await resp.text();
-                    const presetMatch = text.match(new RegExp(`"${themeName}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
-                    if (presetMatch) {
-                        const block = presetMatch[1];
-                        const root = document.documentElement;
-                        const pairs = block.matchAll(/"(\w+)":\s*"(rgba\([^)]+\))"/g);
-                        for (const m of pairs) {
-                            const cssKey = '--' + m[1].replace(/_/g, '-');
-                            root.style.setProperty(cssKey, m[2]);
-                        }
-                    }
-                    refreshColorDots();
-                } catch (err) {
-                    console.warn('Theme laden fehlgeschlagen:', err);
-                }
+                applyTheme(themeName);
+                refreshColorDots();
             });
         });
     }
