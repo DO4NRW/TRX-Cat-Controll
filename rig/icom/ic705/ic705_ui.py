@@ -20,6 +20,7 @@ from PySide6.QtGui import QFont
 
 from core.theme import T, register_refresh
 from core.session_logger import log_action, log_event, log_error
+from core.smeter_widgets import create_smeter
 
 # ── Style Helpers ─────────────────────────────────────────────────────
 
@@ -198,14 +199,7 @@ class IC705Widget(QWidget):
         root.setContentsMargins(15, 10, 15, 10)
         root.setSpacing(8)
 
-        # ── 0. Analog S-Meter Gauge (auskommentiert) ─────────────────
-        # from core.smeter_gauge import SMeterGauge
-        # self.smeter_gauge = SMeterGauge(self)
-        # self.smeter_gauge.setFixedSize(260, 70)
-        # gauge_row = QHBoxLayout()
-        # gauge_row.addWidget(self.smeter_gauge)
-        # gauge_row.addStretch()
-        # root.addLayout(gauge_row)
+        # ── 0. (Gauge wird vom MainWindow in die Top-Bar verschoben)
 
         # ── 1. Waterfall / Spectrum ───────────────────────────────────
         from core.waterfall import WaterfallWidget
@@ -231,7 +225,7 @@ class IC705Widget(QWidget):
         ]
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
-        self.waterfall.setMinimumHeight(100)
+        self.waterfall.setMinimumHeight(0)
         self.waterfall.frequency_clicked.connect(self._on_waterfall_click)
         self.waterfall.frequency_scrolled.connect(self._on_waterfall_scroll)
         self.waterfall.filter_changed.connect(self._on_filter_changed)
@@ -319,11 +313,12 @@ class IC705Widget(QWidget):
 
         root.addLayout(wf_row, stretch=1)
 
-        # ── S-Meter Balken mit integrierten Labels (zwischen Wasserfall und Mode)
-        self.smeter_bar_h = _SegmentedMeter(14, self)
-        self.smeter_bar_h.setFixedHeight(22)
-        root.addWidget(self.smeter_bar_h)
-        self.s_labels = []  # Labels sind jetzt im Widget integriert
+        # ── S-Meter (dynamisch aus Theme) ────────────────────────────
+        self._smeter_style = T.get("smeter_style", "segment")
+        self.smeter_widget = create_smeter(self._smeter_style, self)
+        root.addWidget(self.smeter_widget)
+        self.smeter_bar_h = self.smeter_widget
+        self.s_labels = getattr(self.smeter_widget, 's_labels', [])
 
         # ── 1. Frequency Display (versteckt — Freq-Leiste im Wasserfall zeigt es)
         self.lbl_freq = QLabel("")
@@ -488,10 +483,9 @@ class IC705Widget(QWidget):
 
         root.addLayout(pbt_row)
 
-        # ── 6. S-Meter — smeter_bar_h ist oben zwischen Wasserfall und Mode
-        self.smeter_bar = self.smeter_bar_h  # Kompatibilität
-        self.lbl_smeter_info = QLabel("")
-        self.lbl_smeter_info.setFixedHeight(0)
+        # ── 6. S-Meter — Proxy-Referenzen für Kompatibilität
+        self.smeter_bar = self.smeter_widget
+        self.lbl_smeter_info = getattr(self.smeter_widget, 'lbl_info', None)
 
         # ── 7. TX Meter — Dummy (vertikaler Balken ist links neben Wasserfall)
         self.lbl_tx_info = QLabel("")
@@ -545,8 +539,8 @@ class IC705Widget(QWidget):
 
     def _reset_display(self):
         self.lbl_freq.setText("---.---.--- MHz")
-        self.smeter_bar.setValue(0)
-        self.lbl_smeter_info.setText("S-METER: ---")
+        self.smeter_widget.setValue(0)
+        self.smeter_widget.setLabel("S-METER: ---")
         self.btn_preamp.setText("AMP: OFF")
 
     # ══════════════════════════════════════════════════════════════════
@@ -635,27 +629,38 @@ class IC705Widget(QWidget):
             s9_steps = getattr(self, '_s9_steps', ["S9+20", "S9+40", "S9+60"])
 
             if val <= s9_raw:
-                s_num = val * 9 / max(s9_raw, 1)
-                s_str = f"S{min(9, round(s_num))}"
+                # Leicht komprimierte Kurve — IC-705 S-Meter ist nicht linear
+                s_num = (val / max(s9_raw, 1)) ** 0.80 * 9
+                s_int = min(9, int(s_num + 0.5))
+                # Hysterese: nur wechseln wenn 80% der nächsten Stufe erreicht
+                last_s = getattr(self, '_last_s_int', 0)
+                if s_int > last_s and s_num < s_int - 0.2:
+                    s_int = last_s  # Noch nicht genug für Hochsprung
+                elif s_int < last_s and s_num > s_int + 0.8:
+                    s_int = last_s  # Noch nicht genug für Runtersprung
+                self._last_s_int = s_int
+                s_str = f"S{s_int}"
                 # S0-S9 = Segment 0-9 von 14
                 # S9 (s_num=9) → frac=9/14, fill bis Mitte S9-Segment
                 frac = min(1.0, s_num / 14)
             else:
                 db_over = (val - s9_raw) / max(max_raw - s9_raw, 1) * 60
-                n_steps = len(s9_steps)
-                step_size = 60 / max(n_steps, 1)
                 s_str = "S9"
-                for i, label in enumerate(s9_steps):
-                    if db_over >= (i + 0.5) * step_size:
+                # Schwelle aus Label-Name extrahieren: "S9+10" → 10 dB
+                for label in s9_steps:
+                    try:
+                        threshold = int(label.replace("S9+", ""))
+                    except ValueError:
+                        continue
+                    if db_over >= threshold * 0.8:
                         s_str = label
                 # S9+ → Segment 10-13 (+10/+20/+40/+60)
                 frac = min(1.0, (9 + db_over / 60 * 5) / 14)
             s_val = min(13, int(frac * 14))
             bar_val = int(frac * 1000)
-            self.smeter_bar.setValue(min(1000, bar_val))
+            self.smeter_widget.setValue(min(1000, bar_val))
             preamp = self._current_preamp or "OFF"
-            self.lbl_smeter_info.setText(f"S-METER: {s_str} | {preamp}")
-            self._update_s_labels(s_val)
+            self.smeter_widget.setLabel(f"S-METER: {s_str} | {preamp}")
 
         # TX-Meter + VOX
         self.update_tx_meter(self._tx_rms_db)
@@ -1040,12 +1045,12 @@ class IC705Widget(QWidget):
             data=self._cat._int_to_bcd_msb(outer, 2))
 
     def _status_conf_path(self):
-        """Pfad zu status_conf.json."""
+        """Pfad zu ui_state.json (Slider + DSP States)."""
         return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))))), "configs", "status_conf.json")
+            os.path.dirname(os.path.abspath(__file__))))), "configs", "ui_state.json")
 
     def _save_dsp_state(self):
-        """DSP Button-States in status_conf.json speichern."""
+        """DSP Button-States in ui_state.json speichern."""
         try:
             path = self._status_conf_path()
             cfg = {}
@@ -1066,7 +1071,7 @@ class IC705Widget(QWidget):
             print(f"DSP speichern fehlgeschlagen: {e}")
 
     def _load_dsp_state(self):
-        """DSP Button-States aus status_conf.json laden."""
+        """DSP Button-States aus ui_state.json laden."""
         try:
             path = self._status_conf_path()
             with open(path) as f:
@@ -1581,11 +1586,25 @@ class IC705Widget(QWidget):
         self.slider_signal.setStyleSheet(_vs)
         self.slider_noise.setStyleSheet(_vs)
 
-        # S-Meter
-        self.lbl_smeter_info.setStyleSheet(f"color: {T['text']}; font-size: 11px; border: none;")
-        for lbl in self.s_labels:
-            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
-        self.smeter_bar.update()
+        # S-Meter — Style-Wechsel wenn Theme andere smeter_style hat
+        new_style = T.get("smeter_style", "segment")
+        if new_style != self._smeter_style:
+            self._smeter_style = new_style
+            old_layout = self.smeter_widget.parent().layout() if self.smeter_widget.parent() else None
+            if old_layout:
+                old_layout.removeWidget(self.smeter_widget)
+            self.smeter_widget.setParent(None)
+            self.smeter_widget.deleteLater()
+            self.smeter_widget = create_smeter(new_style, self)
+            # Zwischen Wasserfall und Freq-Display einfügen
+            self.layout().insertWidget(2, self.smeter_widget)
+            self.smeter_bar = self.smeter_widget
+            self.smeter_bar_h = self.smeter_widget
+            self.s_labels = getattr(self.smeter_widget, 's_labels', [])
+            self.lbl_smeter_info = getattr(self.smeter_widget, 'lbl_info', None)
+        else:
+            self.smeter_widget.refresh_theme()
+        # MainWindow verschiebt Gauge in Top-Bar via _update_top_smeter()
 
         # TX Meter
         self.lbl_tx_info.setStyleSheet(f"color: {T['text']}; font-size: 13px; border: none;")

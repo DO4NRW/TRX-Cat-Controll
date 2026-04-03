@@ -1,6 +1,6 @@
 {
     "cat": {
-        "port": "/dev/ttyACM1",
+        "port": "/dev/ttyACM0",
         "baud": 115200,
         "data_bits": 8,
         "stop_bits": 2,
@@ -10,7 +10,7 @@
         "protocol": "icom"
     },
     "ptt": {
-        "port": "/dev/ttyACM2",
+        "port": "/dev/ttyACM1",
         "method": "CAT",
         "invert": false
     },
@@ -84,7 +84,7 @@
         "scope": true
     },
     "smeter": {
-        "s9_raw": 100,
+        "s9_raw": 120,
         "max_raw": 241,
         "steps_over_s9": [
             "S9+10",

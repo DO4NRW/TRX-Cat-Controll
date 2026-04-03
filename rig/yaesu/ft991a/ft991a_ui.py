@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, QSize, QTimer, Signal
 from PySide6.QtGui import QIcon, QFont
 
 from core.theme import T, register_refresh, unregister_refresh
+from core.smeter_widgets import create_smeter
 
 _ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       "..", "..", "..", "assets", "icons")
@@ -391,30 +392,13 @@ class FT991AWidget(QWidget):
         root.addLayout(slider_row)
 
         # ── 6. S-Meter ───────────────────────────────────────────────
-        self.lbl_smeter_info = QLabel("S-METER: --- (S0 | IPO)")
-        self.lbl_smeter_info.setStyleSheet(_get_LABEL(T['text'], 13))
-        root.addWidget(self.lbl_smeter_info)
-
-        # S-Meter Scale Labels
-        scale_row = QHBoxLayout()
-        scale_row.setSpacing(0)
-        self.s_labels = []
-        for s in self._S_LABELS:
-            lbl = QLabel(s)
-            lbl.setAlignment(Qt.AlignCenter)
-            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
-            scale_row.addWidget(lbl, stretch=1)
-            self.s_labels.append(lbl)
-        root.addLayout(scale_row)
-
-        # S-Meter Bar — Range 0-1000 (Promille für feine Auflösung)
-        self.smeter_bar = QProgressBar()
-        self.smeter_bar.setFixedHeight(18)
-        self.smeter_bar.setRange(0, 1000)
-        self.smeter_bar.setValue(0)
-        self.smeter_bar.setTextVisible(False)
-        self.smeter_bar.setStyleSheet(_get_METER())
-        root.addWidget(self.smeter_bar)
+        # ── 6. S-Meter (dynamisch aus Theme) ────────────────────────
+        self._smeter_style = T.get("smeter_style", "segment")
+        self.smeter_widget = create_smeter(self._smeter_style, self)
+        root.addWidget(self.smeter_widget)
+        self.smeter_bar = getattr(self.smeter_widget, 'bar', None)
+        self.s_labels = getattr(self.smeter_widget, 's_labels', [])
+        self.lbl_smeter_info = getattr(self.smeter_widget, 'lbl_info', None)
 
         # ── 7. TX Meter ──────────────────────────────────────────────
         self.lbl_tx_info = QLabel("TX: --- dBFS")
@@ -482,9 +466,9 @@ class FT991AWidget(QWidget):
         """Alle Anzeigen auf Default zurücksetzen."""
         self.lbl_freq.setText("---.---.--- MHz")
         # Mode Labels werden über Button-Styles angezeigt
-        self.lbl_smeter_info.setText("S-METER: --- (S0 | IPO)")
+        self.smeter_widget.setLabel("S-METER: --- (S0 | IPO)")
+        self.smeter_widget.setValue(0)
         self.lbl_tx_info.setText("TX: --- dBFS")
-        self.smeter_bar.setValue(0)
         self.tx_bar.setValue(0)
         self._smeter_smooth = 0.0
         self._current_freq = 0
@@ -974,9 +958,8 @@ class FT991AWidget(QWidget):
                 if r1 > r0:
                     frac = min(1.0, (val - r0) / (r1 - r0))
             bar_val = int((active_idx + frac) / 13 * 1000)
-            self.smeter_bar.setValue(min(1000, bar_val))
-            self.lbl_smeter_info.setText(f"S-METER: {s_str} | {dbm:.0f} dBm | {preamp}")
-            self._update_s_labels(active_idx)
+            self.smeter_widget.setValue(min(1000, bar_val))
+            self.smeter_widget.setLabel(f"S-METER: {s_str} | {dbm:.0f} dBm | {preamp}")
 
         # TX-Meter aktualisieren + VOX
         self.update_tx_meter(self._tx_rms_db)
@@ -1386,16 +1369,28 @@ class FT991AWidget(QWidget):
         self.lbl_smeter_info.setStyleSheet(_get_LABEL(T['text'], 13))
         self.lbl_tx_info.setStyleSheet(_get_LABEL(T['text'], 13))
 
-        # Meters
-        self.smeter_bar.setStyleSheet(_get_METER())
+        # S-Meter — Style-Wechsel wenn Theme andere smeter_style hat
+        new_style = T.get("smeter_style", "segment")
+        if new_style != self._smeter_style:
+            self._smeter_style = new_style
+            layout = self.smeter_widget.parent().layout() if self.smeter_widget.parent() else None
+            if layout:
+                idx = layout.indexOf(self.smeter_widget)
+                layout.removeWidget(self.smeter_widget)
+                self.smeter_widget.deleteLater()
+                self.smeter_widget = create_smeter(new_style, self)
+                layout.insertWidget(idx, self.smeter_widget)
+                self.smeter_bar = getattr(self.smeter_widget, 'bar', None)
+                self.s_labels = getattr(self.smeter_widget, 's_labels', [])
+                self.lbl_smeter_info = getattr(self.smeter_widget, 'lbl_info', None)
+        else:
+            self.smeter_widget.refresh_theme()
+
+        # TX Meter
         self.tx_bar.setStyleSheet(f"""
             QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 4px; }}
             QProgressBar::chunk {{ background-color: {T['tx_bar']}; border-radius: 3px; }}
         """)
-
-        # S-Labels
-        for lbl in self.s_labels:
-            lbl.setStyleSheet(f"color: {T['smeter_label_inactive']}; font-size: 10px; font-weight: bold; border: none;")
 
         # PTT Button
         if self._ptt_active:

@@ -1,0 +1,16 @@
+{
+    "sliders": {
+        "volume": 1,
+        "signal_gain": 60,
+        "noise_floor": 0
+    },
+    "dsp_state": {
+        "ATT": false,
+        "NB": true,
+        "NR": false,
+        "NOTCH": false,
+        "COMP": false,
+        "AGC": "MID",
+        "PREAMP": "P2"
+    }
+}

@@ -72,7 +72,7 @@ class WaterfallWidget(QWidget):
         else:
             self._palette = self._build_palette(wf_pal)
 
-        self.setMinimumHeight(150)
+        self.setMinimumHeight(0)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.ClickFocus)

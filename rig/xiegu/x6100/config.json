@@ -1,0 +1,45 @@
+{
+    "cat": {
+        "port": "",
+        "baud": 19200,
+        "data_bits": 8,
+        "stop_bits": 1,
+        "parity": "N",
+        "timeout": 0.5,
+        "handshake": "None",
+        "protocol": "icom"
+    },
+    "ptt": {
+        "port": "",
+        "method": "CAT",
+        "invert": false
+    },
+    "rig": {
+        "mode": "USB",
+        "tuning_step": 100,
+        "power": 10
+    },
+    "audio": {
+        "pc_mic": { "device": "", "rate": 44100, "channels": 1 },
+        "trx_mic": { "device": "", "rate": 44100, "channels": 1 },
+        "trx_speaker": { "device": "", "rate": 44100, "channels": 1 },
+        "pc_speaker": { "device": "", "rate": 44100, "channels": 1 }
+    },
+    "vox": {
+        "threshold": -25.0,
+        "hold_ms": 700
+    },
+    "features": {
+        "modes": ["LSB", "USB", "CW", "CW-R", "AM", "FM"],
+        "digi_modes": [],
+        "dsp": ["NB", "NR", "NOTCH", "COMP"],
+        "agc": ["SLOW", "MID", "FAST"],
+        "preamp": [],
+        "power": { "min": 0, "max": 255, "max_watts": 10 },
+        "scope": false
+    },
+    "smeter": {
+        "s9_raw": 100,
+        "max_raw": 241
+    }
+}
