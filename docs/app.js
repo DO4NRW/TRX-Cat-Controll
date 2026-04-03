@@ -846,7 +846,7 @@ function updateTXMeter() {
     if (pttActive) {
         const level = 30 + Math.random() * 40;
         bar.style.height = level + '%';
-        label.textContent = Math.round(-60 + level * 0.6) + '';
+        label.textContent = Math.round(-60 + level * 0.6) + 'dB';
     } else {
         bar.style.height = '0%';
         label.textContent = '---';
