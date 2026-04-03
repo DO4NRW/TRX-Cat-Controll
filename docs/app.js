@@ -738,6 +738,7 @@ function connectWebSocket(host) {
 
     rigSocket.onclose = () => {
         connected = false;
+        demoRunning = false;
         liveScope = false;
         rigSocket = null;
         document.getElementById('btn-connect').classList.remove('connected');
