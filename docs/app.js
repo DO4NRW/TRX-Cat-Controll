@@ -207,10 +207,10 @@ function drawWaterfall() {
     if (peak > 0) {
         const scale = 0.85 / Math.max(peak, 1);
 
-        // Gradient Fill (alpha 0.75 unten → 0 oben, wie Desktop)
+        // Gradient Fill (alpha 0.12 unten → 0 oben, wie Desktop waterfall.py fill_color.setAlpha(30))
         const grad = ctx.createLinearGradient(0, 0, 0, specH);
         grad.addColorStop(0, `rgba(${aR},${aG},${aB},0)`);
-        grad.addColorStop(1, `rgba(${aR},${aG},${aB},0.75)`);
+        grad.addColorStop(1, `rgba(${aR},${aG},${aB},0.12)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.moveTo(0, specH);
