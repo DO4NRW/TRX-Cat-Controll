@@ -1019,9 +1019,9 @@ async function init() {
     // Web Serial Hinweis
     const verLabel = document.getElementById('version-text');
     if (hasWebSerial) {
-        verLabel.textContent = 'v2.1.1 — Web Serial Ready';
+        verLabel.textContent = 'v2.1.2 — Web Serial Ready';
     } else {
-        verLabel.textContent = 'v2.1.1 — DEMO (Chrome/Edge für CAT)';
+        verLabel.textContent = 'v2.1.2 — DEMO (Chrome/Edge für CAT)';
     }
 
     tick();
