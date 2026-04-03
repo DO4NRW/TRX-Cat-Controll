@@ -49,7 +49,7 @@ body {
     border-radius: 5px;
     cursor: pointer;
     flex-shrink: 0;
-    padding: 5px;
+    padding: 0;
 }
 .menu-btn:hover { border-color: var(--accent, #06c6a4); background: var(--bg-light, #3a3a3a); }
 .mute-btn:hover { border-color: var(--border-hover, #888); }
@@ -58,7 +58,10 @@ body {
 .connect-btn.connected { border-color: var(--accent, #06c6a4); }
 .connect-btn.error { border-color: var(--error, #ff4444); }
 
-.vox-controls, .vol-controls { display: flex; align-items: center; gap: 4px; }
+.rec-control { margin-right: 4px; }
+.vox-controls, .vol-controls { display: flex; align-items: center; gap: 2px; }
+.mute-btn { margin-right: 6px; }
+.rig-select { margin-right: 4px; }
 .slider-label { color: var(--text, #fff); font-size: 10px; font-weight: bold; min-width: 44px; }
 
 /* Toggle Switch (wie PySide6 ToggleButton) */
