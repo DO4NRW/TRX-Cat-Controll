@@ -801,19 +801,29 @@ let wfColorGain = 3.0;
 let wfBlackLevel = 18;
 
 function setupWfSliders() {
-    const sigSlider = document.getElementById('slider-sig');
-    const nfSlider = document.getElementById('slider-nf');
+    const sigEl = document.getElementById('slider-sig');
+    const nfEl = document.getElementById('slider-nf');
     const valSig = document.getElementById('val-sig');
     const valNf = document.getElementById('val-nf');
-    if (sigSlider) {
-        sigSlider.addEventListener('input', () => {
-            wfColorGain = parseInt(sigSlider.value) / 10.0;
+
+    if (sigEl && typeof noUiSlider !== 'undefined') {
+        noUiSlider.create(sigEl, {
+            start: [30], direction: 'rtl', orientation: 'vertical',
+            range: { min: 5, max: 100 }, step: 1
+        });
+        sigEl.noUiSlider.on('update', (values) => {
+            wfColorGain = parseFloat(values[0]) / 10.0;
             if (valSig) valSig.textContent = wfColorGain.toFixed(1);
         });
     }
-    if (nfSlider) {
-        nfSlider.addEventListener('input', () => {
-            wfBlackLevel = parseInt(nfSlider.value);
+
+    if (nfEl && typeof noUiSlider !== 'undefined') {
+        noUiSlider.create(nfEl, {
+            start: [18], direction: 'rtl', orientation: 'vertical',
+            range: { min: 1, max: 80 }, step: 1
+        });
+        nfEl.noUiSlider.on('update', (values) => {
+            wfBlackLevel = Math.round(parseFloat(values[0]));
             if (valNf) valNf.textContent = wfBlackLevel;
         });
     }

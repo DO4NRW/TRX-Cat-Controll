@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RigLink — Live Demo</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.8.1/nouislider.min.css">
 </head>
 <body>
     <div id="app">
@@ -372,11 +373,11 @@
                     <img class="lock-icon" src="icons/lock_open.svg" width="20" height="20">
                 </button>
                 <span class="wf-slider-label">SIG</span>
-                <input type="range" class="wf-vslider" id="slider-sig" orient="vertical" min="5" max="100" value="30">
+                <div class="wf-vslider-wrap"><div id="slider-sig" class="wf-nouislider"></div></div>
                 <span class="wf-slider-label wf-slider-val" id="val-sig">3.0</span>
                 <span class="wf-slider-label">NF</span>
-                <input type="range" class="wf-vslider" id="slider-nf" orient="vertical" min="1" max="80" value="18">
-                <span class="wf-slider-label wf-slider-val" id="val-nf">5</span>
+                <div class="wf-vslider-wrap"><div id="slider-nf" class="wf-nouislider"></div></div>
+                <span class="wf-slider-label wf-slider-val" id="val-nf">18</span>
                 <span class="wf-slider-label">SPAN</span>
                 <input type="range" class="wf-vslider" id="span-slider" orient="vertical" min="0" max="7" value="4">
                 <span class="wf-slider-label" id="span-label">50k</span>
@@ -469,6 +470,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.8.1/nouislider.min.js"></script>
     <script src="themes.js"></script>
     <script src="serial.js"></script>
     <script src="radio_setup.js"></script>
