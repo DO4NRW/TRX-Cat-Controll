@@ -279,7 +279,9 @@ function drawWaterfall() {
     }
     const wfCtx = window._wfCanvas.getContext('2d');
 
-    // Shift alles 1px nach unten
+    // Shift alles 1px nach unten (mit Smoothing wie auf Main-Canvas)
+    wfCtx.imageSmoothingEnabled = true;
+    wfCtx.imageSmoothingQuality = 'high';
     wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfBufH - 1, 0, 1, w, wfBufH - 1);
 
     // Neue Zeile oben — interpoliert auf Canvas-Breite
