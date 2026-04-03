@@ -240,6 +240,7 @@ class IC705Widget(QWidget):
         # TX Mic Gain Balken (vertikal, links)
         tx_col = QVBoxLayout()
         tx_col.setSpacing(1)
+        tx_col.setContentsMargins(0, 0, 6, 0)
         self.tx_bar_v = QProgressBar()
         self.tx_bar_v.setOrientation(Qt.Vertical)
         self.tx_bar_v.setFixedWidth(10)

@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
 
         self.top_layout = QHBoxLayout()
+        self.top_layout.setSpacing(0)
         self.main_layout.addLayout(self.top_layout)
 
         # ── Main Menu ─────────────────────────────────────────────────
@@ -134,8 +135,8 @@ class MainWindow(QMainWindow):
         self.top_layout.addWidget(self.tgl_vox)
 
         self.lbl_vox_thr = QLabel("THR:-25")
-        self.lbl_vox_thr.setStyleSheet(f"color: {T['text']}; font-size: 10px;")
-        self.lbl_vox_thr.setFixedWidth(42)
+        self.lbl_vox_thr.setStyleSheet(f"color: {T['text']}; font-size: 10px; font-weight: bold;")
+        self.lbl_vox_thr.setFixedWidth(44)
         self.top_layout.addWidget(self.lbl_vox_thr)
 
         self.slider_vox_thr = QSlider(Qt.Horizontal)
@@ -149,12 +150,12 @@ class MainWindow(QMainWindow):
         self.slider_vox_thr.setToolTip("VOX Schwelle dBFS")
         self._apply_top_slider_style(self.slider_vox_thr, small=True)
         self.slider_vox_thr.valueChanged.connect(lambda v: (
-            self.lbl_vox_thr.setText(f"THR:{v}"), self._save_vox()))
+            self.lbl_vox_thr.setText(f"THR:{v}dB"), self._save_vox()))
         self.top_layout.addWidget(self.slider_vox_thr)
 
         self.lbl_vox_hold = QLabel("H:700")
-        self.lbl_vox_hold.setStyleSheet(f"color: {T['text']}; font-size: 10px;")
-        self.lbl_vox_hold.setFixedWidth(38)
+        self.lbl_vox_hold.setStyleSheet(f"color: {T['text']}; font-size: 10px; font-weight: bold;")
+        self.lbl_vox_hold.setFixedWidth(40)
         self.top_layout.addWidget(self.lbl_vox_hold)
 
         self.slider_vox_hold = QSlider(Qt.Horizontal)
@@ -166,7 +167,7 @@ class MainWindow(QMainWindow):
         self.slider_vox_hold.setToolTip("VOX Hold ms")
         self._apply_top_slider_style(self.slider_vox_hold, small=True)
         self.slider_vox_hold.valueChanged.connect(lambda v: (
-            self.lbl_vox_hold.setText(f"H:{v * 100}"), self._save_vox()))
+            self.lbl_vox_hold.setText(f"H:{v * 100}ms"), self._save_vox()))
         self.top_layout.addWidget(self.slider_vox_hold)
 
         # ── RX Volume + Mute ─────────────────────────────────────────
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         self.slider_vol.setValue(_saved_vol)
-        self.slider_vol.setFixedWidth(100)
+        self.slider_vol.setFixedWidth(80)
         self.slider_vol.setFixedHeight(30)
         self.slider_vol.setFocusPolicy(Qt.NoFocus)
         self._apply_top_slider_style(self.slider_vol)
@@ -193,10 +194,12 @@ class MainWindow(QMainWindow):
 
         self._muted = False
         self._vol_before_mute = 5
+        self._icon_vol_on = themed_icon(os.path.join(_ICONS, "volume_up.svg"))
+        self._icon_vol_off = themed_icon(os.path.join(_ICONS, "volume_off.svg"))
         self.btn_mute = QPushButton()
-        self.btn_mute.setFixedSize(40, 40)
-        self.btn_mute.setIcon(themed_icon(os.path.join(_ICONS, "sound.svg")))
-        self.btn_mute.setIconSize(QSize(22, 22))
+        self.btn_mute.setFixedSize(32, 32)
+        self.btn_mute.setIcon(self._icon_vol_on)
+        self.btn_mute.setIconSize(QSize(20, 20))
         self.btn_mute.setFocusPolicy(Qt.NoFocus)
         self.btn_mute.setCursor(Qt.PointingHandCursor)
         self.btn_mute.setToolTip("Mute/Unmute")
@@ -204,6 +207,8 @@ class MainWindow(QMainWindow):
         self.btn_mute.setStyleSheet(self._mute_style_on)
         self.btn_mute.clicked.connect(self._toggle_mute)
         self.top_layout.addWidget(self.btn_mute)
+
+        self.top_layout.addSpacing(6)
 
         # ── Rig-Auswahl ──────────────────────────────────────────────
         self.combo_rig_select = DropDownComboBox()
@@ -216,6 +221,8 @@ class MainWindow(QMainWindow):
         self.top_layout.addWidget(self.combo_rig_select)
 
         self._top_smeter = None
+
+        self.top_layout.addSpacing(4)
 
         self.btn_cat_con = QPushButton()
         self.btn_cat_con.setFixedSize(40, 40)
@@ -386,7 +393,9 @@ class MainWindow(QMainWindow):
         self._update_mute_styles()
 
         self.btn_menu.setIcon(themed_icon(os.path.join(_ICONS, "menu.svg")))
-        self.btn_mute.setIcon(themed_icon(os.path.join(_ICONS, "sound.svg")))
+        self._icon_vol_on = themed_icon(os.path.join(_ICONS, "volume_up.svg"))
+        self._icon_vol_off = themed_icon(os.path.join(_ICONS, "volume_off.svg"))
+        self.btn_mute.setIcon(self._icon_vol_off if self._muted else self._icon_vol_on)
         self.btn_cat_con.setIcon(themed_icon(os.path.join(_ICONS, "connection.svg")))
 
         self.action_settings.setIcon(themed_icon(os.path.join(_ICONS, "radio.svg")))
@@ -656,10 +665,12 @@ class MainWindow(QMainWindow):
             self.slider_vol.setValue(0)
             if self.rig_widget and hasattr(self.rig_widget, "_RX_GAIN"):
                 self.rig_widget._RX_GAIN = 0.0
+            self.btn_mute.setIcon(self._icon_vol_off)
             self.btn_mute.setStyleSheet(self._mute_style_off)
         else:
             self._muted = False
             self.slider_vol.setValue(self._vol_before_mute)
+            self.btn_mute.setIcon(self._icon_vol_on)
             self.btn_mute.setStyleSheet(self._mute_style_on)
 
     def _restart_audio(self):

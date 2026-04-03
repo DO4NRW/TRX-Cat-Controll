@@ -37,7 +37,7 @@ class ToggleButton(QPushButton):
                 color: {T['text_secondary']};
                 font-size: 13px;
                 text-align: left;
-                padding: 4px 6px;
+                padding: 2px 2px;
             }}
             QPushButton:checked {{ color: {T['text']}; }}
             QPushButton:hover   {{ color: {T['text']}; }}

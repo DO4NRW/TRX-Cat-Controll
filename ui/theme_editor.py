@@ -214,26 +214,10 @@ class ThemeEditorOverlay(QWidget):
         self._hex_input = QLineEdit()
 
         # ── Save Row ─────────────────────────────────────────────────
-        hint_lbl = QLabel("Name ändern = neues Theme")
-        hint_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 9px; border: none;")
-        root.addWidget(hint_lbl)
-
         save_row = QHBoxLayout()
         save_row.setSpacing(6)
 
-        self.input_theme_name = QLineEdit()
-        self.input_theme_name.setPlaceholderText("Theme-Name...")
-        self.input_theme_name.setMinimumHeight(32)
-        self.input_theme_name.setStyleSheet(f"""
-            QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text']};
-                border: 1px solid {T['border']}; border-radius: 5px;
-                padding: 4px 10px; font-size: 12px; }}
-            QLineEdit:focus {{ border-color: {T['accent']}; }}
-        """)
-        self.input_theme_name.setFocusPolicy(Qt.ClickFocus)
-        self.input_theme_name.textEdited.connect(self._on_name_edited)
-        save_row.addWidget(self.input_theme_name, stretch=1)
-
+        # Preset-Menü (nur für Farben-Tab sichtbar)
         self._preset_menu = QMenu(self)
         btn_presets = QPushButton()
         btn_presets.setFixedSize(32, 32)
@@ -251,6 +235,20 @@ class ThemeEditorOverlay(QWidget):
         self.combo_preset = QComboBox()
         self.combo_preset.hide()
 
+        # Name-Feld (nur für Farben-Tab)
+        self.input_theme_name = QLineEdit()
+        self.input_theme_name.setPlaceholderText("Theme-Name...")
+        self.input_theme_name.setMinimumHeight(32)
+        self.input_theme_name.setStyleSheet(f"""
+            QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text']};
+                border: 1px solid {T['border']}; border-radius: 5px;
+                padding: 4px 10px; font-size: 12px; }}
+            QLineEdit:focus {{ border-color: {T['accent']}; }}
+        """)
+        self.input_theme_name.setFocusPolicy(Qt.ClickFocus)
+        self.input_theme_name.textEdited.connect(self._on_name_edited)
+        save_row.addWidget(self.input_theme_name, stretch=1)
+
         self.btn_delete = QPushButton()
         self.btn_delete.setFixedSize(32, 32)
         self.btn_delete.setText("X")
@@ -265,6 +263,23 @@ class ThemeEditorOverlay(QWidget):
         self.btn_delete.clicked.connect(self._delete_theme)
         save_row.addWidget(self.btn_delete)
         self._hide_delete_btn()
+
+        # Reset-Button (nur für S-Meter und Digi-Modes Tabs)
+        self._btn_reset = QPushButton()
+        self._btn_reset.setFixedSize(32, 32)
+        self._btn_reset.setIcon(themed_icon(os.path.join(_ICONS, "reset.svg")))
+        self._btn_reset.setIconSize(QSize(20, 20))
+        self._btn_reset.setCursor(Qt.PointingHandCursor)
+        self._btn_reset.setToolTip("Auf Standard zurücksetzen")
+        self._btn_reset.setStyleSheet(f"""
+            QPushButton {{ background-color: {T['bg_mid']}; border: 2px solid {T['border']};
+                          border-radius: 5px; padding: 3px; }}
+            QPushButton:hover {{ border-color: {T['error']}; }}""")
+        self._btn_reset.clicked.connect(self._reset_tab_defaults)
+        self._btn_reset.hide()
+        save_row.addWidget(self._btn_reset)
+
+        save_row.addStretch()
 
         btn_save = QPushButton()
         btn_save.setFixedSize(40, 40)
@@ -314,6 +329,7 @@ class ThemeEditorOverlay(QWidget):
         self._current_tab = idx
         self._tab_stack.setCurrentIndex(idx)
         self._apply_tab_styles()
+        self._update_save_row_visibility()
         self._take_snapshot()
         if idx == 1:
             self._selected_smeter = self._theme_data.get("smeter_style", "segment")
@@ -348,6 +364,41 @@ class ThemeEditorOverlay(QWidget):
                         border: none; border-bottom: 1px solid {T['border']};
                         border-radius: 0; padding: 4px 12px; font-size: 11px; }}
                     QPushButton:hover {{ color: {T['text']}; }}""")
+
+    def _update_save_row_visibility(self):
+        """Save-Row Elemente je nach Tab anzeigen/verstecken."""
+        is_colors = (self._current_tab == 0)
+        # Farben-Tab: Preset-Button, Name-Feld, Delete sichtbar
+        self._btn_presets.setVisible(is_colors)
+        self.input_theme_name.setVisible(is_colors)
+        self.btn_delete.setVisible(is_colors and self.btn_delete.width() > 0)
+        # S-Meter / Digi-Modes: Reset-Button sichtbar
+        self._btn_reset.setVisible(not is_colors)
+
+    def _reset_tab_defaults(self):
+        """Aktiven Tab auf Standard-Werte zurücksetzen."""
+        if self._current_tab == 1:
+            # S-Meter → Default Style
+            self._theme_data["smeter_style"] = "segment"
+            self._selected_smeter = "segment"
+            self._update_smeter_list_styles()
+            T["smeter_style"] = "segment"
+        elif self._current_tab == 2:
+            # Digi-Modes → Defaults wiederherstellen
+            from ui.theme_digi import DIGI_DEFAULTS
+            for key, val in DIGI_DEFAULTS.items():
+                self._theme_data[key] = val
+            self._tab_digi.set_theme_data(self._theme_data)
+        # Live-Preview
+        main_win = self.parent().window() if self.parent() else None
+        if main_win and hasattr(main_win, "refresh_theme"):
+            main_win.refresh_theme()
+        from core.theme import _refresh_callbacks
+        for cb in _refresh_callbacks[:]:
+            try:
+                cb()
+            except Exception:
+                pass
 
     def _select_smeter_style(self, key):
         """S-Meter Style in der Liste auswählen."""
@@ -875,12 +926,17 @@ class ThemeEditorOverlay(QWidget):
         ph = min(580, int(parent.height() * 0.9))
         self.panel.setFixedSize(pw, ph)
         self.panel.move((self.width() - pw) // 2, (self.height() - ph) // 2)
+        self._current_tab = 0
+        self._tab_stack.setCurrentIndex(0)
+        self._apply_tab_styles()
         self._refresh_own_styles()
         self._load_theme()
         self._take_snapshot()
         self._rebuild_preset_combo()
         self._detect_current_preset()
         self.show()
+        # Verzögert damit Widgets sichtbar sind
+        QTimer.singleShot(0, self._update_save_row_visibility)
         self.raise_()
         QApplication.instance().installEventFilter(self)
 
