@@ -391,6 +391,13 @@ function updateSMeter() {
 
     document.getElementById('smeter-info').textContent = `S-METER: ${sStr} | P1`;
 
+    // Labels + Ticks nur bei Segment/LED sichtbar
+    const showLabels = ['segment', 'led'].includes(currentSmeterStyle);
+    const labelsEl = document.querySelector('.smeter-labels');
+    const ticksEl  = document.getElementById('smeter-ticks');
+    if (labelsEl) labelsEl.style.display = showLabels ? '' : 'none';
+    if (ticksEl)  ticksEl.style.display  = showLabels ? '' : 'none';
+
     // Segmentiertes S-Meter zeichnen (14 Segmente wie Desktop)
     const canvas = document.getElementById('smeter-canvas');
     if (!canvas) return;
