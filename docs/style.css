@@ -28,8 +28,8 @@ body {
 .top-bar {
     display: flex;
     align-items: center;
-    padding: 4px 0;
-    gap: 0;
+    padding: 4px 8px;
+    gap: 4px;
 }
 .spacer { flex: 1; }
 /* Icon-Buttons (wie QPushButton mit setIcon) */
@@ -169,7 +169,7 @@ input[type="range"]::-moz-range-progress {
     direction: rtl;
     -webkit-appearance: auto;
     appearance: auto;
-    width: 30px;
+    width: 16px;
     flex: 1;
     cursor: pointer;
 }
