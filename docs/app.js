@@ -2,7 +2,6 @@
  * RigLink Demo — Liest Theme aus configs/theme.json, simuliert Wasserfall + S-Meter
  */
 
-const THEME_URL = 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/configs/theme.json';
 const REPORT_URL = 'https://raport.pcore.de/api/report';
 const HMAC_SECRET = 'RigLink_Report_V2_DO4NRW';
 
@@ -118,47 +117,6 @@ function parseRGBA(s) {
     return [+m[1], +m[2], +m[3], m[4] ? +m[4] : 255];
 }
 
-// Theme-Presets aus Desktop (core/theme.py) — alle 10 Presets
-let THEMES = {};
-
-// Theme auf :root anwenden (wie Desktop apply_theme)
-function applyTheme(name) {
-    const theme = THEMES[name];
-    if (!theme) return;
-    const root = document.documentElement;
-    for (const [key, val] of Object.entries(theme)) {
-        if (typeof val !== 'string' || !val.startsWith('rgba')) continue;
-        const [r, g, b, a] = parseRGBA(val);
-        const cssKey = '--' + key.replace(/_/g, '-');
-        root.style.setProperty(cssKey, `rgba(${r},${g},${b},${a / 255})`);
-    }
-}
-
-// Theme laden — erst lokal, dann Fallback auf GitHub
-async function loadTheme() {
-    // Versuche Presets aus theme.py zu laden (lokal eingebettet oder remote)
-    try {
-        const resp = await fetch('https://raw.githubusercontent.com/DO4NRW/RigLink/main/core/theme.py');
-        const text = await resp.text();
-        // Alle Presets extrahieren
-        const presetNames = ['dark','light','solarized_light','arctic','sakura','discord','nord','dracula','monokai','colorblind'];
-        for (const name of presetNames) {
-            const match = text.match(new RegExp(`"${name}":\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}`, 's'));
-            if (match) {
-                const block = match[1];
-                const pairs = [...block.matchAll(/"(\w+)":\s*"([^"]+)"/g)];
-                THEMES[name] = {};
-                for (const m of pairs) THEMES[name][m[1]] = m[2];
-            }
-        }
-    } catch (e) {
-        console.warn('Remote Presets laden fehlgeschlagen:', e);
-    }
-    // Dark Preset anwenden
-    if (THEMES.dark) {
-        applyTheme('dark');
-    }
-}
 
 // Simulate spectrum with random signals
 function generateSpectrum() {
@@ -686,158 +644,9 @@ function setupSettings() {
     }
 }
 
-// Color-Dots nach Theme-Wechsel aktualisieren
-function refreshColorDots() {
-    const cs = getComputedStyle(document.documentElement);
-    document.querySelectorAll('#color-list .color-item').forEach(item => {
-        const key = item.querySelector('.color-value')?.textContent;
-        if (key) {
-            const cssKey = '--' + key.replace(/_/g, '-');
-            const val = cs.getPropertyValue(cssKey).trim();
-            const dot = item.querySelector('.color-dot');
-            if (dot && val) dot.style.background = val;
-        }
-    });
-}
 
-// Toggle-Gruppen (Radio Setup)
-function setupToggleGroups() {
-    document.querySelectorAll('.toggle-group').forEach(group => {
-        group.querySelectorAll('.toggle-option').forEach(opt => {
-            opt.addEventListener('click', () => {
-                group.querySelectorAll('.toggle-option').forEach(o => {
-                    o.classList.remove('active');
-                    const img = o.querySelector('img');
-                    if (img) img.src = 'icons/toggle_off.svg';
-                });
-                opt.classList.add('active');
-                const img = opt.querySelector('img');
-                if (img) img.src = 'icons/toggle_on.svg';
-            });
-        });
-    });
-}
 
-// Hersteller → Modell Kaskade
-const RIG_MODELS = {
-    icom: [['ic705','IC-705'],['ic7100','IC-7100'],['ic7300','IC-7300'],['ic7610','IC-7610'],['ic9700','IC-9700']],
-    yaesu: [['ft991a','FT-991A'],['ft710','FT-710'],['ftdx101d','FTDX101D'],['ftdx101mp','FTDX101MP'],['ftdx10','FTDX10'],['ft891','FT-891'],['ft857','FT-857'],['ft818','FT-818'],['ft950','FT-950'],['ft450','FT-450'],['ft2000','FT-2000']],
-    kenwood: [['ts890s','TS-890S'],['ts590sg','TS-590SG'],['ts480','TS-480'],['ts2000','TS-2000']],
-    elecraft: [['k3','K3'],['k3s','K3S'],['kx3','KX3'],['kx2','KX2']],
-    xiegu: [['g90','G90'],['g106','G106'],['x5105','X5105'],['x6100','X6100'],['x6200','X6200']],
-};
 
-function setupManufacturerCascade() {
-    const mfr = document.getElementById('cfg-manufacturer');
-    const model = document.getElementById('cfg-rig');
-    if (!mfr || !model) return;
-    mfr.addEventListener('change', () => {
-        const models = RIG_MODELS[mfr.value] || [];
-        model.innerHTML = models.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-        // CI-V update
-        const civInput = document.getElementById('cfg-civ');
-        if (civInput && mfr.value === 'icom') {
-            const addr = IcomCIV.RIG_ADDRESSES[model.value] || 0xA4;
-            civInput.value = '0x' + addr.toString(16).toUpperCase();
-        } else if (civInput) {
-            civInput.value = 'N/A';
-        }
-    });
-}
-
-// Theme Editor Tabs
-function setupThemeTabs() {
-    document.querySelectorAll('.theme-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.theme-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.theme-tab-content').forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-        });
-    });
-
-    // Farbliste befüllen
-    const THEME_COLORS = [
-        ['accent', 'Akzentfarbe'], ['accent_dark', 'Akzent dunkel'], ['error', 'Fehler'],
-        ['bg_dark', 'Hintergrund dunkel'], ['bg_mid', 'Hintergrund mittel'], ['bg_light', 'Hintergrund hell'],
-        ['border', 'Rahmen'], ['border_hover', 'Rahmen Hover'],
-        ['text', 'Text'], ['text_secondary', 'Text sekundär'], ['text_muted', 'Text gedimmt'],
-        ['slider_handle', 'Slider Punkt'], ['slider_fill', 'Slider Spur'],
-        ['smeter_bar', 'S-Meter Balken'], ['tx_bar', 'TX-Meter Balken'],
-        ['ptt_tx_bg', 'PTT TX Hintergrund'], ['ptt_tx_border', 'PTT TX Rahmen'],
-        ['wf_color_1', 'Wasserfall 1'], ['wf_color_2', 'Wasserfall 2'], ['wf_color_3', 'Wasserfall 3'],
-        ['wf_color_4', 'Wasserfall 4'], ['wf_color_5', 'Wasserfall 5'], ['wf_color_6', 'Wasserfall 6'],
-        ['wf_color_7', 'Wasserfall 7'], ['wf_color_8', 'Wasserfall 8'], ['wf_color_9', 'Wasserfall 9'],
-    ];
-    const colorList = document.getElementById('color-list');
-    if (colorList) {
-        const cs = getComputedStyle(document.documentElement);
-        THEME_COLORS.forEach(([key, label]) => {
-            const cssKey = '--' + key.replace(/_/g, '-');
-            const val = cs.getPropertyValue(cssKey).trim() || '#888';
-            const item = document.createElement('div');
-            item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${val}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
-            colorList.appendChild(item);
-        });
-    }
-
-    // Digi-Farben
-    const DIGI_COLORS = [
-        ['digi_cq', 'CQ', '#00ff00'],
-        ['digi_reply', 'Reply', '#ff6666'],
-        ['digi_own_call', 'Own Call', '#ff0000'],
-        ['digi_worked', 'Worked', '#888888'],
-        ['digi_new_dxcc', 'New DXCC', '#ff00ff'],
-        ['digi_new_grid', 'New Grid', '#ffaa00'],
-        ['digi_new_call', 'New Callsign', '#00ccff'],
-        ['digi_alert', 'Alert', '#ffff00'],
-        ['digi_bg', 'Hintergrund', '#1a1a2e'],
-        ['digi_text', 'Text', '#ffffff'],
-        ['digi_time', 'Zeitstempel', '#aaaaaa'],
-        ['digi_freq', 'Frequenz', '#66ccff'],
-        ['digi_snr', 'SNR', '#88ff88'],
-    ];
-    const digiList = document.getElementById('digi-color-list');
-    if (digiList) {
-        DIGI_COLORS.forEach(([key, label, color]) => {
-            const item = document.createElement('div');
-            item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${color}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
-            digiList.appendChild(item);
-        });
-    }
-
-    // S-Meter Style Auswahl
-    document.querySelectorAll('.smeter-style-item').forEach(item => {
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.smeter-style-item').forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-        });
-    });
-}
-
-// Audio Setup VU-Meter Simulation
-function setupAudioDemo() {
-    const waveBtn = document.getElementById('btn-wave-test');
-    const recBtn = document.getElementById('btn-rec-test');
-    const vuBar = document.getElementById('vu-bar');
-    if (!waveBtn || !vuBar) return;
-
-    let vuInterval = null;
-    function startVU(duration) {
-        let t = 0;
-        vuInterval = setInterval(() => {
-            const level = 20 + Math.random() * 60;
-            vuBar.style.width = level + '%';
-            vuBar.style.background = level > 85 ? 'var(--vu-red, #f44336)' : level > 60 ? 'var(--vu-yellow, #ffeb3b)' : 'var(--vu-green, #4caf50)';
-            t += 50;
-            if (t >= duration) { clearInterval(vuInterval); vuBar.style.width = '0%'; }
-        }, 50);
-    }
-    waveBtn.addEventListener('click', () => startVU(2000));
-    recBtn.addEventListener('click', () => startVU(3000));
-}
 
 function getSerialConfig() {
     return {
@@ -1179,7 +988,7 @@ function tick() {
 async function init() {
     buildPalette();
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
-    await loadTheme();
+    applyTheme('dark');
     await loadDemoData();
     initSMeter();
     updateFreqDisplay();
