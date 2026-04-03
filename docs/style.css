@@ -303,13 +303,14 @@ input[type="range"]::-moz-range-progress {
 /* ═══ Overlays ═══ */
 .overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); z-index: 100;
+    background: rgba(0,0,0,0.3); z-index: 100;
     display: flex; align-items: center; justify-content: center;
 }
 .overlay-panel {
-    background: var(--bg-dark, #1a1a1a); border: 1px solid var(--border, #555);
+    background: rgba(26,26,46,0.92); border: 1px solid var(--border, #555);
     border-radius: 8px; padding: 20px; min-width: 320px; max-width: 400px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6); color: var(--text, #fff);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .overlay-panel h3 { color: var(--accent, #06c6a4); font-size: 18px; margin-bottom: 16px; }
 .overlay-panel label { color: var(--text-secondary, #ccc); font-size: 12px; display: block; margin-top: 10px; margin-bottom: 4px; }
@@ -366,8 +367,7 @@ input[type="range"]::-moz-range-progress {
 }
 .audio-label { font-size: 10px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 150px; flex-shrink: 0; }
 .audio-device { flex: 1; }
-.audio-rate { width: 70px; flex-shrink: 0; }
-.audio-ch { width: 40px; flex-shrink: 0; }
+.audio-rate { width: 80px; flex-shrink: 0; }
 .audio-row select {
     background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
     border: 1px solid var(--border, #555); border-radius: 3px;
