@@ -51,33 +51,33 @@ class ThemeEditorOverlay(QWidget):
         self.combo_preset.hide()
         self._preset_lbl = QLabel("")
 
-        # ── S-Meter Style Dropdown ────────────────────────────────
-        smeter_row = QHBoxLayout()
-        smeter_row.setSpacing(6)
-        smeter_lbl = QLabel("S-Meter Style:")
-        smeter_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
-        smeter_row.addWidget(smeter_lbl)
-        self._smeter_lbl = smeter_lbl
+        # ── Tab-Leiste (Akten-Ordner Laschen) ─────────────────────
+        from PySide6.QtWidgets import QStackedWidget
+        tab_row = QHBoxLayout()
+        tab_row.setSpacing(0)
+        self._tab_buttons = []
+        self._tab_names = ["Farben", "S-Meter", "Digi-Modes"]
+        self._current_tab = 0
 
-        self.combo_smeter_style = DropDownComboBox()
-        for key, label in _SMETER_STYLES:
-            self.combo_smeter_style.addItem(label, userData=key)
-        # Aktuellen Style vorwählen
-        current_style = T.get("smeter_style", "segment")
-        for i in range(self.combo_smeter_style.count()):
-            if self.combo_smeter_style.itemData(i) == current_style:
-                self.combo_smeter_style.setCurrentIndex(i)
-                break
-        self.combo_smeter_style.setStyleSheet(f"""
-            QComboBox {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
-                border: 1px solid {T['border']}; border-radius: 5px;
-                padding: 4px 8px; font-size: 11px; min-height: 24px; }}
-            QComboBox::drop-down {{ border: none; width: 20px; }}
-            QComboBox QAbstractItemView {{ background-color: {T['bg_mid']}; color: {T['text_secondary']};
-                selection-background-color: {T['bg_light']}; border: 1px solid {T['border']}; }}""")
-        self.combo_smeter_style.currentIndexChanged.connect(self._on_smeter_style_changed)
-        smeter_row.addWidget(self.combo_smeter_style, stretch=1)
-        root.addLayout(smeter_row)
+        for i, name in enumerate(self._tab_names):
+            btn = QPushButton(name)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setFixedHeight(28)
+            btn.clicked.connect(lambda checked, idx=i: self._switch_tab(idx))
+            tab_row.addWidget(btn)
+            self._tab_buttons.append(btn)
+        tab_row.addStretch()
+        root.addLayout(tab_row)
+        self._apply_tab_styles()
+
+        self._tab_stack = QStackedWidget()
+        self._tab_stack.setStyleSheet("background: transparent;")
+
+        # ── TAB 0: Farben ─────────────────────────────────────────
+        self._tab_colors = QWidget()
+        tab_colors_layout = QVBoxLayout(self._tab_colors)
+        tab_colors_layout.setContentsMargins(0, 4, 0, 0)
+        tab_colors_layout.setSpacing(4)
 
         # ── Farbliste mit Punkten + Edit-Button pro Zeile ─────────
         scroll = QScrollArea()
@@ -140,7 +140,72 @@ class ThemeEditorOverlay(QWidget):
 
         color_list.addStretch()
         scroll.setWidget(scroll_widget)
-        root.addWidget(scroll, stretch=1)
+        tab_colors_layout.addWidget(scroll, stretch=1)
+        self._tab_stack.addWidget(self._tab_colors)
+
+        # ── TAB 1: S-Meter (Style-Liste mit Highlight) ────────────
+        self._tab_smeter = QWidget()
+        tab_smeter_layout = QVBoxLayout(self._tab_smeter)
+        tab_smeter_layout.setContentsMargins(0, 4, 0, 0)
+        tab_smeter_layout.setSpacing(2)
+
+        # Dummy combo für Kompatibilität (versteckt)
+        self.combo_smeter_style = DropDownComboBox()
+        for key, label in _SMETER_STYLES:
+            self.combo_smeter_style.addItem(label, userData=key)
+        self.combo_smeter_style.hide()
+        self.combo_smeter_style.currentIndexChanged.connect(self._on_smeter_style_changed)
+
+        self._smeter_style_rows = {}
+        self._selected_smeter = T.get("smeter_style", "segment")
+
+        smeter_scroll = QScrollArea()
+        smeter_scroll.setWidgetResizable(True)
+        smeter_scroll.setStyleSheet("""
+            QScrollArea { border: none; background: transparent; }
+            QScrollBar:vertical { width: 6px; background: transparent; }
+            QScrollBar::handle:vertical { background: rgba(128,128,128,60); border-radius: 3px; min-height: 20px; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+        """)
+        smeter_list_widget = QWidget()
+        smeter_list = QVBoxLayout(smeter_list_widget)
+        smeter_list.setContentsMargins(4, 4, 4, 4)
+        smeter_list.setSpacing(2)
+
+        for key, label in _SMETER_STYLES:
+            row = QWidget()
+            row.setFixedHeight(36)
+            row.setCursor(Qt.PointingHandCursor)
+            row_l = QHBoxLayout(row)
+            row_l.setContentsMargins(8, 0, 8, 0)
+            row_l.setSpacing(8)
+
+            # Punkt (Akzentfarbe wenn aktiv, grau wenn nicht)
+            dot = QLabel("")
+            dot.setFixedSize(14, 14)
+            row_l.addWidget(dot)
+
+            lbl = QPushButton(label)
+            lbl.setCursor(Qt.PointingHandCursor)
+            lbl.clicked.connect(lambda checked, k=key: self._select_smeter_style(k))
+            row_l.addWidget(lbl, stretch=1)
+
+            smeter_list.addWidget(row)
+            self._smeter_style_rows[key] = (row, dot, lbl)
+
+        smeter_list.addStretch()
+        smeter_scroll.setWidget(smeter_list_widget)
+        tab_smeter_layout.addWidget(smeter_scroll, stretch=1)
+        self._update_smeter_list_styles()
+        self._tab_stack.addWidget(self._tab_smeter)
+
+        # ── TAB 2: Digi-Modes ─────────────────────────────────────
+        from ui.theme_digi import DigiColorWidget
+        self._tab_digi = DigiColorWidget(self._theme_data)
+        self._tab_stack.addWidget(self._tab_digi)
+
+        root.addWidget(self._tab_stack, stretch=1)
 
         # Dummy-Attribute für Kompatibilität
         self._color_preview = QLabel("")
@@ -222,6 +287,102 @@ class ThemeEditorOverlay(QWidget):
 
         root.addLayout(save_row)
         self._init_done = True
+
+    def _switch_tab(self, idx):
+        """Tab wechseln — Speichern-Dialog nur wenn Änderungen vorhanden."""
+        if idx == self._current_tab:
+            return
+        # Prüfe ob sich was geändert hat seit dem letzten Snapshot
+        if self._has_unsaved_changes():
+            from PySide6.QtWidgets import QMessageBox
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Speichern?")
+            msg.setText("Änderungen speichern bevor Sie wechseln?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            msg.button(QMessageBox.Yes).setText("Ja, speichern")
+            msg.button(QMessageBox.No).setText("Verwerfen")
+            msg.button(QMessageBox.Cancel).setText("Abbrechen")
+            result = msg.exec()
+            if result == QMessageBox.Cancel:
+                return
+            if result == QMessageBox.Yes:
+                self._save_theme()
+            else:
+                # Verwerfen — Snapshot wiederherstellen
+                self._theme_data.clear()
+                self._theme_data.update(copy.deepcopy(self._theme_snapshot))
+        self._current_tab = idx
+        self._tab_stack.setCurrentIndex(idx)
+        self._apply_tab_styles()
+        self._take_snapshot()
+        if idx == 1:
+            self._selected_smeter = self._theme_data.get("smeter_style", "segment")
+            self._update_smeter_list_styles()
+        elif idx == 2:
+            self._tab_digi.set_theme_data(self._theme_data)
+        # Snapshot NACH Tab-Init (Defaults können theme_data erweitern)
+        self._take_snapshot()
+
+    def _take_snapshot(self):
+        """Aktuellen Theme-Stand im RAM speichern für Änderungs-Erkennung."""
+        self._theme_snapshot = copy.deepcopy(self._theme_data)
+
+    def _has_unsaved_changes(self):
+        """Prüft ob theme_data sich seit dem Snapshot geändert hat."""
+        if not hasattr(self, '_theme_snapshot') or not self._theme_snapshot:
+            return False
+        return self._theme_data != self._theme_snapshot
+
+    def _apply_tab_styles(self):
+        """Tab-Buttons stylen — aktiver Tab hervorgehoben."""
+        for i, btn in enumerate(self._tab_buttons):
+            if i == self._current_tab:
+                btn.setStyleSheet(f"""
+                    QPushButton {{ background: {T['bg_mid']}; color: {T['text']};
+                        border: 1px solid {T['border']}; border-bottom: none;
+                        border-radius: 6px 6px 0 0; padding: 4px 12px;
+                        font-size: 11px; font-weight: bold; }}""")
+            else:
+                btn.setStyleSheet(f"""
+                    QPushButton {{ background: transparent; color: {T['text_muted']};
+                        border: none; border-bottom: 1px solid {T['border']};
+                        border-radius: 0; padding: 4px 12px; font-size: 11px; }}
+                    QPushButton:hover {{ color: {T['text']}; }}""")
+
+    def _select_smeter_style(self, key):
+        """S-Meter Style in der Liste auswählen."""
+        self._selected_smeter = key
+        self._theme_data["smeter_style"] = key
+        self._update_smeter_list_styles()
+        # Live-Preview
+        T["smeter_style"] = key
+        main_win = self.parent().window() if self.parent() else None
+        if main_win and hasattr(main_win, "refresh_theme"):
+            main_win.refresh_theme()
+        from core.theme import _refresh_callbacks
+        for cb in _refresh_callbacks[:]:
+            try:
+                cb()
+            except Exception:
+                pass
+
+    def _update_smeter_list_styles(self):
+        """S-Meter Style-Liste visuell aktualisieren."""
+        for key, (row, dot, lbl) in self._smeter_style_rows.items():
+            is_active = (key == self._selected_smeter)
+            if is_active:
+                dot.setStyleSheet(f"background: {T['accent']}; border: 2px solid {T['accent']}; border-radius: 7px;")
+                lbl.setStyleSheet(f"""
+                    QPushButton {{ background: transparent; border: none;
+                        color: {T['text']}; font-size: 12px; font-weight: bold; text-align: left; padding: 0; }}""")
+                row.setStyleSheet(f"background: {T['bg_light']}; border: 1px solid {T['accent']}; border-radius: 4px;")
+            else:
+                dot.setStyleSheet(f"background: {T['bg_light']}; border: 2px solid {T['border']}; border-radius: 7px;")
+                lbl.setStyleSheet(f"""
+                    QPushButton {{ background: transparent; border: none;
+                        color: {T['text_secondary']}; font-size: 12px; text-align: left; padding: 0; }}
+                    QPushButton:hover {{ color: {T['text']}; }}""")
+                row.setStyleSheet("background: transparent; border: none; border-radius: 4px;")
 
     def _on_smeter_style_changed(self, index):
         """S-Meter Style in theme_data setzen → Live-Preview."""
@@ -598,6 +759,7 @@ class ThemeEditorOverlay(QWidget):
             self._refresh_own_styles()
             self._rebuild_preset_combo()
             self._detect_current_preset()
+            self._take_snapshot()
 
             # Grüner Border NACH refresh (sonst wird er sofort überschrieben)
             self._btn_save.setStyleSheet(self._save_ok)
@@ -650,6 +812,13 @@ class ThemeEditorOverlay(QWidget):
                         border: 1px solid {T['border']}; border-radius: 5px;
                         padding: 4px 8px; font-size: 12px; }}
         """)
+        # Tabs
+        if hasattr(self, '_tab_buttons'):
+            self._apply_tab_styles()
+        if hasattr(self, '_smeter_style_rows'):
+            self._update_smeter_list_styles()
+        if hasattr(self, '_tab_digi'):
+            self._tab_digi.refresh_theme()
         # S-Meter Style Dropdown
         if hasattr(self, '_smeter_lbl'):
             self._smeter_lbl.setStyleSheet(f"color: {T['text_secondary']}; font-size: 11px; border: none;")
@@ -708,6 +877,7 @@ class ThemeEditorOverlay(QWidget):
         self.panel.move((self.width() - pw) // 2, (self.height() - ph) // 2)
         self._refresh_own_styles()
         self._load_theme()
+        self._take_snapshot()
         self._rebuild_preset_combo()
         self._detect_current_preset()
         self.show()

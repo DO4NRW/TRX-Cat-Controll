@@ -12,5 +12,6 @@
         "COMP": false,
         "AGC": "MID",
         "PREAMP": "P2"
-    }
+    },
+    "freq_locked": false
 }

@@ -15,10 +15,10 @@ import serial
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QComboBox, QSlider, QLineEdit,
                                QProgressBar, QFrame)
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont
 
-from core.theme import T, register_refresh
+from core.theme import T, register_refresh, themed_icon
 from core.session_logger import log_action, log_event, log_error
 from core.smeter_widgets import create_smeter
 
@@ -211,7 +211,7 @@ class IC705Widget(QWidget):
         self.slider_span = QSlider(Qt.Vertical)
         self.slider_span.setRange(0, 7)
         self.slider_span.setValue(3)
-        self.slider_span.setFixedWidth(16)
+        self.slider_span.setFixedWidth(28)
         self.slider_span.setInvertedAppearance(True)  # Oben = großer Span
         self.slider_span.sliderPressed.connect(lambda: setattr(self, '_span_lock', True))
         self.slider_span.valueChanged.connect(self._on_span_changed)
@@ -223,6 +223,8 @@ class IC705Widget(QWidget):
             (25000, "25 kHz"), (50000, "50 kHz"), (100000, "100 kHz"),
             (250000, "250 kHz"), (500000, "500 kHz"),
         ]
+
+        self._freq_locked = False
 
         self.waterfall = WaterfallWidget(self, num_points=475, max_amp=160)
         self.waterfall.setMinimumHeight(0)
@@ -260,20 +262,46 @@ class IC705Widget(QWidget):
         # Wasserfall-Regler (vertikal, rechts neben Wasserfall)
         slider_col = QVBoxLayout()
         slider_col.setSpacing(2)
+        slider_col.setContentsMargins(6, 0, 0, 0)
+        slider_col.setAlignment(Qt.AlignHCenter)
+
+        # Lock-Button (klein, oben in der Slider-Spalte)
+        from PySide6.QtWidgets import QPushButton
+        from PySide6.QtGui import QIcon
+        _icons_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))), "assets", "icons")
+        self._lock_icon_open = themed_icon(os.path.join(_icons_dir, "lock_open.svg"))
+        self._lock_icon_closed = themed_icon(os.path.join(_icons_dir, "lock.svg"))
+        self.btn_lock = QPushButton()
+        self.btn_lock.setFixedSize(28, 28)
+        self.btn_lock.setCheckable(True)
+        self.btn_lock.setIcon(self._lock_icon_open)
+        self.btn_lock.setIconSize(QSize(22, 22))
+        self.btn_lock.setCursor(Qt.PointingHandCursor)
+        self.btn_lock.setToolTip("Frequenz sperren")
+        self.btn_lock.setStyleSheet(f"""
+            QPushButton {{ background: transparent; border: none; padding: 0; }}
+            QPushButton:checked {{ background: {T['bg_light']}; border: 1px solid {T['accent']}; border-radius: 3px; }}""")
+        self.btn_lock.toggled.connect(self._toggle_freq_lock)
+        slider_col.addWidget(self.btn_lock)
 
         _vslider_style = f"""
             QSlider::groove:vertical {{ background: {T['slider_groove']}; width: 4px; border-radius: 2px; }}
             QSlider::handle:vertical {{ background: {T['slider_handle']}; height: 12px; margin: 0 -4px; border-radius: 6px; }}
             QSlider::sub-page:vertical {{ background: {T['slider_fill']}; border-radius: 2px; }}"""
 
+        _lbl_style = f"color: {T['text_muted']}; font-size: 8px; border: none;"
+        _col_w = 28  # Gleiche Breite wie Lock-Button
+
         lbl_sig = QLabel("SIG")
-        lbl_sig.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        lbl_sig.setStyleSheet(_lbl_style)
         lbl_sig.setAlignment(Qt.AlignCenter)
+        lbl_sig.setFixedWidth(_col_w)
         slider_col.addWidget(lbl_sig)
         self.slider_signal = QSlider(Qt.Vertical)
-        self.slider_signal.setRange(10, 60)  # color_gain * 10 (1.0 - 6.0)
-        self.slider_signal.setValue(30)       # Default 3.0
-        self.slider_signal.setFixedWidth(16)
+        self.slider_signal.setRange(10, 60)
+        self.slider_signal.setValue(30)
+        self.slider_signal.setFixedWidth(_col_w)
         self.slider_signal.setToolTip("Signal Kontrast")
         self.slider_signal.setFocusPolicy(Qt.NoFocus)
         self.slider_signal.setStyleSheet(_vslider_style)
@@ -281,13 +309,14 @@ class IC705Widget(QWidget):
         slider_col.addWidget(self.slider_signal, stretch=1)
 
         lbl_nf = QLabel("NF")
-        lbl_nf.setStyleSheet(f"color: {T['text_muted']}; font-size: 8px; border: none;")
+        lbl_nf.setStyleSheet(_lbl_style)
         lbl_nf.setAlignment(Qt.AlignCenter)
+        lbl_nf.setFixedWidth(_col_w)
         slider_col.addWidget(lbl_nf)
         self.slider_noise = QSlider(Qt.Vertical)
-        self.slider_noise.setRange(0, 30)  # black_level 0-30
-        self.slider_noise.setValue(3)      # Default 3
-        self.slider_noise.setFixedWidth(16)
+        self.slider_noise.setRange(0, 30)
+        self.slider_noise.setValue(3)
+        self.slider_noise.setFixedWidth(_col_w)
         self.slider_noise.setToolTip("Rausch-Filter (Black Level)")
         self.slider_noise.setFocusPolicy(Qt.NoFocus)
         self.slider_noise.setStyleSheet(_vslider_style)
@@ -980,6 +1009,8 @@ class IC705Widget(QWidget):
     def _set_freq_from_input(self):
         if not self._cat or not self._cat.connected:
             return
+        if getattr(self, '_freq_locked', False):
+            return
         try:
             txt = self.input_freq.text().strip().replace(",", ".")
             parts = txt.split(".")
@@ -1071,11 +1102,17 @@ class IC705Widget(QWidget):
             print(f"DSP speichern fehlgeschlagen: {e}")
 
     def _load_dsp_state(self):
-        """DSP Button-States aus ui_state.json laden."""
+        """DSP Button-States + Lock aus ui_state.json laden."""
         try:
             path = self._status_conf_path()
             with open(path) as f:
-                dsp = json.load(f).get("dsp_state", {})
+                cfg = json.load(f)
+            # Lock-Status laden
+            locked = cfg.get("freq_locked", False)
+            self._freq_locked = locked
+            if hasattr(self, 'btn_lock'):
+                self.btn_lock.setChecked(locked)
+            dsp = cfg.get("dsp_state", {})
             if not dsp:
                 print("Keine gespeicherten DSP-States")
                 return
@@ -1188,9 +1225,28 @@ class IC705Widget(QWidget):
     # WATERFALL CLICK / SCROLL
     # ══════════════════════════════════════════════════════════════════
 
+    def _toggle_freq_lock(self, checked):
+        self._freq_locked = checked
+        self.btn_lock.setIcon(self._lock_icon_closed if checked else self._lock_icon_open)
+        log_action(f"Frequenz-Lock {'aktiviert' if checked else 'deaktiviert'}")
+        # In ui_state.json speichern
+        try:
+            path = self._status_conf_path()
+            cfg = {}
+            if os.path.exists(path):
+                with open(path) as f:
+                    cfg = json.load(f)
+            cfg["freq_locked"] = checked
+            with open(path, "w") as f:
+                json.dump(cfg, f, indent=4)
+        except Exception:
+            pass
+
     def _on_waterfall_click(self, freq_hz):
         """Klick im Wasserfall → Frequenz direkt setzen."""
         if not self._cat or not self._cat.connected:
+            return
+        if getattr(self, '_freq_locked', False):
             return
         log_action(f"Wasserfall Klick → {freq_hz} Hz")
         self._cat.set_frequency(freq_hz)
@@ -1204,6 +1260,8 @@ class IC705Widget(QWidget):
     def _on_waterfall_scroll(self, delta_hz):
         """Mausrad im Wasserfall → Frequenz um delta_hz ändern."""
         if not self._cat or not self._cat.connected:
+            return
+        if getattr(self, '_freq_locked', False):
             return
         self._cat.step_frequency(delta_hz)
 

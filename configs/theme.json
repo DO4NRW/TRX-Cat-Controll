@@ -48,7 +48,7 @@
     "wf_freq_tick": "rgba(60, 70, 80, 255)",
     "wf_cursor": "rgba(0, 220, 100, 255)",
     "wf_palette": "sdr",
-    "smeter_style": "gauge",
+    "smeter_style": "segment",
     "smeter_needle": "rgba(255, 255, 255, 200)",
     "smeter_needle_shaft": "rgba(100, 100, 100, 255)",
     "smeter_needle_pivot": "rgba(80, 80, 80, 255)",
