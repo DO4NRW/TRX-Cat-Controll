@@ -53,6 +53,7 @@ window.addEventListener('unhandledrejection', e => {
 let currentFreq = 14200000;
 let currentMode = 'USB';
 let connected = false;
+let demoRunning = false;
 let pttActive = false;
 let smeterValue = 0;
 let spectrum = new Float32Array(475);
@@ -661,22 +662,31 @@ function setupConnect() {
     const bar = document.querySelector('.status-bar');
 
     btn.addEventListener('click', async () => {
-        if (connected) {
+        if (connected || demoRunning) {
             // Disconnect
             if (rigSocket) { rigSocket.close(); rigSocket = null; }
             connected = false;
+            demoRunning = false;
             liveScope = false;
             btn.classList.remove('connected');
             bar.classList.remove('connected');
             status.textContent = 'SYSTEM READY';
-            // Demo-Playback zurücksetzen
             demoStartTime = 0;
+            // Wasserfall-Canvas leeren
+            const wfCanvas = document.getElementById('waterfall');
+            if (wfCanvas) {
+                const wfCtx = wfCanvas.getContext('2d');
+                wfCtx.clearRect(0, 0, wfCanvas.width, wfCanvas.height);
+            }
             return;
         }
 
-        // Automatisch zum Server verbinden (gleicher Host wie die Seite)
+        // Demo-Modus starten + WebSocket versuchen
+        demoRunning = true;
+        btn.classList.add('connected');
+        bar.classList.add('connected');
         const host = document.getElementById('cfg-server-host')?.value.trim() || window.location.host;
-        status.textContent = `Verbinde mit ${host}...`;
+        status.textContent = `Demo-Modus aktiv — Verbinde mit ${host}...`;
         connectWebSocket(host);
     });
 }
@@ -1113,23 +1123,23 @@ function playDemoFrame() {
 function tick() {
     const now = performance.now();
 
-    // Demo-Daten NUR wenn NICHT verbunden
-    if (!connected && !rigSocket) {
-        playDemoFrame();
+    if (demoRunning || rigSocket) {
+        // Demo-Daten nur wenn kein echter TRX
+        if (demoRunning && !rigSocket) {
+            playDemoFrame();
+        }
+
+        // Blend + Wasserfall + S-Meter
+        for (let i = 0; i < 475; i++) {
+            displaySpectrum[i] = displaySpectrum[i] * 0.90 + spectrum[i] * 0.10;
+        }
+        if (now - lastWfTime >= 80) {
+            lastWfTime = now;
+            drawWaterfall();
+        }
+        updateSMeter();
     }
 
-    // Blend: exponentieller gleitender Mittelwert (alpha=0.10 wie Desktop waterfall.py)
-    for (let i = 0; i < 475; i++) {
-        displaySpectrum[i] = displaySpectrum[i] * 0.90 + spectrum[i] * 0.10;
-    }
-
-    // Wasserfall: neue Zeile nur alle 80ms (wie App scroll_timer)
-    if (now - lastWfTime >= 80) {
-        lastWfTime = now;
-        drawWaterfall();
-    }
-
-    updateSMeter();
     updateTXMeter();
     requestAnimationFrame(tick);
 }
