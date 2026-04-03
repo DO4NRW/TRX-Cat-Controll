@@ -214,12 +214,17 @@ function drawWaterfall() {
     ctx.fillStyle = wfBg;
     ctx.fillRect(0, 0, w, specH);
 
-    // Grid
+    // Grid (4x8 wie Desktop)
     ctx.strokeStyle = wfGrid;
     ctx.lineWidth = 1;
+    const dbLabels = ['-20', '-40', '-60'];
+    ctx.font = '8px Consolas, monospace';
     for (let i = 1; i < 4; i++) {
         const y = Math.floor(specH * i / 4);
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        // dB-Skala Labels links
+        ctx.fillStyle = wfFreqText;
+        ctx.fillText(dbLabels[i - 1] || '', 3, y - 2);
     }
     for (let i = 1; i < 8; i++) {
         const x = Math.floor(w * i / 8);
@@ -672,8 +677,24 @@ function setupSettings() {
                     root.style.setProperty(cssKey, m[2]);
                 }
             }
+            // Color-Dots im Theme Editor aktualisieren
+            refreshColorDots();
         } catch (err) {
             console.warn('Theme laden fehlgeschlagen:', err);
+        }
+    });
+}
+
+// Color-Dots nach Theme-Wechsel aktualisieren
+function refreshColorDots() {
+    const cs = getComputedStyle(document.documentElement);
+    document.querySelectorAll('#color-list .color-item').forEach(item => {
+        const key = item.querySelector('.color-value')?.textContent;
+        if (key) {
+            const cssKey = '--' + key.replace(/_/g, '-');
+            const val = cs.getPropertyValue(cssKey).trim();
+            const dot = item.querySelector('.color-dot');
+            if (dot && val) dot.style.background = val;
         }
     });
 }
@@ -756,18 +777,26 @@ function setupThemeTabs() {
 
     // Digi-Farben
     const DIGI_COLORS = [
-        ['digi_cq', 'CQ'], ['digi_reply', 'Reply'], ['digi_own_call', 'Own Call'],
-        ['digi_worked', 'Worked'], ['digi_new_dxcc', 'New DXCC'], ['digi_new_grid', 'New Grid'],
-        ['digi_new_call', 'New Callsign'], ['digi_alert', 'Alert'],
-        ['digi_bg', 'Hintergrund'], ['digi_text', 'Text'], ['digi_time', 'Zeitstempel'],
-        ['digi_freq', 'Frequenz'], ['digi_snr', 'SNR'],
+        ['digi_cq', 'CQ', '#00ff00'],
+        ['digi_reply', 'Reply', '#ff6666'],
+        ['digi_own_call', 'Own Call', '#ff0000'],
+        ['digi_worked', 'Worked', '#888888'],
+        ['digi_new_dxcc', 'New DXCC', '#ff00ff'],
+        ['digi_new_grid', 'New Grid', '#ffaa00'],
+        ['digi_new_call', 'New Callsign', '#00ccff'],
+        ['digi_alert', 'Alert', '#ffff00'],
+        ['digi_bg', 'Hintergrund', '#1a1a2e'],
+        ['digi_text', 'Text', '#ffffff'],
+        ['digi_time', 'Zeitstempel', '#aaaaaa'],
+        ['digi_freq', 'Frequenz', '#66ccff'],
+        ['digi_snr', 'SNR', '#88ff88'],
     ];
     const digiList = document.getElementById('digi-color-list');
     if (digiList) {
-        DIGI_COLORS.forEach(([key, label]) => {
+        DIGI_COLORS.forEach(([key, label, color]) => {
             const item = document.createElement('div');
             item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:var(--accent, #06c6a4)"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
+            item.innerHTML = `<div class="color-dot" style="background:${color}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span>`;
             digiList.appendChild(item);
         });
     }
