@@ -1124,23 +1124,20 @@ function playDemoFrame() {
 function tick() {
     const now = performance.now();
 
-    if (demoRunning || rigSocket) {
-        // Demo-Daten nur wenn kein echter TRX
-        if (demoRunning && !rigSocket) {
-            playDemoFrame();
-        }
-
-        // Blend + Wasserfall + S-Meter
-        for (let i = 0; i < 475; i++) {
-            displaySpectrum[i] = displaySpectrum[i] * 0.90 + spectrum[i] * 0.10;
-        }
-        if (now - lastWfTime >= 80) {
-            lastWfTime = now;
-            drawWaterfall();
-        }
-        updateSMeter();
+    // Demo-Daten NUR wenn demoRunning
+    if (demoRunning && !rigSocket) {
+        playDemoFrame();
     }
 
+    // Wasserfall IMMER zeichnen (auch eingefroren wenn kein Connect)
+    for (let i = 0; i < 475; i++) {
+        displaySpectrum[i] = displaySpectrum[i] * 0.90 + spectrum[i] * 0.10;
+    }
+    if (now - lastWfTime >= 80) {
+        lastWfTime = now;
+        drawWaterfall();
+    }
+    updateSMeter();
     updateTXMeter();
     requestAnimationFrame(tick);
 }
