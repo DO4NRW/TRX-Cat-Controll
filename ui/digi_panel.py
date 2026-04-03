@@ -6,7 +6,7 @@ FT8/FT4 Platzhalter + RTTY Decode (RTTYDecoder).
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QComboBox, QTextEdit, QSplitter,
                                QFrame, QProgressBar, QStackedWidget)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont
 
 from core.theme import T, register_refresh, themed_icon
@@ -14,16 +14,33 @@ from core.digi.rtty import RTTYDecoder, RTTYConfig
 from ui._constants import _ICONS
 
 import os
+import random
 
 
 class DigiPanelOverlay(QWidget):
     """Overlay für den Digi-Modus (FT8/FT4 Platzhalter + RTTY aktiv)."""
 
+    _RTTY_DEMO_LINES = [
+        "CQ CQ DE DO4NRW DO4NRW JN49 K\r\n",
+        "DL1ABC DE DO4NRW 599 NR 001 K\r\n",
+        "CQ DX DE DO4NRW JN49 PSE K\r\n",
+        "DO4NRW DE DL2XYZ 579 NR 042 BK\r\n",
+        "QSL 73 DE DO4NRW SK\r\n",
+        "CQ CQ DE OE3MWS OE3MWS JN78 K\r\n",
+        "DO4NRW DE PA3ABC 599 NR 007 K\r\n",
+        "CQ CONTEST DE DK5WL JO31 K\r\n",
+        "DO4NRW DE F5RWT 599 599 BK\r\n",
+        "QRZ? DE DO4NRW K\r\n",
+    ]
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setVisible(False)
         self._rtty_decoder = RTTYDecoder(RTTYConfig())
         self._rtty_active  = False
+        self._rtty_demo_timer = QTimer(self)
+        self._rtty_demo_timer.timeout.connect(self._rtty_demo_tick)
         self._build_ui()
         self._rtty_decoder.decoded.connect(self._on_rtty_decoded)
         register_refresh(self.refresh_theme)
@@ -202,13 +219,23 @@ class DigiPanelOverlay(QWidget):
         self._rtty_decoder.reset()
         self._rtty_active = True
         self.btn_rtty.setText("■ RTTY Stop")
-        self.decode_view.setPlainText("— RTTY läuft — warte auf Audio-Input —\n")
-        self.lbl_tx_status.setText("RTTY RX aktiv")
+        self.decode_view.setPlainText("— RTTY läuft — Demo-Modus (kein TRX) —\n")
+        self.lbl_tx_status.setText("RTTY RX aktiv [Demo]")
+        self._rtty_demo_timer.start(random.randint(2000, 5000))
 
     def _stop_rtty(self):
         self._rtty_active = False
+        self._rtty_demo_timer.stop()
         self.btn_rtty.setText("▶ RTTY Start")
         self.lbl_tx_status.setText("RX — Warte auf Decodes...")
+
+    def _rtty_demo_tick(self):
+        """Simuliert eine zufällige RTTY-Decode-Zeile im Demo-Modus."""
+        if not self._rtty_active:
+            return
+        line = random.choice(self._RTTY_DEMO_LINES)
+        self._on_rtty_decoded(line)
+        self._rtty_demo_timer.start(random.randint(2000, 5000))
 
     def _on_rtty_decoded(self, text: str):
         """Dekodierten RTTY-Text in decode_view anhängen."""
