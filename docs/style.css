@@ -32,29 +32,21 @@ body {
     gap: 0;
 }
 .spacer { flex: 1; }
-.menu-btn, .connect-btn {
-    width: 40px; height: 40px;
+/* Icon-Buttons (wie QPushButton mit setIcon) */
+.icon-btn {
     display: flex; align-items: center; justify-content: center;
     background: var(--bg-mid, #2a2a2a);
     border: 2px solid var(--border, #555);
     border-radius: 5px;
-    cursor: pointer;
-    flex-shrink: 0;
+    cursor: pointer; padding: 0; flex-shrink: 0;
 }
-.mute-btn {
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--bg-mid, #2a2a2a);
-    border: 2px solid var(--border, #555);
-    border-radius: 5px;
-    cursor: pointer;
-    flex-shrink: 0;
-    padding: 0;
-}
-.menu-btn:hover { border-color: var(--accent, #06c6a4); background: var(--bg-light, #3a3a3a); }
-.mute-btn:hover { border-color: var(--border-hover, #888); }
+.icon-btn:hover { background: var(--bg-light, #3a3a3a); border-color: var(--border-hover, #888); }
+.icon-btn:active { background: var(--bg-dark, #1a1a1a); }
+.icon-btn img { display: block; }
+.menu-btn, .connect-btn { width: 40px; height: 40px; }
+.mute-btn { width: 32px; height: 32px; margin-right: 6px; }
+.menu-btn:hover { border-color: var(--accent, #06c6a4); }
 .mute-btn.muted { border-color: var(--error, #ff4444); }
-.connect-btn:hover { border-color: var(--border-hover, #888); }
 .connect-btn.connected { border-color: var(--accent, #06c6a4); }
 .connect-btn.error { border-color: var(--error, #ff4444); }
 
