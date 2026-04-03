@@ -404,10 +404,42 @@ function updateSMeter() {
     const segW = w / S_SEGMENTS;
     const fillSegs = frac * S_SEGMENTS;
 
+    // LED Style — runde Punkte
+    if (currentSmeterStyle === 'led') {
+        ctx.clearRect(0, 0, w, h);
+        for (let i = 0; i < S_SEGMENTS; i++) {
+            const cx = Math.floor(i * segW + segW / 2);
+            const cy = h / 2;
+            const r = Math.min(segW / 2 - 2, h / 2 - 2);
+            const isOver = i >= 10;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = i < fillSegs ? (isOver ? errorColor : barColor) : bgColor;
+            ctx.fill();
+            ctx.strokeStyle = borderColor;
+            ctx.stroke();
+        }
+        return;
+    }
+
+    // Digit Style — große Zahl im Canvas
+    if (currentSmeterStyle === 'digit') {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+        ctx.font = 'bold 16px Consolas, monospace';
+        ctx.fillStyle = barColor;
+        ctx.textAlign = 'center';
+        ctx.fillText(sStr, w / 2, h - 3);
+        ctx.textAlign = 'start';
+        return;
+    }
+
+    // Default: Segment Style
     for (let i = 0; i < S_SEGMENTS; i++) {
         const x = Math.floor(i * segW) + gap / 2;
         const sw = Math.floor(segW) - gap;
-        const isOver = i >= 10;  // +10, +20, +40, +60 → rot
+        const isOver = i >= 10;
         const activeColor = isOver ? errorColor : barColor;
 
         if (i < Math.floor(fillSegs)) {

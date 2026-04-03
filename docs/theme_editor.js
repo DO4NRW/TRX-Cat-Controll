@@ -78,7 +78,8 @@ function setupThemeTabs() {
             editBtn.className = 'color-edit-btn';
             editBtn.innerHTML = '<img src="icons/build.svg" width="20" height="20">';
             editBtn.addEventListener('click', () => {
-                colorInput.value = rgbaToHex(val);
+                const current = getComputedStyle(document.documentElement).getPropertyValue(cssKey).trim();
+                colorInput.value = rgbaToHex(current || val);
                 colorInput.click();
             });
             colorInput.addEventListener('input', () => {
