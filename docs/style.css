@@ -260,7 +260,7 @@ input[type="range"]::-moz-range-progress {
     width: 1px; height: 5px; background: var(--smeter-label-inactive, #888);
 }
 #smeter-canvas {
-    width: 100%; display: block;
+    width: 100%; display: block; min-height: 20px;
 }
 
 /* ═══ PTT Button ═══ */
