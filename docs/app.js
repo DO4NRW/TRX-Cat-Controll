@@ -806,24 +806,15 @@ function setupWfSliders() {
     const valSig = document.getElementById('val-sig');
     const valNf = document.getElementById('val-nf');
 
-    if (sigEl && typeof noUiSlider !== 'undefined') {
-        noUiSlider.create(sigEl, {
-            start: [30], direction: 'rtl', orientation: 'vertical',
-            range: { min: 5, max: 100 }, step: 1
-        });
-        sigEl.noUiSlider.on('update', (values) => {
-            wfColorGain = parseFloat(values[0]) / 10.0;
+    if (sigEl) {
+        sigEl.addEventListener('input', () => {
+            wfColorGain = sigEl.value / 10.0;
             if (valSig) valSig.textContent = wfColorGain.toFixed(1);
         });
     }
-
-    if (nfEl && typeof noUiSlider !== 'undefined') {
-        noUiSlider.create(nfEl, {
-            start: [18], direction: 'rtl', orientation: 'vertical',
-            range: { min: 1, max: 80 }, step: 1
-        });
-        nfEl.noUiSlider.on('update', (values) => {
-            wfBlackLevel = Math.round(parseFloat(values[0]));
+    if (nfEl) {
+        nfEl.addEventListener('input', () => {
+            wfBlackLevel = parseInt(nfEl.value);
             if (valNf) valNf.textContent = wfBlackLevel;
         });
     }
