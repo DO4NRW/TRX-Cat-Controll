@@ -177,7 +177,7 @@ input[type="range"]::-moz-range-progress {
 }
 .wf-vslider::-webkit-slider-runnable-track {
     width: 4px;
-    background: var(--slider-groove, #555);
+    background: var(--slider-groove, #2a2a2a);
     border-radius: 2px;
 }
 .wf-vslider::-webkit-slider-thumb {
