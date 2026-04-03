@@ -96,21 +96,21 @@
                         </select>
                         <label>Data Bits</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn" data-val="default">Default</button>
-                            <button class="btn tgl-btn" data-val="7">Seven</button>
-                            <button class="btn tgl-btn active" data-val="8">Eight</button>
+                            <div class="toggle-option" data-val="default"><img src="icons/toggle_off.svg" width="40" height="24"><span>Default</span></div>
+                            <div class="toggle-option" data-val="7"><img src="icons/toggle_off.svg" width="40" height="24"><span>Seven</span></div>
+                            <div class="toggle-option active" data-val="8"><img src="icons/toggle_on.svg" width="40" height="24"><span>Eight</span></div>
                         </div>
                         <label>Stop Bits</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn" data-val="default">Default</button>
-                            <button class="btn tgl-btn" data-val="1">One</button>
-                            <button class="btn tgl-btn active" data-val="2">Two</button>
+                            <div class="toggle-option" data-val="default"><img src="icons/toggle_off.svg" width="40" height="24"><span>Default</span></div>
+                            <div class="toggle-option" data-val="1"><img src="icons/toggle_off.svg" width="40" height="24"><span>One</span></div>
+                            <div class="toggle-option active" data-val="2"><img src="icons/toggle_on.svg" width="40" height="24"><span>Two</span></div>
                         </div>
                         <label>Handshake</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn active" data-val="none">None</button>
-                            <button class="btn tgl-btn" data-val="xonxoff">XON/XOFF</button>
-                            <button class="btn tgl-btn" data-val="hw">Hardware</button>
+                            <div class="toggle-option active" data-val="none"><img src="icons/toggle_on.svg" width="40" height="24"><span>None</span></div>
+                            <div class="toggle-option" data-val="xonxoff"><img src="icons/toggle_off.svg" width="40" height="24"><span>XON/XOFF</span></div>
+                            <div class="toggle-option" data-val="hw"><img src="icons/toggle_off.svg" width="40" height="24"><span>Hardware</span></div>
                         </div>
                         <label>CI-V Adresse</label>
                         <input type="text" id="cfg-civ" value="0xA4" readonly>
@@ -121,10 +121,10 @@
                         <h4>PTT / Mode</h4>
                         <label>PTT Method</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn" data-val="vox">VOX</button>
-                            <button class="btn tgl-btn" data-val="dtr">DTR</button>
-                            <button class="btn tgl-btn active" data-val="cat">CAT</button>
-                            <button class="btn tgl-btn" data-val="rts">RTS</button>
+                            <div class="toggle-option" data-val="vox"><img src="icons/toggle_off.svg" width="40" height="24"><span>VOX</span></div>
+                            <div class="toggle-option" data-val="dtr"><img src="icons/toggle_off.svg" width="40" height="24"><span>DTR</span></div>
+                            <div class="toggle-option active" data-val="cat"><img src="icons/toggle_on.svg" width="40" height="24"><span>CAT</span></div>
+                            <div class="toggle-option" data-val="rts"><img src="icons/toggle_off.svg" width="40" height="24"><span>RTS</span></div>
                         </div>
                         <label>PTT Port</label>
                         <select id="cfg-ptt-port">
@@ -134,20 +134,20 @@
                         </select>
                         <label>PTT Invert</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn active" data-val="off">Off</button>
-                            <button class="btn tgl-btn" data-val="on">On</button>
+                            <div class="toggle-option active" data-val="off"><img src="icons/toggle_on.svg" width="40" height="24"><span>Off</span></div>
+                            <div class="toggle-option" data-val="on"><img src="icons/toggle_off.svg" width="40" height="24"><span>On</span></div>
                         </div>
                         <label>Mode</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn active" data-val="none">None</button>
-                            <button class="btn tgl-btn" data-val="usb">USB</button>
-                            <button class="btn tgl-btn" data-val="data">Data/Pkt</button>
+                            <div class="toggle-option active" data-val="none"><img src="icons/toggle_on.svg" width="40" height="24"><span>None</span></div>
+                            <div class="toggle-option" data-val="usb"><img src="icons/toggle_off.svg" width="40" height="24"><span>USB</span></div>
+                            <div class="toggle-option" data-val="data"><img src="icons/toggle_off.svg" width="40" height="24"><span>Data/Pkt</span></div>
                         </div>
                         <label>Split Operation</label>
                         <div class="toggle-group">
-                            <button class="btn tgl-btn active" data-val="none">None</button>
-                            <button class="btn tgl-btn" data-val="rig">Rig</button>
-                            <button class="btn tgl-btn" data-val="fake">Fake It</button>
+                            <div class="toggle-option active" data-val="none"><img src="icons/toggle_on.svg" width="40" height="24"><span>None</span></div>
+                            <div class="toggle-option" data-val="rig"><img src="icons/toggle_off.svg" width="40" height="24"><span>Rig</span></div>
+                            <div class="toggle-option" data-val="fake"><img src="icons/toggle_off.svg" width="40" height="24"><span>Fake It</span></div>
                         </div>
                         <label>Server Adresse</label>
                         <input type="text" id="cfg-server-host" placeholder="raspi.local:8080">

@@ -346,9 +346,17 @@ input[type="range"]::-moz-range-progress {
     border-radius: 6px; padding: 12px;
 }
 .setup-card h4 { color: var(--accent, #06c6a4); font-size: 13px; margin-bottom: 8px; }
-.toggle-group { display: flex; gap: 4px; }
-.toggle-group .tgl-btn { flex: 1; padding: 4px 6px; font-size: 11px; min-height: 28px; }
-.toggle-group .tgl-btn.active { border: 2px solid var(--accent, #06c6a4); font-weight: bold; }
+.toggle-group {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+}
+.toggle-option {
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer; padding: 2px;
+    color: var(--text-secondary, #ccc); font-size: 13px;
+}
+.toggle-option:hover { color: var(--text, #fff); }
+.toggle-option.active { color: var(--text, #fff); }
+.toggle-option img { flex-shrink: 0; }
 
 /* ═══ Audio Setup ═══ */
 .audio-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }

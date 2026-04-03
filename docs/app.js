@@ -710,10 +710,16 @@ function refreshColorDots() {
 // Toggle-Gruppen (Radio Setup)
 function setupToggleGroups() {
     document.querySelectorAll('.toggle-group').forEach(group => {
-        group.querySelectorAll('.tgl-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                group.querySelectorAll('.tgl-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        group.querySelectorAll('.toggle-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                group.querySelectorAll('.toggle-option').forEach(o => {
+                    o.classList.remove('active');
+                    const img = o.querySelector('img');
+                    if (img) img.src = 'icons/toggle_off.svg';
+                });
+                opt.classList.add('active');
+                const img = opt.querySelector('img');
+                if (img) img.src = 'icons/toggle_on.svg';
             });
         });
     });
