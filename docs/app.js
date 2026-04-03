@@ -803,14 +803,18 @@ let wfBlackLevel = 5;
 function setupWfSliders() {
     const sigSlider = document.getElementById('slider-sig');
     const nfSlider = document.getElementById('slider-nf');
+    const valSig = document.getElementById('val-sig');
+    const valNf = document.getElementById('val-nf');
     if (sigSlider) {
         sigSlider.addEventListener('input', () => {
             wfColorGain = parseInt(sigSlider.value) / 10.0;
+            if (valSig) valSig.textContent = wfColorGain.toFixed(1);
         });
     }
     if (nfSlider) {
         nfSlider.addEventListener('input', () => {
             wfBlackLevel = parseInt(nfSlider.value);
+            if (valNf) valNf.textContent = wfBlackLevel;
         });
     }
 }
