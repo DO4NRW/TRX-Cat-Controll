@@ -268,7 +268,7 @@ function drawWaterfall() {
     const wfY = freqY + freqBarH;
 
     // Offscreen Wasserfall in Canvas-Breite (dynamische Höhe)
-    const wfBufH = Math.max(200, wfH);
+    const wfBufH = Math.max(60, Math.round(wfH * 0.4));
     if (!window._wfCanvas || window._wfCanvas.width !== w || window._wfCanvas.height !== wfBufH) {
         window._wfCanvas = document.createElement('canvas');
         window._wfCanvas.width = w;
