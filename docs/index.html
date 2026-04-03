@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RigLink — Live Demo</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,11 +12,11 @@
         <!-- Menu Dropdown -->
         <div class="overlay" id="menu-overlay" style="display:none;">
             <div class="menu-dropdown">
-                <div class="menu-item" id="menu-radio"><span class="material-symbols-outlined">radio</span> Radio Setup</div>
-                <div class="menu-item" id="menu-audio"><span class="material-symbols-outlined">volume_up</span> Audio Setup</div>
-                <div class="menu-item" id="menu-theme"><span class="material-symbols-outlined">palette</span> Theme</div>
+                <div class="menu-item" id="menu-radio"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/radio.svg" width="20" height="20"> Radio Setup</div>
+                <div class="menu-item" id="menu-audio"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/sound.svg" width="20" height="20"> Audio Setup</div>
+                <div class="menu-item" id="menu-theme"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/settings.svg" width="20" height="20"> Theme</div>
                 <div class="menu-sep"></div>
-                <div class="menu-item" id="menu-report"><span class="material-symbols-outlined">bug_report</span> Bug Report</div>
+                <div class="menu-item" id="menu-report"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/bug_report.svg" width="20" height="20"> Bug Report</div>
             </div>
         </div>
 
@@ -144,8 +143,8 @@
             <div class="overlay-panel overlay-panel-wide">
                 <h3>Audio Setup</h3>
                 <div class="audio-toolbar">
-                    <button class="btn" id="btn-wave-test"><span class="material-symbols-outlined">play_arrow</span> Wave Test</button>
-                    <button class="btn" id="btn-rec-test"><span class="material-symbols-outlined">mic</span> Rec Test</button>
+                    <button class="btn" id="btn-wave-test">&#9654; Wave Test</button>
+                    <button class="btn" id="btn-rec-test"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/mic.svg" width="16" height="16"> Rec Test</button>
                     <button class="btn btn-accent" id="btn-audio-save">Speichern</button>
                 </div>
                 <div class="audio-devices">
@@ -267,7 +266,7 @@
 
         <!-- ═══ Top Bar ═══ -->
         <div class="top-bar">
-            <div class="menu-btn"><span class="material-symbols-outlined">menu</span></div>
+            <div class="menu-btn"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/menu.svg" width="24" height="24"></div>
             <div class="spacer"></div>
             <div class="rec-control">
                 <div class="toggle-switch" id="tgl-rec">
@@ -288,7 +287,7 @@
             <div class="vol-controls">
                 <span class="vol-label">VOL</span>
                 <input type="range" class="vol-slider" min="0" max="20" value="5">
-                <div class="mute-btn" id="btn-mute" title="Mute"><span class="material-symbols-outlined">volume_up</span></div>
+                <div class="mute-btn" id="btn-mute" title="Mute"><img class="mute-icon" src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_up.svg" width="20" height="20"></div>
             </div>
             <div class="rig-select">
                 <select id="rig-combo">
@@ -333,7 +332,7 @@
                     </optgroup>
                 </select>
             </div>
-            <div class="connect-btn" id="btn-connect" title="Connect"><span class="material-symbols-outlined">cable</span></div>
+            <div class="connect-btn" id="btn-connect" title="Connect"><img src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/connection.svg" width="24" height="24"></div>
         </div>
 
         <!-- ═══ Waterfall / Spectrum + TX-Bar + Slider ═══ -->
@@ -349,7 +348,7 @@
             </div>
             <div class="wf-sliders">
                 <button class="lock-btn" id="btn-lock" title="Frequenz sperren">
-                    <span class="material-symbols-outlined">lock_open</span>
+                    <img class="lock-icon" src="https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/lock_open.svg" width="20" height="20">
                 </button>
                 <span class="wf-slider-label">SIG</span>
                 <input type="range" class="wf-vslider" id="slider-sig" orient="vertical" min="10" max="60" value="30">

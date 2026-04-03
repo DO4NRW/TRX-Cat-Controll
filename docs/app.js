@@ -896,7 +896,10 @@ function setupLock() {
     btn.addEventListener('click', () => {
         freqLocked = !freqLocked;
         btn.classList.toggle('locked', freqLocked);
-        btn.querySelector('.material-symbols-outlined').textContent = freqLocked ? 'lock' : 'lock_open';
+        const img = btn.querySelector('.lock-icon');
+        if (img) img.src = freqLocked
+            ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/lock.svg'
+            : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/lock_open.svg';
     });
 }
 
@@ -952,8 +955,10 @@ function setupMute() {
     if (btn) {
         btn.addEventListener('click', () => {
             muted = !muted;
-            const icon = btn.querySelector('.material-symbols-outlined');
-            icon.textContent = muted ? 'volume_off' : 'volume_up';
+            const img = btn.querySelector('.mute-icon');
+            if (img) img.src = muted
+                ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_off.svg'
+                : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_up.svg';
             btn.style.borderColor = muted
                 ? (getComputedStyle(document.documentElement).getPropertyValue('--error').trim() || '#ff4444')
                 : (getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#555');

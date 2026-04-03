@@ -1,6 +1,5 @@
 /* RigLink Demo — 1:1 wie die Desktop-App */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-.material-symbols-outlined { font-size: 22px; color: var(--text, #fff); }
 body {
     font-family: 'Segoe UI', 'Roboto', sans-serif;
     overflow: hidden;
@@ -181,13 +180,13 @@ input[type="range"]::-moz-range-progress {
     background: transparent; border: none; cursor: pointer;
     border-radius: 3px; padding: 0; flex-shrink: 0;
 }
-.lock-btn .material-symbols-outlined { font-size: 20px; color: var(--text-muted, #aaa); }
-.lock-btn:hover .material-symbols-outlined { color: var(--text, #fff); }
+.lock-btn img { opacity: 0.6; }
+.lock-btn:hover img { opacity: 1; }
 .lock-btn.locked {
     background: var(--bg-light, #3a3a3a);
     border: 1px solid var(--accent, #06c6a4);
 }
-.lock-btn.locked .material-symbols-outlined { color: var(--accent, #06c6a4); }
+.lock-btn.locked img { opacity: 1; }
 
 /* ═══ Buttons (wie PySide6 QPushButton) ═══ */
 .btn {
@@ -252,7 +251,7 @@ input[type="range"]::-moz-range-progress {
 
 /* ═══ PTT Button ═══ */
 .ptt-btn {
-    margin: 4px 0; padding: 12px;
+    margin: 4px 0; padding: 12px; height: 50px;
     font-size: 20px; font-weight: bold; font-family: 'Roboto', sans-serif;
     background: var(--ptt-rx-bg, #3d3d3d); color: var(--text, #fff);
     border: 2px solid var(--ptt-rx-border, #555); border-radius: 8px; cursor: pointer;
@@ -282,7 +281,7 @@ input[type="range"]::-moz-range-progress {
     border-radius: 6px; cursor: pointer; font-size: 14px;
 }
 .menu-item:hover { background: var(--bg-light, #3a3a3a); color: var(--text, #fff); }
-.menu-item .material-symbols-outlined { font-size: 20px; }
+.menu-item img { vertical-align: middle; }
 .menu-sep { height: 1px; background: var(--border, #555); margin: 4px 8px; }
 
 /* ═══ Overlays ═══ */
@@ -342,7 +341,7 @@ input[type="range"]::-moz-range-progress {
 /* ═══ Audio Setup ═══ */
 .audio-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
 .audio-toolbar .btn { display: flex; align-items: center; gap: 4px; font-size: 12px; }
-.audio-toolbar .material-symbols-outlined { font-size: 16px; }
+.audio-toolbar img { vertical-align: middle; }
 .audio-devices { display: flex; flex-direction: column; gap: 8px; }
 .audio-row {
     display: flex; gap: 6px; align-items: center;
