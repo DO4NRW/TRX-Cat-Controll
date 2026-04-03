@@ -856,35 +856,39 @@ function updateTXMeter() {
     }
 }
 
-// Kontaktformular
+// Bug Report
 function setupContact() {
     const overlay = document.getElementById('contact-overlay');
     const link = document.getElementById('link-contact');
     const closeBtn = document.getElementById('btn-contact-close');
     const sendBtn = document.getElementById('btn-contact-send');
     const status = document.getElementById('contact-status');
+    const sysInfo = document.getElementById('report-sysinfo');
 
-    link.addEventListener('click', (e) => { e.preventDefault(); overlay.style.display = 'flex'; });
+    function openReport() {
+        if (sysInfo) sysInfo.textContent = getBrowserInfo();
+        overlay.style.display = 'flex';
+    }
+
+    if (link) link.addEventListener('click', (e) => { e.preventDefault(); openReport(); });
     closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
 
     sendBtn.addEventListener('click', async () => {
-        const name = document.getElementById('contact-name').value.trim();
-        const email = document.getElementById('contact-email').value.trim();
         const msg = document.getElementById('contact-msg').value.trim();
-        if (!msg) { status.textContent = 'Bitte Nachricht eingeben.'; return; }
+        if (!msg) { status.textContent = 'Bitte Beschreibung eingeben.'; return; }
 
         sendBtn.disabled = true;
         sendBtn.textContent = 'Sende...';
 
-        const body = `## Kontaktformular (Web Demo)\n\n**Von:** ${name || 'Anonym'}\n**E-Mail:** ${email || 'nicht angegeben'}\n\n## Nachricht\n${msg}\n\n## Browser\n\`\`\`\n${getBrowserInfo()}\n\`\`\``;
-        const result = await sendWebReport('[KONTAKT] ' + (name || 'Web Demo'), body);
+        const body = `## Bug Report (Web Demo)\n\n## Beschreibung\n${msg}\n\n## System\n\`\`\`\n${getBrowserInfo()}\n\`\`\``;
+        const result = await sendWebReport('[BUG] Web Demo', body);
 
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Senden';
+        sendBtn.textContent = 'Report senden';
 
         if (result && result.ok) {
-            status.textContent = 'Nachricht gesendet! Danke.';
+            status.textContent = 'Report gesendet! Danke.';
             document.getElementById('contact-msg').value = '';
             setTimeout(() => { overlay.style.display = 'none'; status.textContent = ''; }, 2000);
         } else {

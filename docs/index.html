@@ -107,7 +107,8 @@
                             <div class="toggle-option active" data-val="2"><img src="icons/toggle_on.svg" width="40" height="24"><span>Two</span></div>
                         </div>
                         <label>Handshake</label>
-                        <div class="toggle-group">
+                        <div class="toggle-group" style="grid-template-columns:repeat(4,1fr);">
+                            <div class="toggle-option" data-val="default"><img src="icons/toggle_off.svg" width="40" height="24"><span>Default</span></div>
                             <div class="toggle-option active" data-val="none"><img src="icons/toggle_on.svg" width="40" height="24"><span>None</span></div>
                             <div class="toggle-option" data-val="xonxoff"><img src="icons/toggle_off.svg" width="40" height="24"><span>XON/XOFF</span></div>
                             <div class="toggle-option" data-val="hw"><img src="icons/toggle_off.svg" width="40" height="24"><span>Hardware</span></div>
@@ -120,7 +121,7 @@
                     <div class="setup-card">
                         <h4>PTT / Mode</h4>
                         <label>PTT Method</label>
-                        <div class="toggle-group">
+                        <div class="toggle-group" style="grid-template-columns:repeat(2,1fr);">
                             <div class="toggle-option" data-val="vox"><img src="icons/toggle_off.svg" width="40" height="24"><span>VOX</span></div>
                             <div class="toggle-option" data-val="dtr"><img src="icons/toggle_off.svg" width="40" height="24"><span>DTR</span></div>
                             <div class="toggle-option active" data-val="cat"><img src="icons/toggle_on.svg" width="40" height="24"><span>CAT</span></div>
@@ -167,32 +168,33 @@
         <!-- Audio Setup Overlay -->
         <div class="overlay" id="audio-overlay" style="display:none;">
             <div class="overlay-panel overlay-panel-wide">
-                <h3>Audio Setup</h3>
+                <h3>Audio Matrix</h3>
                 <div class="audio-toolbar">
                     <button class="btn" id="btn-wave-test" title="Wave Test" style="display:flex;align-items:center;justify-content:center;gap:6px;">&#9654; Wave Test</button>
                     <button class="btn" id="btn-rec-test" title="Rec Test" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="icons/mic.svg" width="16" height="16"> Rec Test</button>
-                    <button class="icon-btn btn-accent" id="btn-audio-save" title="Audio speichern" style="width:40px;height:40px;flex:0;"><img src="icons/save.svg" width="22" height="22"></button>
+                    <div class="spacer"></div>
+                    <button class="icon-btn btn-accent" id="btn-audio-save" title="Audio speichern" style="width:40px;height:40px;"><img src="icons/save.svg" width="22" height="22"></button>
                 </div>
                 <div class="audio-devices">
                     <div class="audio-row">
                         <span class="audio-label">PC MICROPHONE (Input)</span>
                         <select class="audio-device"><option>Default Input</option><option>USB Headset Mic</option><option>Built-in Mic</option></select>
-                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <input type="number" class="audio-rate" value="48000">
                     </div>
                     <div class="audio-row">
                         <span class="audio-label">TRX MICROPHONE (Input)</span>
                         <select class="audio-device"><option>Default Input</option><option>IC-705 USB Audio CODEC</option></select>
-                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <input type="number" class="audio-rate" value="48000">
                     </div>
                     <div class="audio-row">
                         <span class="audio-label">TRX LOUDSPEAKER (Output)</span>
                         <select class="audio-device"><option>Default Output</option><option>IC-705 USB Audio CODEC</option></select>
-                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <input type="number" class="audio-rate" value="48000">
                     </div>
                     <div class="audio-row">
                         <span class="audio-label">PC LOUDSPEAKER (Output)</span>
                         <select class="audio-device"><option>Default Output</option><option>USB Headset</option><option>Built-in Speaker</option></select>
-                        <select class="audio-rate"><option>44100</option><option selected>48000</option><option>96000</option></select>
+                        <input type="number" class="audio-rate" value="48000">
                     </div>
                 </div>
                 <div class="vu-meter-section">
@@ -269,19 +271,17 @@
             </div>
         </div>
 
-        <!-- Kontakt Overlay -->
+        <!-- Bug Report Overlay -->
         <div class="overlay" id="contact-overlay" style="display:none;">
             <div class="overlay-panel">
-                <h3>Kontakt</h3>
-                <label>Name / Rufzeichen</label>
-                <input type="text" id="contact-name" placeholder="z.B. DL1ABC">
-                <label>E-Mail</label>
-                <input type="text" id="contact-email" placeholder="deine@email.de">
-                <label>Nachricht</label>
-                <textarea id="contact-msg" rows="4" placeholder="Deine Nachricht..."></textarea>
+                <h3>Bug Report senden</h3>
+                <label>Beschreibung</label>
+                <textarea id="contact-msg" rows="4" placeholder="Was ist passiert?"></textarea>
+                <label>System-Info</label>
+                <pre id="report-sysinfo" style="background:var(--bg-mid);color:var(--text-muted);padding:8px;border-radius:4px;font-size:10px;overflow-x:auto;max-height:80px;"></pre>
                 <div class="overlay-buttons">
                     <button class="btn" id="btn-contact-close">Abbrechen</button>
-                    <button class="btn btn-accent" id="btn-contact-send">Senden</button>
+                    <button class="btn btn-accent" id="btn-contact-send">Report senden</button>
                 </div>
                 <div class="contact-status" id="contact-status"></div>
             </div>

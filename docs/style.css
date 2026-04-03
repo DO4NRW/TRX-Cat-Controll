@@ -370,7 +370,12 @@ input[type="range"]::-moz-range-progress {
 }
 .audio-label { font-size: 11px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 180px; flex-shrink: 0; }
 .audio-device { flex: 1; min-width: 0; overflow: hidden; }
-.audio-rate { width: 80px; flex-shrink: 0; }
+.audio-rate {
+    width: 80px; flex-shrink: 0;
+    background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
+    border: 1px solid var(--border, #555); border-radius: 3px;
+    padding: 8px 6px; font-size: 12px; height: 36px;
+}
 .audio-row select {
     background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
     border: 1px solid var(--border, #555); border-radius: 3px;
