@@ -164,7 +164,6 @@ input[type="range"]::-moz-range-progress {
     color: var(--text-muted, #aaa); font-size: 8px; writing-mode: horizontal-tb;
 }
 /* Vertikale Slider (SIG, NF, SPAN) */
-.wf-vslider-wrap { flex: 1; display: flex; justify-content: center; min-height: 60px; }
 .wf-vslider {
     writing-mode: vertical-lr;
     direction: rtl;
@@ -176,16 +175,16 @@ input[type="range"]::-moz-range-progress {
     cursor: pointer;
 }
 .wf-vslider::-webkit-slider-runnable-track {
-    width: 4px;
-    background: var(--slider-groove, #2a2a2a);
-    border-radius: 2px;
+    width: 4px !important;
+    background: var(--slider-groove, #2a2a2a) !important;
+    border-radius: 2px !important;
 }
 .wf-vslider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px; height: 16px;
-    background: var(--slider-handle, #06c6a4);
-    border-radius: 50%;
-    margin-left: -6px;
+    -webkit-appearance: none !important;
+    width: 16px !important; height: 16px !important;
+    background: var(--slider-handle, #06c6a4) !important;
+    border-radius: 50% !important;
+    margin-left: -6px !important;
 }
 
 /* Lock-Button */
