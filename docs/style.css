@@ -96,7 +96,7 @@ input[type="range"] {
     height: 20px;
 }
 input[type="range"]::-webkit-slider-runnable-track {
-    background: var(--slider-groove, #888); height: 6px; border-radius: 3px;
+    background: var(--slider-groove, #2a2a2a); height: 6px; border-radius: 3px;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -104,7 +104,7 @@ input[type="range"]::-webkit-slider-thumb {
     border-radius: 50%; margin-top: -5px;
 }
 input[type="range"]::-moz-range-track {
-    background: var(--slider-groove, #888); height: 6px; border-radius: 3px; border: none;
+    background: var(--slider-groove, #2a2a2a); height: 6px; border-radius: 3px; border: none;
 }
 input[type="range"]::-moz-range-thumb {
     width: 16px; height: 16px; background: var(--slider-handle, #06c6a4);
@@ -171,14 +171,14 @@ input[type="range"]::-moz-range-progress {
     background: var(--slider-handle, #06c6a4); border-radius: 50%;
 }
 .wf-vslider::-webkit-slider-runnable-track {
-    width: 4px; background: var(--slider-groove, #888); border-radius: 2px;
+    width: 4px; background: var(--slider-groove, #2a2a2a); border-radius: 2px;
 }
 .wf-vslider::-moz-range-thumb {
     width: 12px; height: 12px; background: var(--slider-handle, #06c6a4);
     border-radius: 50%; border: none;
 }
 .wf-vslider::-moz-range-track {
-    width: 4px; background: var(--slider-groove, #888); border-radius: 2px;
+    width: 4px; background: var(--slider-groove, #2a2a2a); border-radius: 2px;
 }
 
 /* Lock-Button */
@@ -383,7 +383,7 @@ input[type="range"]::-moz-range-progress {
     flex: 1; height: 14px; background: var(--bg-dark, #1a1a1a);
     border: 1px solid var(--border, #555); border-radius: 3px; overflow: hidden;
 }
-.vu-bar { height: 100%; width: 0%; background: var(--vu-green, #4caf50); border-radius: 2px; transition: width 0.1s; }
+.vu-bar { height: 100%; width: 0%; background: var(--vu-green, #00cc00); border-radius: 2px; transition: width 0.1s; }
 
 /* ═══ Theme Editor ═══ */
 .theme-tabs { display: flex; gap: 2px; margin-bottom: 12px; }
@@ -460,8 +460,8 @@ input[type="range"]::-moz-range-progress {
 
 /* ═══ Legal Footer ═══ */
 .legal-footer {
-    padding: 4px 0; font-size: 9px; color: var(--text-muted, #666);
-    text-align: center; border-top: 1px solid var(--border, #333); flex-shrink: 0;
+    padding: 4px 0; font-size: 9px; color: var(--text-muted, #aaa);
+    text-align: center; border-top: 1px solid var(--border, #555); flex-shrink: 0;
 }
 .legal-footer a { color: var(--text-secondary, #aaa); text-decoration: none; }
 .legal-footer a:hover { color: var(--accent, #06c6a4); }
