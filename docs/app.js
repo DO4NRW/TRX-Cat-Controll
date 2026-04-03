@@ -439,6 +439,147 @@ function updateSMeter() {
         return;
     }
 
+    // Gauge Style — Analogzeiger Halbkreis
+    if (currentSmeterStyle === 'gauge' || currentSmeterStyle === 'classic') {
+        const gh = 60;
+        canvas.height = gh;
+        ctx.clearRect(0, 0, w, gh);
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, gh);
+        const cx = w / 2, cy = gh - 4, r = Math.min(w / 2 - 8, gh - 8);
+        const startAngle = Math.PI, endAngle = 0;
+        const needleAngle = Math.PI - frac * Math.PI;
+        // Bogenhintergrund
+        ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0);
+        ctx.strokeStyle = borderColor; ctx.lineWidth = 6; ctx.stroke();
+        // Aktiver Bogen
+        ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI - frac * Math.PI);
+        ctx.strokeStyle = frac > 10/14 ? errorColor : barColor; ctx.lineWidth = 6; ctx.stroke();
+        if (currentSmeterStyle === 'classic') {
+            // Skalenstriche
+            for (let i = 0; i <= 14; i++) {
+                const a = Math.PI - i / 14 * Math.PI;
+                const r0 = r - 8, r1 = r - (i % 2 === 0 ? 2 : 5);
+                ctx.beginPath();
+                ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a));
+                ctx.lineTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a));
+                ctx.strokeStyle = borderColor; ctx.lineWidth = 1; ctx.stroke();
+            }
+        }
+        // Nadel
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + (r - 4) * Math.cos(needleAngle), cy + (r - 4) * Math.sin(needleAngle));
+        ctx.strokeStyle = barColor; ctx.lineWidth = 2; ctx.stroke();
+        // Mittelpunkt
+        ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = barColor; ctx.fill();
+        // Label
+        ctx.font = 'bold 10px Consolas,monospace'; ctx.fillStyle = barColor;
+        ctx.textAlign = 'center'; ctx.fillText(sStr, cx, cy - r + 12); ctx.textAlign = 'start';
+        ctx.lineWidth = 1;
+        return;
+    }
+
+    // VU-Meter Style — klassischer Balken mit Zonen
+    if (currentSmeterStyle === 'vu') {
+        canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = bgColor; ctx.fillRect(0, 0, w, h);
+        const zones = [
+            { end: 0.6, color: barColor },
+            { end: 0.85, color: '#f0a030' },
+            { end: 1.0, color: errorColor },
+        ];
+        let x0 = 0;
+        for (const z of zones) {
+            const zw = w * z.end - x0;
+            ctx.fillStyle = (x0 / w) < frac ? z.color : borderColor;
+            if ((x0 / w) < frac && (x0 + zw) / w > frac) {
+                ctx.fillStyle = z.color;
+                ctx.fillRect(x0, 2, (frac * w - x0), h - 4);
+                ctx.fillStyle = borderColor;
+                ctx.fillRect(frac * w, 2, x0 + zw - frac * w, h - 4);
+            } else {
+                ctx.fillRect(x0, 2, zw, h - 4);
+            }
+            x0 += zw;
+        }
+        ctx.font = '9px Consolas,monospace'; ctx.fillStyle = barColor;
+        ctx.textAlign = 'right'; ctx.fillText(sStr, w - 2, h - 2); ctx.textAlign = 'start';
+        return;
+    }
+
+    // Nixie Style — Glüh-Röhren Optik
+    if (currentSmeterStyle === 'nixie') {
+        const nh = 36;
+        canvas.height = nh;
+        ctx.clearRect(0, 0, w, nh);
+        ctx.fillStyle = '#0a0500'; ctx.fillRect(0, 0, w, nh);
+        // Röhren-Rahmen
+        ctx.strokeStyle = '#5a3a00'; ctx.lineWidth = 1;
+        ctx.strokeRect(1, 1, w - 2, nh - 2);
+        // Glüh-Effekt
+        const grd = ctx.createRadialGradient(w/2, nh/2, 2, w/2, nh/2, w/2);
+        grd.addColorStop(0, 'rgba(255,160,0,0.15)');
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, w, nh);
+        // Zahl
+        ctx.font = 'bold 24px Consolas,monospace';
+        ctx.fillStyle = '#ff9900';
+        ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 12;
+        ctx.textAlign = 'center'; ctx.fillText(sStr, w/2, nh - 5);
+        ctx.shadowBlur = 0; ctx.textAlign = 'start';
+        return;
+    }
+
+    // Dual-Nadel Style — S-Meter oben, Power unten
+    if (currentSmeterStyle === 'dual') {
+        const dh = 40;
+        canvas.height = dh;
+        ctx.clearRect(0, 0, w, dh);
+        ctx.fillStyle = bgColor; ctx.fillRect(0, 0, w, dh);
+        const drawBar = (y0, bh, f, color, label) => {
+            const bw = w - 40;
+            ctx.fillStyle = borderColor; ctx.fillRect(0, y0, bw, bh);
+            ctx.fillStyle = color; ctx.fillRect(0, y0, bw * f, bh);
+            ctx.font = '9px Consolas,monospace'; ctx.fillStyle = color;
+            ctx.textAlign = 'right'; ctx.fillText(label, w - 2, y0 + bh - 1);
+            ctx.textAlign = 'start';
+        };
+        drawBar(2, 14, frac, barColor, sStr);
+        const pFrac = (0.3 + Math.sin(Date.now() / 800) * 0.05);  // fake TX power
+        drawBar(dh - 16, 14, pFrac, '#f0a030', 'P25W');
+        ctx.font = '8px Consolas,monospace'; ctx.fillStyle = borderColor;
+        ctx.fillText('S', 0, 14); ctx.fillText('P', 0, dh - 3);
+        return;
+    }
+
+    // Rings Style — konzentrische Bögen
+    if (currentSmeterStyle === 'rings') {
+        const rh = 50;
+        canvas.height = rh;
+        ctx.clearRect(0, 0, w, rh);
+        ctx.fillStyle = bgColor; ctx.fillRect(0, 0, w, rh);
+        const cx = w / 2, cy = rh;
+        const rings = 4;
+        for (let i = rings; i >= 1; i--) {
+            const ri = (rh - 6) * i / rings;
+            const ringFrac = Math.min(1, frac * rings / i);
+            const isOver = i === rings && frac > 10/14;
+            ctx.beginPath(); ctx.arc(cx, cy, ri, Math.PI, 0);
+            ctx.strokeStyle = borderColor; ctx.lineWidth = 5; ctx.stroke();
+            if (ringFrac > 0) {
+                ctx.beginPath(); ctx.arc(cx, cy, ri, Math.PI, Math.PI - ringFrac * Math.PI);
+                ctx.strokeStyle = isOver ? errorColor : barColor; ctx.lineWidth = 5; ctx.stroke();
+            }
+        }
+        ctx.font = 'bold 10px Consolas,monospace'; ctx.fillStyle = barColor;
+        ctx.textAlign = 'center'; ctx.fillText(sStr, cx, cy - 2); ctx.textAlign = 'start';
+        ctx.lineWidth = 1;
+        return;
+    }
+
     // Default: Segment Style
     for (let i = 0; i < S_SEGMENTS; i++) {
         const x = Math.floor(i * segW) + gap / 2;
