@@ -284,6 +284,7 @@ input[type="range"]::-moz-range-progress {
 .status-bar.error { border-top: 2px solid var(--error, #ff4444); }
 .status-text { color: var(--text, #fff); font-size: 12px; font-family: 'Consolas', monospace; }
 .version { color: var(--text-secondary, #ccc); font-size: 11px; }
+.demo-hint { color: var(--accent, #06c6a4); font-size: 10px; opacity: 0.7; flex: 1; text-align: center; }
 
 /* ═══ Menu Dropdown ═══ */
 .menu-dropdown {
