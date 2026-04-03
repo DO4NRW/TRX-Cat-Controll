@@ -4,8 +4,8 @@ body {
     font-family: 'Segoe UI', 'Roboto', sans-serif;
     overflow: hidden;
     height: 100vh;
-    background: #1a1a1a;
-    color: #fff;
+    background: var(--bg-dark, #1a1a1a);
+    color: var(--text, #fff);
 }
 #app {
     display: flex;
@@ -78,7 +78,7 @@ body {
 }
 .toggle-thumb {
     width: 16px; height: 16px;
-    background: #fff;
+    background: var(--text, #fff);
     border-radius: 50%;
     position: absolute;
     top: 1px; left: 2px;
