@@ -798,7 +798,7 @@ function setupMute() {
 
 // Waterfall SIG/NF Slider
 let wfColorGain = 3.0;
-let wfBlackLevel = 3;
+let wfBlackLevel = 5;
 
 function setupWfSliders() {
     const sigSlider = document.getElementById('slider-sig');
