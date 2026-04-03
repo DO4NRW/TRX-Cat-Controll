@@ -959,9 +959,7 @@ function setupMute() {
             if (img) img.src = muted
                 ? 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_off.svg'
                 : 'https://raw.githubusercontent.com/DO4NRW/RigLink/main/assets/icons/volume_up.svg';
-            btn.style.borderColor = muted
-                ? (getComputedStyle(document.documentElement).getPropertyValue('--error').trim() || '#ff4444')
-                : (getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#555');
+            btn.classList.toggle('muted', muted);
         });
     }
 }

@@ -29,10 +29,10 @@ body {
     display: flex;
     align-items: center;
     padding: 4px 0;
-    gap: 8px;
+    gap: 0;
 }
 .spacer { flex: 1; }
-.menu-btn, .mute-btn, .connect-btn {
+.menu-btn, .connect-btn {
     width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
     background: var(--bg-mid, #2a2a2a);
@@ -41,12 +41,25 @@ body {
     cursor: pointer;
     flex-shrink: 0;
 }
-.menu-btn:hover, .mute-btn:hover { border-color: var(--accent, #06c6a4); }
+.mute-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-mid, #2a2a2a);
+    border: 2px solid var(--border, #555);
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 5px;
+}
+.menu-btn:hover { border-color: var(--accent, #06c6a4); background: var(--bg-light, #3a3a3a); }
+.mute-btn:hover { border-color: var(--border-hover, #888); }
+.mute-btn.muted { border-color: var(--error, #ff4444); }
 .connect-btn:hover { border-color: var(--border-hover, #888); }
 .connect-btn.connected { border-color: var(--accent, #06c6a4); }
+.connect-btn.error { border-color: var(--error, #ff4444); }
 
 .vox-controls, .vol-controls { display: flex; align-items: center; gap: 4px; }
-.slider-label { color: var(--text, #fff); font-size: 10px; min-width: 38px; }
+.slider-label { color: var(--text, #fff); font-size: 10px; font-weight: bold; min-width: 44px; }
 
 /* Toggle Switch (wie PySide6 ToggleButton) */
 .toggle-switch {
@@ -110,7 +123,7 @@ input[type="range"]::-moz-range-progress {
 .small-slider::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4px; }
 .small-slider::-moz-range-track { height: 4px; }
 .small-slider::-moz-range-thumb { width: 12px; height: 12px; }
-.vol-slider { width: 100px; }
+.vol-slider { width: 80px; height: 30px; }
 
 .rig-select select {
     background: var(--bg-mid, #2a2a2a); color: var(--text-secondary, #ccc);
@@ -261,10 +274,13 @@ input[type="range"]::-moz-range-progress {
 
 /* ═══ Status Bar ═══ */
 .status-bar {
-    display: flex; justify-content: space-between;
-    padding: 6px 0; border-top: 1px solid var(--border, #555); flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    height: 30px; padding: 0 10px;
+    background: var(--bg-dark, #1a1a1a);
+    border-top: 1px solid var(--border, #555); flex-shrink: 0;
 }
 .status-bar.connected { border-top: 2px solid var(--accent, #06c6a4); }
+.status-bar.error { border-top: 2px solid var(--error, #ff4444); }
 .status-text { color: var(--text, #fff); font-size: 12px; font-family: 'Consolas', monospace; }
 .version { color: var(--text-secondary, #ccc); font-size: 11px; }
 
