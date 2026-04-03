@@ -159,7 +159,7 @@
                 </div>
                 <div class="overlay-buttons">
                     <button class="btn" id="btn-settings-close">Schließen</button>
-                    <button class="btn btn-accent" id="btn-settings-save"><img src="icons/save.svg" width="16" height="16"> Speichern</button>
+                    <button class="icon-btn btn-accent" id="btn-settings-save" title="Einstellungen speichern" style="width:40px;height:40px;"><img src="icons/save.svg" width="22" height="22"></button>
                 </div>
             </div>
         </div>
@@ -169,9 +169,9 @@
             <div class="overlay-panel overlay-panel-wide">
                 <h3>Audio Setup</h3>
                 <div class="audio-toolbar">
-                    <button class="btn" id="btn-wave-test">&#9654; Wave Test</button>
-                    <button class="btn" id="btn-rec-test"><img src="icons/mic.svg" width="16" height="16"> Rec Test</button>
-                    <button class="btn btn-accent" id="btn-audio-save"><img src="icons/save.svg" width="16" height="16"> Speichern</button>
+                    <button class="btn" id="btn-wave-test" title="Wave Test" style="display:flex;align-items:center;justify-content:center;gap:6px;">&#9654; Wave Test</button>
+                    <button class="btn" id="btn-rec-test" title="Rec Test" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="icons/mic.svg" width="16" height="16"> Rec Test</button>
+                    <button class="icon-btn btn-accent" id="btn-audio-save" title="Audio speichern" style="width:40px;height:40px;flex:0;"><img src="icons/save.svg" width="22" height="22"></button>
                 </div>
                 <div class="audio-devices">
                     <div class="audio-row">
@@ -249,6 +249,8 @@
                     <input type="text" class="theme-name-input" id="theme-name" placeholder="Theme-Name...">
                     <button class="btn theme-delete-btn" id="btn-theme-delete" title="Löschen">X</button>
                     <button class="btn theme-reset-btn" id="btn-theme-reset" title="Reset"><img src="icons/reset.svg" width="20" height="20"></button>
+                    <div class="spacer"></div>
+                    <button class="icon-btn btn-accent" id="btn-theme-save" title="Theme speichern" style="width:40px;height:40px;"><img src="icons/save.svg" width="22" height="22"></button>
                 </div>
                 <!-- Preset Popup (versteckt) -->
                 <div class="theme-preset-popup" id="theme-preset-popup" style="display:none;">
