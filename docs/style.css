@@ -18,11 +18,13 @@ body {
 
 /* ═══ Title Bar ═══ */
 .title-bar {
-    text-align: center;
-    padding: 6px 0 4px;
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
     font-size: 13px;
     color: var(--text-secondary, #ccc);
 }
+.title-bar .title-text { flex: 1; text-align: center; }
 
 /* ═══ Top Bar ═══ */
 .top-bar {
@@ -167,11 +169,24 @@ input[type="range"]::-moz-range-progress {
 .wf-vslider {
     writing-mode: vertical-lr;
     direction: rtl;
-    -webkit-appearance: auto;
-    appearance: auto;
-    width: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
     flex: 1;
+    background: transparent;
     cursor: pointer;
+}
+.wf-vslider::-webkit-slider-runnable-track {
+    width: 4px;
+    background: var(--slider-groove, #555);
+    border-radius: 2px;
+}
+.wf-vslider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--slider-handle, #06c6a4);
+    border-radius: 50%;
+    margin-left: -6px;
 }
 
 /* Lock-Button */
