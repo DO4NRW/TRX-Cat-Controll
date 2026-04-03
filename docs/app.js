@@ -640,10 +640,7 @@ function setupSettings() {
         document.getElementById('contact-overlay').style.display = 'flex';
     });
 
-    // Close Buttons
-    document.getElementById('btn-settings-close').addEventListener('click', () => settingsOverlay.style.display = 'none');
-    document.getElementById('btn-audio-close').addEventListener('click', () => audioOverlay.style.display = 'none');
-    document.getElementById('btn-theme-close').addEventListener('click', () => themeOverlay.style.display = 'none');
+    // Overlays schließen sich per Klick außerhalb (kein Close-Button nötig)
 
     // Overlay schließen bei Klick außerhalb
     [settingsOverlay, audioOverlay, themeOverlay].forEach(ov => {
