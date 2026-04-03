@@ -358,15 +358,15 @@ input[type="range"]::-moz-range-progress {
 .audio-row {
     display: flex; gap: 6px; align-items: center;
     background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
-    border-radius: 4px; padding: 8px;
+    border-radius: 4px; padding: 10px 12px; min-height: 44px;
 }
-.audio-label { font-size: 10px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 150px; flex-shrink: 0; }
+.audio-label { font-size: 11px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 180px; flex-shrink: 0; }
 .audio-device { flex: 1; }
 .audio-rate { width: 80px; flex-shrink: 0; }
 .audio-row select {
     background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
     border: 1px solid var(--border, #555); border-radius: 3px;
-    padding: 4px; font-size: 11px;
+    padding: 8px 10px; font-size: 12px; height: 36px;
 }
 .vu-meter-section { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .vu-label { font-size: 11px; font-weight: bold; color: var(--text, #fff); }
