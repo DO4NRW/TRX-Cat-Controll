@@ -163,7 +163,8 @@ input[type="range"]::-moz-range-progress {
     color: var(--text-muted, #aaa); font-size: 8px; writing-mode: horizontal-tb;
 }
 .wf-vslider {
-    -webkit-appearance: slider-vertical; appearance: slider-vertical;
+    writing-mode: vertical-lr;
+    direction: rtl;
     width: 16px; flex: 1; cursor: pointer;
 }
 .wf-vslider::-webkit-slider-thumb {
