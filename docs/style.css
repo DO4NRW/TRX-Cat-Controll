@@ -338,8 +338,8 @@ input[type="range"]::-moz-range-progress {
 .contact-status { margin-top: 8px; font-size: 12px; text-align: center; color: var(--accent, #06c6a4); }
 
 /* Overlay Varianten */
-.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow-x: hidden; }
-.overlay-panel-tall { max-width: 420px; min-width: 380px; overflow-x: hidden; }
+.overlay-panel-wide { width: min(700px, 92vw); overflow-x: hidden; }
+.overlay-panel-tall { width: min(420px, 92vw); overflow-x: hidden; }
 
 /* ═══ Radio Setup ═══ */
 .setup-rig-row {
