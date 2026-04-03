@@ -3,6 +3,23 @@
  * Tabs, Farbliste, Color-Picker, Digi-Modes Farben, S-Meter Styles.
  */
 
+// Digi-Farben (Modulebene, wird auch vom Reset-Button genutzt)
+const DIGI_COLORS = [
+    ['digi_cq', 'CQ', '#00ff00'],
+    ['digi_reply', 'Reply', '#ff6666'],
+    ['digi_own_call', 'Own Call', '#ff0000'],
+    ['digi_worked', 'Worked', '#888888'],
+    ['digi_new_dxcc', 'New DXCC', '#ff00ff'],
+    ['digi_new_grid', 'New Grid', '#ffaa00'],
+    ['digi_new_call', 'New Callsign', '#00ccff'],
+    ['digi_alert', 'Alert', '#ffff00'],
+    ['digi_bg', 'Hintergrund', '#1a1a2e'],
+    ['digi_text', 'Text', '#ffffff'],
+    ['digi_time', 'Zeitstempel', '#aaaaaa'],
+    ['digi_freq', 'Frequenz', '#66ccff'],
+    ['digi_snr', 'SNR', '#88ff88'],
+];
+
 // Hilfsfunktion: rgba → hex
 function rgbaToHex(rgba) {
     const m = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -97,21 +114,6 @@ function setupThemeTabs() {
     }
 
     // Digi-Farben mit Color-Picker
-    const DIGI_COLORS = [
-        ['digi_cq', 'CQ', '#00ff00'],
-        ['digi_reply', 'Reply', '#ff6666'],
-        ['digi_own_call', 'Own Call', '#ff0000'],
-        ['digi_worked', 'Worked', '#888888'],
-        ['digi_new_dxcc', 'New DXCC', '#ff00ff'],
-        ['digi_new_grid', 'New Grid', '#ffaa00'],
-        ['digi_new_call', 'New Callsign', '#00ccff'],
-        ['digi_alert', 'Alert', '#ffff00'],
-        ['digi_bg', 'Hintergrund', '#1a1a2e'],
-        ['digi_text', 'Text', '#ffffff'],
-        ['digi_time', 'Zeitstempel', '#aaaaaa'],
-        ['digi_freq', 'Frequenz', '#66ccff'],
-        ['digi_snr', 'SNR', '#88ff88'],
-    ];
     const digiList = document.getElementById('digi-color-list');
     if (digiList) {
         DIGI_COLORS.forEach(([key, label, color]) => {
@@ -156,6 +158,37 @@ function setupThemeTabs() {
         });
     }
 
+    // Digi Reset-Button — setzt digi_* Farben auf aktuelles Preset zurück
+    const digiResetBtn = document.getElementById('btn-digi-reset');
+    if (digiResetBtn) {
+        digiResetBtn.addEventListener('click', () => {
+            const themeName = window._currentTheme || 'dark';
+            const theme = typeof THEMES !== 'undefined' ? THEMES[themeName] : null;
+            if (!theme) return;
+            const root = document.documentElement;
+            DIGI_COLORS.forEach(([key]) => {
+                const val = theme[key];
+                if (!val) return;
+                const m = val.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*(\d*)\)/);
+                if (!m) return;
+                const cssKey = '--' + key.replace(/_/g, '-');
+                const a = m[4] !== '' ? (+m[4] / 255) : 1;
+                root.style.setProperty(cssKey, `rgba(${m[1]},${m[2]},${m[3]},${a})`);
+            });
+            // Dots aktualisieren
+            const digiListEl = document.getElementById('digi-color-list');
+            if (digiListEl) {
+                digiListEl.querySelectorAll('.color-item').forEach(item => {
+                    const key = item.querySelector('.color-value')?.textContent;
+                    if (!key) return;
+                    const cssKey = '--' + key.replace(/_/g, '-');
+                    const dot = item.querySelector('.color-dot');
+                    if (dot) dot.style.background = getComputedStyle(root).getPropertyValue(cssKey).trim();
+                });
+            }
+        });
+    }
+
     // S-Meter Style Auswahl → setzt globale Variable
     document.querySelectorAll('.smeter-style-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -183,6 +216,7 @@ function setupThemeTabs() {
                 if (nameInput) nameInput.value = item.textContent;
                 presetPopup.style.display = 'none';
                 presetBtn.classList.remove('open');
+                window._currentTheme = themeName;
                 applyTheme(themeName);
                 refreshColorDots();
             });

@@ -428,7 +428,7 @@ input[type="range"]::-moz-range-progress {
 .theme-save-row {
     display: flex; gap: 6px; align-items: center; margin-top: 8px;
 }
-.theme-arrow-btn { width: 32px; height: 32px; flex-shrink: 0; padding: 0; }
+.theme-arrow-btn { width: 28px; height: 28px; flex-shrink: 0; padding: 0; }
 .theme-arrow-btn img { transform: rotate(-90deg); transition: transform 0.2s; }
 .theme-arrow-btn.open img { transform: rotate(90deg); }
 
