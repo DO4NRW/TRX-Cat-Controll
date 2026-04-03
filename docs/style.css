@@ -331,7 +331,7 @@ input[type="range"]::-moz-range-progress {
 .contact-status { margin-top: 8px; font-size: 12px; text-align: center; color: var(--accent, #06c6a4); }
 
 /* Overlay Varianten */
-.overlay-panel-wide { max-width: 700px; min-width: 600px; }
+.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow: hidden; }
 .overlay-panel-tall { max-width: 420px; min-width: 380px; max-height: 80vh; overflow-y: auto; }
 
 /* ═══ Radio Setup ═══ */
@@ -352,7 +352,7 @@ input[type="range"]::-moz-range-progress {
 
 /* ═══ Audio Setup ═══ */
 .audio-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
-.audio-toolbar .btn { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.audio-toolbar .btn { flex: 1; height: 36px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .audio-toolbar img { vertical-align: middle; }
 .audio-devices { display: flex; flex-direction: column; gap: 8px; }
 .audio-row {
@@ -361,12 +361,13 @@ input[type="range"]::-moz-range-progress {
     border-radius: 4px; padding: 10px 12px; min-height: 44px;
 }
 .audio-label { font-size: 11px; font-weight: bold; color: var(--text-secondary, #ccc); min-width: 180px; flex-shrink: 0; }
-.audio-device { flex: 1; }
+.audio-device { flex: 1; min-width: 0; overflow: hidden; }
 .audio-rate { width: 80px; flex-shrink: 0; }
 .audio-row select {
     background: var(--bg-dark, #1a1a1a); color: var(--text, #fff);
     border: 1px solid var(--border, #555); border-radius: 3px;
     padding: 8px 10px; font-size: 12px; height: 36px;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .vu-meter-section { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .vu-label { font-size: 11px; font-weight: bold; color: var(--text, #fff); }
