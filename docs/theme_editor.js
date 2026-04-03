@@ -1,7 +1,14 @@
 /**
  * RigLink Demo — Theme Editor
- * Tabs, Farbliste und Digi-Modes Farben für das Theme Editor Overlay.
+ * Tabs, Farbliste, Color-Picker, Digi-Modes Farben, S-Meter Styles.
  */
+
+// Hilfsfunktion: rgba → hex
+function rgbaToHex(rgba) {
+    const m = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) return '#888888';
+    return '#' + [m[1],m[2],m[3]].map(x => (+x).toString(16).padStart(2,'0')).join('');
+}
 
 // Color-Dots nach Theme-Wechsel aktualisieren
 function refreshColorDots() {
@@ -28,7 +35,7 @@ function setupThemeTabs() {
         });
     });
 
-    // Farbliste befüllen
+    // Farbliste befüllen mit Color-Picker
     const THEME_COLORS = [
         ['accent', 'Akzentfarbe'], ['accent_dark', 'Akzent dunkel'], ['error', 'Fehler'],
         ['bg_dark', 'Hintergrund dunkel'], ['bg_mid', 'Hintergrund mittel'], ['bg_light', 'Hintergrund hell'],
@@ -49,12 +56,46 @@ function setupThemeTabs() {
             const val = cs.getPropertyValue(cssKey).trim() || '#888';
             const item = document.createElement('div');
             item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${val}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
+
+            const dot = document.createElement('div');
+            dot.className = 'color-dot';
+            dot.style.background = val;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'color-name';
+            nameSpan.textContent = label;
+
+            const keySpan = document.createElement('span');
+            keySpan.className = 'color-value';
+            keySpan.textContent = key;
+
+            // Color-Picker (versteckt)
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.style.display = 'none';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'color-edit-btn';
+            editBtn.innerHTML = '<img src="icons/build.svg" width="20" height="20">';
+            editBtn.addEventListener('click', () => {
+                colorInput.value = rgbaToHex(val);
+                colorInput.click();
+            });
+            colorInput.addEventListener('input', () => {
+                const hex = colorInput.value;
+                const r = parseInt(hex.slice(1,3),16);
+                const g = parseInt(hex.slice(3,5),16);
+                const b = parseInt(hex.slice(5,7),16);
+                document.documentElement.style.setProperty(cssKey, `rgba(${r},${g},${b},1)`);
+                dot.style.background = hex;
+            });
+
+            item.append(dot, nameSpan, keySpan, colorInput, editBtn);
             colorList.appendChild(item);
         });
     }
 
-    // Digi-Farben
+    // Digi-Farben mit Color-Picker
     const DIGI_COLORS = [
         ['digi_cq', 'CQ', '#00ff00'],
         ['digi_reply', 'Reply', '#ff6666'],
@@ -73,9 +114,43 @@ function setupThemeTabs() {
     const digiList = document.getElementById('digi-color-list');
     if (digiList) {
         DIGI_COLORS.forEach(([key, label, color]) => {
+            const cssKey = '--' + key.replace(/_/g, '-');
             const item = document.createElement('div');
             item.className = 'color-item';
-            item.innerHTML = `<div class="color-dot" style="background:${color}"></div><span class="color-name">${label}</span><span class="color-value">${key}</span><button class="color-edit-btn"><img src="icons/build.svg" width="20" height="20"></button>`;
+
+            const dot = document.createElement('div');
+            dot.className = 'color-dot';
+            dot.style.background = color;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'color-name';
+            nameSpan.textContent = label;
+
+            const keySpan = document.createElement('span');
+            keySpan.className = 'color-value';
+            keySpan.textContent = key;
+
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.style.display = 'none';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'color-edit-btn';
+            editBtn.innerHTML = '<img src="icons/build.svg" width="20" height="20">';
+            editBtn.addEventListener('click', () => {
+                colorInput.value = color;
+                colorInput.click();
+            });
+            colorInput.addEventListener('input', () => {
+                const hex = colorInput.value;
+                const r = parseInt(hex.slice(1,3),16);
+                const g = parseInt(hex.slice(3,5),16);
+                const b = parseInt(hex.slice(5,7),16);
+                document.documentElement.style.setProperty(cssKey, `rgba(${r},${g},${b},1)`);
+                dot.style.background = hex;
+            });
+
+            item.append(dot, nameSpan, keySpan, colorInput, editBtn);
             digiList.appendChild(item);
         });
     }
@@ -87,4 +162,26 @@ function setupThemeTabs() {
             item.classList.add('active');
         });
     });
+
+    // Preset-Pfeil Toggle
+    const presetBtn = document.getElementById('btn-theme-presets');
+    const presetPopup = document.getElementById('theme-preset-popup');
+    if (presetBtn && presetPopup) {
+        presetBtn.addEventListener('click', () => {
+            const isOpen = presetPopup.style.display !== 'none';
+            presetPopup.style.display = isOpen ? 'none' : 'block';
+            presetBtn.classList.toggle('open', !isOpen);
+        });
+        presetPopup.querySelectorAll('.preset-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const themeName = item.dataset.theme;
+                const nameInput = document.getElementById('theme-name');
+                if (nameInput) nameInput.value = item.textContent;
+                presetPopup.style.display = 'none';
+                presetBtn.classList.remove('open');
+                applyTheme(themeName);
+                refreshColorDots();
+            });
+        });
+    }
 }

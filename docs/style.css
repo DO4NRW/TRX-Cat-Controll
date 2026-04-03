@@ -302,7 +302,7 @@ input[type="range"]::-moz-range-progress {
     display: flex; align-items: center; justify-content: center;
 }
 .overlay-panel {
-    background: rgba(26,26,46,0.92); border: 1px solid var(--border, #555);
+    background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
     border-radius: 8px; padding: 20px; min-width: 320px; max-width: 400px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6); color: var(--text, #fff);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -331,7 +331,7 @@ input[type="range"]::-moz-range-progress {
 .contact-status { margin-top: 8px; font-size: 12px; text-align: center; color: var(--accent, #06c6a4); }
 
 /* Overlay Varianten */
-.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow: hidden; }
+.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow-y: auto; max-height: 90vh; }
 .overlay-panel-tall { max-width: 420px; min-width: 380px; max-height: 80vh; overflow-y: auto; }
 
 /* ═══ Radio Setup ═══ */
@@ -428,6 +428,8 @@ input[type="range"]::-moz-range-progress {
     display: flex; gap: 6px; align-items: center; margin-top: 8px;
 }
 .theme-arrow-btn { width: 32px; height: 32px; flex-shrink: 0; padding: 0; }
+.theme-arrow-btn img { transform: rotate(-90deg); transition: transform 0.2s; }
+.theme-arrow-btn.open img { transform: rotate(90deg); }
 .theme-name-input {
     flex: 1; height: 32px;
     background: var(--bg-mid, #2a2a2a); color: var(--text, #fff);

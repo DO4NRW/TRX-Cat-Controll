@@ -623,25 +623,7 @@ function setupSettings() {
         civInput.value = '0x' + addr.toString(16).toUpperCase();
     });
 
-    // Preset-Popup Toggle
-    const presetBtn = document.getElementById('btn-theme-presets');
-    const presetPopup = document.getElementById('theme-preset-popup');
-    if (presetBtn && presetPopup) {
-        presetBtn.addEventListener('click', () => {
-            presetPopup.style.display = presetPopup.style.display === 'none' ? 'block' : 'none';
-        });
-        // Preset-Items → Theme laden
-        presetPopup.querySelectorAll('.preset-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const themeName = item.dataset.theme;
-                const nameInput = document.getElementById('theme-name');
-                if (nameInput) nameInput.value = item.textContent;
-                presetPopup.style.display = 'none';
-                applyTheme(themeName);
-                refreshColorDots();
-            });
-        });
-    }
+    // Preset-Popup Logik ist jetzt in theme_editor.js
 }
 
 
@@ -988,11 +970,27 @@ function tick() {
     requestAnimationFrame(tick);
 }
 
+// Theme aus configs/theme.json laden (aktuelles Theme des Repos)
+async function loadThemeFromConfig() {
+    try {
+        const resp = await fetch('https://raw.githubusercontent.com/DO4NRW/RigLink/main/configs/theme.json');
+        const theme = await resp.json();
+        const root = document.documentElement;
+        for (const [key, val] of Object.entries(theme)) {
+            if (typeof val !== 'string' || !val.startsWith('rgba')) continue;
+            const m = val.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*(\d*)\)/);
+            if (!m) continue;
+            root.style.setProperty('--' + key.replace(/_/g, '-'),
+                `rgba(${m[1]},${m[2]},${m[3]},${m[4] ? +m[4]/255 : 1})`);
+        }
+    } catch(e) { applyTheme('dark'); }
+}
+
 // Init
 async function init() {
     buildPalette();
     for (let i = 0; i < WF_LINES; i++) wfData.push(new Uint8Array(475));
-    applyTheme('dark');
+    await loadThemeFromConfig();
     await loadDemoData();
     initSMeter();
     updateFreqDisplay();
