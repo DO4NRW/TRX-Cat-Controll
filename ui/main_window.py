@@ -23,6 +23,7 @@ from ui.radio_setup import RadioSetupOverlay
 from ui.audio_setup import AudioSetupOverlay, DropDownComboBox
 from ui.theme_editor import ThemeEditorOverlay
 from ui.digi_panel import DigiPanelOverlay
+from ui.logbook_panel import LogbookOverlay
 
 
 class MenuIconProxyStyle(QProxyStyle):
@@ -85,9 +86,13 @@ class MainWindow(QMainWindow):
         self.action_digi = QAction("Digi-Modus", self)
         self.action_digi.setIcon(themed_icon(os.path.join(_ICONS, "radio.svg")))
 
+        self.action_logbook = QAction("Logbuch", self)
+        self.action_logbook.setIcon(themed_icon(os.path.join(_ICONS, "build.svg")))
+
         self.main_menu.addAction(self.action_settings)
         self.main_menu.addAction(self.action_audio)
         self.main_menu.addAction(self.action_digi)
+        self.main_menu.addAction(self.action_logbook)
         self.main_menu.addAction(self.action_theme)
         self.main_menu.addSeparator()
         self.main_menu.addAction(self.action_report)
@@ -114,8 +119,11 @@ class MainWindow(QMainWindow):
         self.digi_panel_overlay = DigiPanelOverlay(self.central_widget)
         self.action_digi.triggered.connect(lambda: (self.digi_panel_overlay.show_overlay(), self._check_gauge_visibility()))
 
+        self.logbook_overlay = LogbookOverlay(self.central_widget)
+        self.action_logbook.triggered.connect(lambda: (self.logbook_overlay.show_overlay(), self._check_gauge_visibility()))
+
         # Gauge wieder zeigen wenn Overlay geschlossen wird
-        for overlay in [self.radio_setup_overlay, self.audio_setup_overlay, self.theme_editor_overlay, self.digi_panel_overlay]:
+        for overlay in [self.radio_setup_overlay, self.audio_setup_overlay, self.theme_editor_overlay, self.digi_panel_overlay, self.logbook_overlay]:
             orig_hide = overlay.hide
             def make_hide(oh):
                 def patched_hide():
