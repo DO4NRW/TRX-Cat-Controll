@@ -9,6 +9,35 @@
 <body>
     <div id="app">
 
+        <!-- Welcome Overlay -->
+        <div class="overlay" id="welcome-overlay">
+            <div class="overlay-panel" style="text-align:center; max-width:420px;">
+                <h3>RigLink Web-Demo</h3>
+                <p style="color:var(--text-secondary); font-size:13px; line-height:1.6; margin:12px 0;">
+                    Dies ist eine <b>interaktive Vorschau</b> der RigLink Desktop-Anwendung.
+                </p>
+                <p style="color:var(--text-muted); font-size:12px; line-height:1.6; margin:12px 0;">
+                    Diese Demo zeigt die Funktionen und das Bedienkonzept von RigLink.
+                    Die Desktop-App basiert auf Qt/PySide6 mit eigenem Widget-Rendering &mdash;
+                    eine Webseite kann dies technisch bedingt nicht identisch darstellen.
+                    Buttons, Slider, Dropdowns und Schriften werden vom Browser anders
+                    gerendert als von Qt. Diese Demo dient als Funktionsübersicht,
+                    nicht als pixelgenaue Nachbildung.
+                </p>
+                <p style="margin:16px 0;">
+                    <a href="https://github.com/DO4NRW/RigLink" target="_blank"
+                       style="color:var(--accent); font-size:14px; font-weight:bold;">
+                       github.com/DO4NRW/RigLink
+                    </a>
+                </p>
+                <div class="overlay-buttons" style="justify-content:center;">
+                    <button class="btn btn-accent" id="btn-welcome-close" style="min-width:160px; font-size:14px;">
+                        Demo starten
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Menu Dropdown -->
         <div class="overlay" id="menu-overlay" style="display:none;">
             <div class="menu-dropdown">

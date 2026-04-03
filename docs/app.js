@@ -1194,6 +1194,11 @@ async function init() {
             : 'icons/toggle_off.svg';
     });
 
+    // Welcome-Popup
+    document.getElementById('btn-welcome-close').addEventListener('click', () => {
+        document.getElementById('welcome-overlay').style.display = 'none';
+    });
+
     setupSettings();
     setupToggleGroups();
     setupManufacturerCascade();
