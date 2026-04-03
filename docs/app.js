@@ -267,17 +267,17 @@ function drawWaterfall() {
     // Waterfall
     const wfY = freqY + freqBarH;
 
-    // Offscreen Wasserfall in Canvas-Breite (kein Zoom-Artefakt)
-    if (!window._wfCanvas || window._wfCanvas.width !== w) {
+    // Offscreen Wasserfall in Canvas-Breite (dynamische Höhe)
+    const wfBufH = Math.max(200, wfH);
+    if (!window._wfCanvas || window._wfCanvas.width !== w || window._wfCanvas.height !== wfBufH) {
         window._wfCanvas = document.createElement('canvas');
         window._wfCanvas.width = w;
-        window._wfCanvas.height = 200;
+        window._wfCanvas.height = wfBufH;
         const wc = window._wfCanvas.getContext('2d');
         wc.fillStyle = 'rgb(8, 12, 35)';
-        wc.fillRect(0, 0, w, 200);
+        wc.fillRect(0, 0, w, wfBufH);
     }
     const wfCtx = window._wfCanvas.getContext('2d');
-    const wfBufH = 200;
 
     // Shift alles 1px nach unten
     wfCtx.drawImage(window._wfCanvas, 0, 0, w, wfBufH - 1, 0, 1, w, wfBufH - 1);
@@ -303,6 +303,8 @@ function drawWaterfall() {
     wfCtx.putImageData(lineData, 0, 0);
 
     // Wasserfall auf Zielbereich skalieren (nur Höhe)
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(window._wfCanvas, 0, 0, w, wfBufH, 0, wfY, w, wfH);
 
     // Center marker + passband (aus Theme wie waterfall.py)
