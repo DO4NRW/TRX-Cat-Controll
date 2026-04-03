@@ -155,11 +155,14 @@ function setupThemeTabs() {
         });
     }
 
-    // S-Meter Style Auswahl
+    // S-Meter Style Auswahl → setzt globale Variable
     document.querySelectorAll('.smeter-style-item').forEach(item => {
         item.addEventListener('click', () => {
             document.querySelectorAll('.smeter-style-item').forEach(i => i.classList.remove('active'));
             item.classList.add('active');
+            if (typeof currentSmeterStyle !== 'undefined') {
+                currentSmeterStyle = item.dataset.style;
+            }
         });
     });
 

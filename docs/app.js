@@ -66,6 +66,7 @@ let lastWfTime = 0;
 let freqLocked = false;
 let muted = false;
 let wfHoverX = -1;
+let currentSmeterStyle = 'segment';
 
 // Demo-Daten Playback
 let demoData = null;
