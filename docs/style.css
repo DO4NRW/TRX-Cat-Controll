@@ -305,7 +305,8 @@ input[type="range"]::-moz-range-progress {
 .overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.3); z-index: 100;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px 0; overflow-y: auto;
 }
 .overlay-panel {
     background: var(--bg-mid, #2a2a2a); border: 1px solid var(--border, #555);
@@ -337,7 +338,7 @@ input[type="range"]::-moz-range-progress {
 .contact-status { margin-top: 8px; font-size: 12px; text-align: center; color: var(--accent, #06c6a4); }
 
 /* Overlay Varianten */
-.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow-y: auto; max-height: 90vh; }
+.overlay-panel-wide { max-width: 700px; min-width: 600px; overflow-y: auto; overflow-x: hidden; max-height: 90vh; }
 .overlay-panel-tall { max-width: 420px; min-width: 380px; max-height: 80vh; overflow-y: auto; }
 
 /* ═══ Radio Setup ═══ */
