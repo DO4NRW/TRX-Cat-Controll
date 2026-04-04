@@ -4,7 +4,7 @@ import threading
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QComboBox, QApplication,
-                                QStackedWidget)
+                                QStackedWidget, QLineEdit)
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import QSize, QPoint, Qt, QEvent, QRect, QTimer, Signal
 
@@ -17,8 +17,10 @@ from ui.toggle import ToggleButton, ToggleGroup
 
 class RadioSetupOverlay(QWidget):
 
-    _cat_result_sig = Signal(bool)
-    _ptt_result_sig = Signal(bool)
+    _cat_result_sig    = Signal(bool)
+    _ptt_result_sig    = Signal(bool)
+    remote_connect_sig = Signal(str, int)   # (host, port) → main_window verbindet
+    remote_disconnect_sig = Signal()        # → main_window trennt
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -165,12 +167,41 @@ class RadioSetupOverlay(QWidget):
         _tab_remote = QWidget()
         remote_l = QVBoxLayout(_tab_remote)
         remote_l.setContentsMargins(0, 8, 0, 0)
-        remote_l.setSpacing(4)
-        remote_lbl = QLabel("Remote-Verbindung (coming soon)")
-        remote_lbl.setAlignment(Qt.AlignCenter)
-        remote_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 13px; border: none;")
-        remote_l.addStretch()
-        remote_l.addWidget(remote_lbl)
+        remote_l.setSpacing(8)
+
+        remote_l.addWidget(_section_label("IP / URL (rigctld)", "connection.svg"))
+
+        self.input_remote_host = QLineEdit()
+        self.input_remote_host.setPlaceholderText("192.168.1.167  oder  192.168.1.167:4532")
+        self.input_remote_host.setFocusPolicy(Qt.ClickFocus)
+        self.input_remote_host.setStyleSheet(self._remote_input_style())
+        self.input_remote_host.returnPressed.connect(self._on_remote_connect)
+        remote_l.addWidget(self.input_remote_host)
+
+        remote_btn_row = QHBoxLayout()
+        remote_btn_row.setSpacing(8)
+
+        self.btn_remote_connect = QPushButton("Verbinden")
+        self.btn_remote_connect.setFixedHeight(34)
+        self.btn_remote_connect.setFocusPolicy(Qt.NoFocus)
+        self.btn_remote_connect.setStyleSheet(self._remote_btn_style())
+        self.btn_remote_connect.clicked.connect(self._on_remote_connect)
+        remote_btn_row.addWidget(self.btn_remote_connect)
+
+        self.btn_remote_disconnect = QPushButton("Trennen")
+        self.btn_remote_disconnect.setFixedHeight(34)
+        self.btn_remote_disconnect.setFocusPolicy(Qt.NoFocus)
+        self.btn_remote_disconnect.setStyleSheet(self._remote_btn_style())
+        self.btn_remote_disconnect.clicked.connect(self._on_remote_disconnect)
+        remote_btn_row.addWidget(self.btn_remote_disconnect)
+
+        remote_l.addLayout(remote_btn_row)
+
+        self.lbl_remote_status = QLabel("")
+        self.lbl_remote_status.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none;")
+        self.lbl_remote_status.setWordWrap(True)
+        remote_l.addWidget(self.lbl_remote_status)
+
         remote_l.addStretch()
         self._cat_tab_stack.addWidget(_tab_remote)
 
@@ -228,6 +259,57 @@ class RadioSetupOverlay(QWidget):
 
         # Signals direkt verbinden
         self._connect_signals()
+
+    # ── Remote-Tab Logik ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _parse_remote_input(text: str) -> tuple[str, int]:
+        """Parst '192.168.1.167' oder 'http://host:4532' → (host, port)."""
+        text = text.strip()
+        # http(s)-Präfix entfernen
+        for prefix in ("https://", "http://"):
+            if text.lower().startswith(prefix):
+                text = text[len(prefix):]
+        # host:port trennen
+        if ":" in text:
+            host, _, port_str = text.rpartition(":")
+            try:
+                return host.strip(), int(port_str.strip())
+            except ValueError:
+                pass
+        return text, 4532
+
+    def _on_remote_connect(self):
+        raw = self.input_remote_host.text().strip()
+        if not raw:
+            self.lbl_remote_status.setText("Bitte IP-Adresse eingeben.")
+            self.lbl_remote_status.setStyleSheet(f"color: {T['error']}; font-size: 11px; border: none;")
+            return
+        host, port = self._parse_remote_input(raw)
+        self.lbl_remote_status.setText(f"Verbinde mit {host}:{port} …")
+        self.lbl_remote_status.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none;")
+        self.remote_connect_sig.emit(host, port)
+
+    def _on_remote_disconnect(self):
+        self.lbl_remote_status.setText("")
+        self.remote_disconnect_sig.emit()
+
+    def set_remote_status(self, ok: bool, message: str):
+        """Wird aus main_window nach Connect-Versuch aufgerufen."""
+        color = T['accent'] if ok else T['error']
+        self.lbl_remote_status.setText(message)
+        self.lbl_remote_status.setStyleSheet(f"color: {color}; font-size: 11px; border: none;")
+
+    def _remote_input_style(self) -> str:
+        return (f"QLineEdit {{ background-color: {T['bg_mid']}; color: {T['text']}; "
+                f"border: 1px solid {T['border']}; border-radius: 4px; "
+                f"padding: 6px 10px; font-size: 13px; }}"
+                f"QLineEdit:focus {{ border-color: {T['accent']}; }}")
+
+    def _remote_btn_style(self) -> str:
+        return (f"QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']}; "
+                f"border: 1px solid {T['border']}; border-radius: 4px; padding: 4px 14px; font-size: 12px; }} "
+                f"QPushButton:hover {{ border-color: {T['border_hover']}; background-color: {T['bg_light']}; }}")
 
     # ── CAT-Tab-System ────────────────────────────────────────────────────────
 
@@ -428,6 +510,10 @@ class RadioSetupOverlay(QWidget):
             }}"""
         if hasattr(self, '_cat_tab_buttons'):
             self._apply_cat_tab_styles()
+        if hasattr(self, 'input_remote_host'):
+            self.input_remote_host.setStyleSheet(self._remote_input_style())
+            self.btn_remote_connect.setStyleSheet(self._remote_btn_style())
+            self.btn_remote_disconnect.setStyleSheet(self._remote_btn_style())
         self._cat_card.setObjectName("catCard")
         self._ptt_card.setObjectName("pttCard")
         _card_style_cat = f"""

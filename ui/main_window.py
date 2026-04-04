@@ -114,6 +114,8 @@ class MainWindow(QMainWindow):
         # Overlays
         self.radio_setup_overlay = RadioSetupOverlay(self.central_widget)
         self.action_settings.triggered.connect(lambda: (self.radio_setup_overlay.show_overlay(), self._check_gauge_visibility()))
+        self.radio_setup_overlay.remote_connect_sig.connect(self._connect_cat_network)
+        self.radio_setup_overlay.remote_disconnect_sig.connect(self._disconnect_cat)
 
         self.audio_setup_overlay = AudioSetupOverlay(self.central_widget)
         self.action_audio.triggered.connect(lambda: (self.audio_setup_overlay.show_overlay(), self._check_gauge_visibility()))
@@ -613,23 +615,60 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-        def close_serial():
+        def close_handler():
             if self._cat_handler:
                 try:
-                    if self._cat_handler._ser and self._cat_handler._ser.is_open:
-                        self._cat_handler._ser.close()
+                    self._cat_handler.disconnect()
                 except Exception:
                     pass
-                self._cat_handler._ser = None
                 self._cat_handler = None
 
-        threading.Thread(target=close_serial, daemon=True).start()
+        threading.Thread(target=close_handler, daemon=True).start()
 
         self._cat_connected = False
         self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF)
         self.status_label.setText(" CAT: Getrennt")
         self.status_bar_widget.setStyleSheet(self._STATUS_OFF)
         self.tgl_vox.setChecked(False)
+
+    def _connect_cat_network(self, host: str, port: int):
+        """Verbindet via TCP-CAT (NetworkCat / Hamlib rigctld)."""
+        if self._cat_connected:
+            self._disconnect_cat()
+
+        log_event(f"Remote-Connect: {host}:{port}")
+        try:
+            from core.cat import create_cat_handler
+            self._cat_handler = create_cat_handler("network", host=host, port=port)
+            ok = self._cat_handler.connect()
+        except Exception as e:
+            ok = False
+            log_error(f"NetworkCat Exception: {e}")
+
+        overlay = getattr(self, "radio_setup_overlay", None)
+        if ok:
+            self._cat_connected = True
+            self.btn_cat_con.setStyleSheet(self._CAT_BTN_ON)
+            msg = f" CAT: Remote {host}:{port}"
+            self.status_label.setText(msg)
+            self.status_bar_widget.setStyleSheet(self._STATUS_ON)
+            log_event(msg)
+            if self.rig_widget and hasattr(self.rig_widget, "set_cat_handler"):
+                self.rig_widget.set_cat_handler(self._cat_handler)
+            if overlay:
+                overlay.set_remote_status(True, f"Verbunden — {host}:{port}")
+        else:
+            self._cat_handler = None
+            self.btn_cat_con.setStyleSheet(self._CAT_BTN_ERR)
+            msg = f" CAT: Remote fehlgeschlagen ({host}:{port})"
+            self.status_label.setText(msg)
+            self.status_bar_widget.setStyleSheet(self._STATUS_ERR)
+            log_error(msg)
+            if overlay:
+                overlay.set_remote_status(False, f"Verbindung fehlgeschlagen ({host}:{port})")
+            QTimer.singleShot(3000, lambda: (
+                self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF),
+                self.status_bar_widget.setStyleSheet(self._STATUS_OFF)))
 
     def _on_rig_combo_changed(self, rig_name):
         if self._rig_switching or not rig_name:

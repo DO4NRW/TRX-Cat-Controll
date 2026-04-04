@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (QMessageBox, QProgressDialog, QApplication,
                                QPushButton, QTextEdit)
 from PySide6.QtCore import Signal, QObject, Qt
 
-CURRENT_VERSION = "2.1.2"
+CURRENT_VERSION = "2.1.3"
 
 REPO_OWNER = "DO4NRW"
 REPO_NAME = "RigLink"

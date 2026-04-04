@@ -260,5 +260,8 @@ def create_cat_handler(protocol: str, **kwargs) -> CatBase:
     elif protocol == "elecraft":
         from core.cat.kenwood import KenwoodCat  # Elecraft nutzt Kenwood-Protokoll
         return KenwoodCat(**kwargs)
+    elif protocol == "network":
+        from core.cat.network import NetworkCat
+        return NetworkCat(**kwargs)
     else:
         raise ValueError(f"Unbekanntes CAT-Protokoll: {protocol}")
