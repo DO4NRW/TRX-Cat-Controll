@@ -8,8 +8,8 @@ FT8/FT4 Decode-Ansicht.
 import time
 
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                               QToolButton, QComboBox, QTextEdit, QSplitter,
-                               QFrame, QProgressBar)
+                               QPushButton, QToolButton, QComboBox, QTextEdit,
+                               QSplitter, QFrame, QProgressBar)
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor, QTextCharFormat, QTextCursor, QIcon, QPixmap
 
