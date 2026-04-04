@@ -7,7 +7,7 @@ Werte werden in der Rig-Config gespeichert.
 import os
 import json
 
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -20,13 +20,14 @@ from ui._constants import _PROJECT_DIR
 _CONFIG_PATH = os.path.join(_PROJECT_DIR, "configs", "eq_state.json")
 
 
-class EQOverlay(QWidget):
-    """Overlay-Panel für den 10-Band EQ."""
+class EQOverlay(QDialog):
+    """Freistehender EQ-Dialog — 10-Band TX Equalizer."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setVisible(False)
+        self.setWindowTitle("TX Equalizer")
+        self.setMinimumSize(600, 400)
+        self.setSizeGripEnabled(True)
         self._build_ui()
         self._load_state()
         register_refresh(self.refresh_theme)
@@ -58,7 +59,7 @@ class EQOverlay(QWidget):
         self.btn_close.setFixedHeight(34)
         self.btn_close.setFocusPolicy(Qt.NoFocus)
         self.btn_close.setStyleSheet(self._btn_style())
-        self.btn_close.clicked.connect(self.hide)
+        self.btn_close.clicked.connect(self.close)
         header.addWidget(self.btn_close)
 
         root.addLayout(header)
@@ -99,13 +100,6 @@ class EQOverlay(QWidget):
                 self.eq_widget.set_gains(gains)
         except (OSError, json.JSONDecodeError, KeyError):
             pass
-
-    # ── Overlay-Verwaltung ────────────────────────────────────────────────────
-
-    def show_overlay(self):
-        self.setGeometry(self.parent().rect())
-        self.setVisible(True)
-        self.raise_()
 
     # ── Theme ─────────────────────────────────────────────────────────────────
 

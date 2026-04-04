@@ -121,17 +121,18 @@ class MainWindow(QMainWindow):
         self.theme_editor_overlay = ThemeEditorOverlay(self.central_widget)
         self.action_theme.triggered.connect(lambda: (self.theme_editor_overlay.show_overlay(), self._check_gauge_visibility()))
 
-        self.digi_panel_overlay = DigiPanelOverlay(self.central_widget)
-        self.action_digi.triggered.connect(lambda: (self.digi_panel_overlay.show_overlay(), self._check_gauge_visibility()))
+        # Digi + EQ: freistehende QDialog-Fenster (kein Vollbild-Overlay)
+        self.digi_panel_overlay = DigiPanelOverlay(self)
+        self.action_digi.triggered.connect(self.digi_panel_overlay.show)
 
         self.logbook_overlay = LogbookOverlay(self.central_widget)
         self.action_logbook.triggered.connect(lambda: (self.logbook_overlay.show_overlay(), self._check_gauge_visibility()))
 
-        self.eq_overlay = EQOverlay(self.central_widget)
-        self.action_eq.triggered.connect(lambda: (self.eq_overlay.show_overlay(), self._check_gauge_visibility()))
+        self.eq_overlay = EQOverlay(self)
+        self.action_eq.triggered.connect(self.eq_overlay.show)
 
-        # Gauge wieder zeigen wenn Overlay geschlossen wird
-        for overlay in [self.radio_setup_overlay, self.audio_setup_overlay, self.theme_editor_overlay, self.digi_panel_overlay, self.logbook_overlay, self.eq_overlay]:
+        # Gauge wieder zeigen wenn Overlay geschlossen wird (nur für Vollbild-Overlays)
+        for overlay in [self.radio_setup_overlay, self.audio_setup_overlay, self.theme_editor_overlay, self.logbook_overlay]:
             orig_hide = overlay.hide
             def make_hide(oh):
                 def patched_hide():

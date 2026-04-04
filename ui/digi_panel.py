@@ -1,49 +1,70 @@
 """
 RigLink — Digi-Modus Panel
-FT8/FT4 Platzhalter + RTTY Decode (RTTYDecoder).
+FT8/FT4 Decode-Ansicht mit Demo-Daten, RTTY, PSK31, CW Platzhalter.
 """
 
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+import random
+from datetime import datetime, timedelta
+
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QComboBox, QTextEdit, QSplitter,
-                               QFrame, QProgressBar, QStackedWidget)
+                               QFrame, QProgressBar)
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QColor, QTextCharFormat, QTextCursor
 
 from core.theme import T, register_refresh, themed_icon
-from core.digi.rtty import RTTYDecoder, RTTYConfig
 from ui._constants import _ICONS
 
-import os
-import random
+
+# ── FT8 Demo-Daten ────────────────────────────────────────────────────────────
+
+_FT8_CALLS = [
+    ("CQ DX DO4NRW JN49", -12, 0.3, 14074),
+    ("DO4NRW DL2XYZ -08",  +3, 1.1, 14074),
+    ("DL2XYZ DO4NRW RR73",  -8, 0.2, 14074),
+    ("CQ EU SP5ABC KO02", +15, 0.8, 14075),
+    ("CQ CONTEST OE3MWS JN78", -5, 0.4, 14076),
+    ("DO4NRW PA3GRM -14",  -3, 0.6, 14077),
+    ("PA3GRM DO4NRW R-09",  +7, 0.9, 14077),
+    ("DO4NRW PA3GRM RR73", -10, 0.3, 14077),
+    ("CQ DX F5RWT IN93",   +2, 0.5, 14073),
+    ("F5RWT DO4NRW -06",   -6, 1.2, 14073),
+    ("CQ VE3XAZ FN03",    -18, 0.1, 14072),
+    ("DO4NRW DK5WL R-04",  -1, 0.7, 14079),
+    ("CQ WWFF HA5CW JN97", +9, 0.4, 14071),
+    ("CQ DX UR4EI KN88",  -15, 0.2, 14075),
+    ("CQ EU IK4EST JN54",  +4, 0.8, 14078),
+]
 
 
-class DigiPanelOverlay(QWidget):
-    """Overlay für den Digi-Modus (FT8/FT4 Platzhalter + RTTY aktiv)."""
-
-    _RTTY_DEMO_LINES = [
-        "CQ CQ DE DO4NRW DO4NRW JN49 K\r\n",
-        "DL1ABC DE DO4NRW 599 NR 001 K\r\n",
-        "CQ DX DE DO4NRW JN49 PSE K\r\n",
-        "DO4NRW DE DL2XYZ 579 NR 042 BK\r\n",
-        "QSL 73 DE DO4NRW SK\r\n",
-        "CQ CQ DE OE3MWS OE3MWS JN78 K\r\n",
-        "DO4NRW DE PA3ABC 599 NR 007 K\r\n",
-        "CQ CONTEST DE DK5WL JO31 K\r\n",
-        "DO4NRW DE F5RWT 599 599 BK\r\n",
-        "QRZ? DE DO4NRW K\r\n",
-    ]
+class DigiPanelOverlay(QDialog):
+    """Freistehender Digi-Modus Dialog — FT8/FT4 Decode + Demo-Betrieb."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setVisible(False)
-        self._rtty_decoder = RTTYDecoder(RTTYConfig())
-        self._rtty_active  = False
-        self._rtty_demo_timer = QTimer(self)
-        self._rtty_demo_timer.timeout.connect(self._rtty_demo_tick)
+        self.setWindowTitle("Digi-Modus")
+        self.setMinimumSize(700, 500)
+        self.setSizeGripEnabled(True)
+
+        self._demo_timer = QTimer(self)
+        self._demo_timer.timeout.connect(self._ft8_demo_tick)
+        self._demo_counter = 0
+
         self._build_ui()
-        self._rtty_decoder.decoded.connect(self._on_rtty_decoded)
         register_refresh(self.refresh_theme)
+
+    # ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._demo_timer.isActive():
+            self._start_ft8_demo()
+
+    def closeEvent(self, event):
+        self._demo_timer.stop()
+        super().closeEvent(event)
+
+    # ── UI aufbauen ───────────────────────────────────────────────────────────
 
     def _build_ui(self):
         self.setStyleSheet(f"background-color: {T['bg_dark']};")
@@ -70,46 +91,34 @@ class DigiPanelOverlay(QWidget):
         self.combo_mode.currentTextChanged.connect(self._on_mode_changed)
         header.addWidget(self.combo_mode)
 
-        # RTTY Start/Stop (nur sichtbar wenn RTTY aktiv)
-        self.btn_rtty = QPushButton("▶ RTTY Start")
-        self.btn_rtty.setFixedHeight(36)
-        self.btn_rtty.setStyleSheet(self._btn_style())
-        self.btn_rtty.setFocusPolicy(Qt.NoFocus)
-        self.btn_rtty.setVisible(False)
-        self.btn_rtty.clicked.connect(self._on_rtty_toggle)
-        header.addWidget(self.btn_rtty)
-
         # Schließen-Button
         self.btn_close = QPushButton("Schließen")
         self.btn_close.setFixedHeight(36)
         self.btn_close.setStyleSheet(self._btn_style())
         self.btn_close.setFocusPolicy(Qt.NoFocus)
-        self.btn_close.clicked.connect(self.hide)
+        self.btn_close.clicked.connect(self.close)
         header.addWidget(self.btn_close)
 
         root.addLayout(header)
 
-        # ── Splitter: Decode-Liste oben, Wasserfall-Bereich unten ──
+        # ── Splitter: Decode-Liste oben, TX-Bereich unten ──────────
         splitter = QSplitter(Qt.Vertical)
 
-        # Oberer Bereich: Decode-Liste (Platzhalter)
-        decode_widget = QWidget()
+        # Oberer Bereich: Decode-Liste
+        decode_widget = QFrame()
         decode_layout = QVBoxLayout(decode_widget)
         decode_layout.setContentsMargins(0, 0, 0, 0)
         decode_layout.setSpacing(4)
 
         # Spalten-Header
         col_header = QHBoxLayout()
-        for label in ["UTC", "dB", "DT", "Freq", "Message"]:
+        for label, stretch in [("UTC", 2), ("dB", 1), ("DT", 1), ("Freq", 1), ("Message", 4)]:
             lbl = QLabel(label)
             lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 10px; font-weight: bold; border: none;")
-            if label == "Message":
-                col_header.addWidget(lbl, stretch=3)
-            else:
-                col_header.addWidget(lbl, stretch=1)
+            col_header.addWidget(lbl, stretch=stretch)
         decode_layout.addLayout(col_header)
 
-        # Decode-Textfeld (Platzhalter)
+        # Decode-Textfeld
         self.decode_view = QTextEdit()
         self.decode_view.setReadOnly(True)
         self.decode_view.setFont(QFont("Consolas", 11))
@@ -120,23 +129,12 @@ class DigiPanelOverlay(QWidget):
                 border: 1px solid {T['border']};
                 border-radius: 4px;
             }}""")
-        # Platzhalter-Daten
-        self.decode_view.setPlainText(
-            "— Digi-Modus ist noch nicht implementiert —\n\n"
-            "Hier werden zukünftig FT8/FT4 Decodes angezeigt:\n\n"
-            "  UTC    dB   DT   Freq   Message\n"
-            "  12:30  -5  0.3  1234   CQ DL1ABC JO31\n"
-            "  12:30  -8  0.1  1567   CQ DO4NRW JO31\n"
-            "  12:30 -12  0.5   890   DL1ABC DO4NRW -05\n"
-            "  12:31  -3  0.2  1234   DO4NRW DL1ABC R-08\n"
-            "  12:31  -6  0.4  1567   DL1ABC DO4NRW RR73\n"
-        )
         decode_layout.addWidget(self.decode_view)
 
         splitter.addWidget(decode_widget)
 
         # Unterer Bereich: TX-Eingabe + Buttons
-        tx_widget = QWidget()
+        tx_widget = QFrame()
         tx_layout = QVBoxLayout(tx_widget)
         tx_layout.setContentsMargins(0, 0, 0, 0)
         tx_layout.setSpacing(6)
@@ -150,7 +148,7 @@ class DigiPanelOverlay(QWidget):
 
         # Fortschrittsbalken (TX Timing)
         self.progress_tx = QProgressBar()
-        self.progress_tx.setRange(0, 100)
+        self.progress_tx.setRange(0, 15)
         self.progress_tx.setValue(0)
         self.progress_tx.setFixedHeight(8)
         self.progress_tx.setFixedWidth(200)
@@ -161,95 +159,107 @@ class DigiPanelOverlay(QWidget):
         tx_status.addWidget(self.progress_tx)
         tx_layout.addLayout(tx_status)
 
-        # TX-Buttons-Reihe
+        # TX-Buttons
         tx_buttons = QHBoxLayout()
         tx_buttons.setSpacing(4)
-
         for label in ["Enable TX", "Halt TX", "Tune", "Log QSO"]:
             btn = QPushButton(label)
             btn.setFixedHeight(32)
             btn.setStyleSheet(self._btn_style())
             btn.setFocusPolicy(Qt.NoFocus)
-            btn.setEnabled(False)  # Platzhalter — noch nicht aktiv
+            btn.setEnabled(False)
             tx_buttons.addWidget(btn)
-
         tx_layout.addLayout(tx_buttons)
 
-        # Info-Zeile
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
         sep.setStyleSheet(f"color: {T['border']};")
         tx_layout.addWidget(sep)
 
-        info = QLabel("Digi-Modus wird in einem zukünftigen Update verfügbar sein.")
+        info = QLabel("Demo-Modus: FT8-Decodes werden simuliert. TX erfordert TRX-Verbindung.")
         info.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none;")
         info.setAlignment(Qt.AlignCenter)
         tx_layout.addWidget(info)
 
         splitter.addWidget(tx_widget)
-        splitter.setStretchFactor(0, 3)  # Decode-Liste größer
-        splitter.setStretchFactor(1, 1)  # TX-Bereich kleiner
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
 
         root.addWidget(splitter)
+
+        # Progress-Tick-Timer (1s)
+        self._progress_timer = QTimer(self)
+        self._progress_timer.timeout.connect(self._progress_tick)
+        self._progress_value = 0
+        self._progress_timer.start(1000)
+
+    # ── FT8 Demo ─────────────────────────────────────────────────────────────
+
+    def _start_ft8_demo(self):
+        self.decode_view.clear()
+        self.lbl_tx_status.setText("RX — FT8 Demo-Modus (kein TRX verbunden)")
+        self._demo_counter = 0
+        # Erste Zeile sofort
+        self._ft8_demo_tick()
+        # Danach alle 15 Sekunden
+        self._demo_timer.start(15000)
+
+    def _ft8_demo_tick(self):
+        """Hängt eine simulierte FT8-Decode-Zeile an."""
+        entry = _FT8_CALLS[self._demo_counter % len(_FT8_CALLS)]
+        msg, snr, dt, freq = entry
+        # Uhrzeit leicht variieren (immer richtiger 15s-Zyklus)
+        base = datetime.now().replace(second=0, microsecond=0)
+        utc = base.strftime("%H:%M:%S")
+        snr_str = f"{snr:+4d}"
+        line = f"{utc}  {snr_str}  {dt:.1f}  {freq:5d}  {msg}\n"
+
+        # Farbe je nach Nachrichtstyp
+        cursor = self.decode_view.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        fmt = QTextCharFormat()
+        if "CQ" in msg:
+            fmt.setForeground(QColor(T["digi_cq"]))
+        elif "DO4NRW" in msg and msg.startswith("DO4NRW"):
+            fmt.setForeground(QColor(T["digi_own_call"]))
+        elif "DO4NRW" in msg:
+            fmt.setForeground(QColor(T["digi_reply"]))
+        else:
+            fmt.setForeground(QColor(T["text"]))
+        cursor.insertText(line, fmt)
+        self.decode_view.setTextCursor(cursor)
+        self.decode_view.ensureCursorVisible()
+
+        self._demo_counter += 1
+        self._progress_value = 0
+
+    def _progress_tick(self):
+        self._progress_value = min(15, self._progress_value + 1)
+        self.progress_tx.setValue(self._progress_value)
 
     # ── Modus-Wechsel ─────────────────────────────────────────────────────────
 
     def _on_mode_changed(self, mode: str):
-        is_rtty = (mode == "RTTY")
-        self.btn_rtty.setVisible(is_rtty)
-        if not is_rtty and self._rtty_active:
-            self._stop_rtty()
-        if is_rtty:
-            self.decode_view.setPlainText("— RTTY-Decoder bereit. Start drücken —\n")
+        self.decode_view.clear()
+        if mode == "FT8":
+            self.lbl_tx_status.setText("RX — FT8 Demo-Modus (kein TRX verbunden)")
+            if not self._demo_timer.isActive():
+                self._start_ft8_demo()
         else:
+            self._demo_timer.stop()
+            self.lbl_tx_status.setText(f"RX — {mode} noch nicht implementiert")
             self.decode_view.setPlainText(
-                "— Digi-Modus ist noch nicht implementiert —\n\n"
-                "Hier werden zukünftig FT8/FT4 Decodes angezeigt:\n\n"
-                "  UTC    dB   DT   Freq   Message\n"
-                "  12:30  -5  0.3  1234   CQ DL1ABC JO31\n"
+                f"— {mode} ist in dieser Version noch nicht verfügbar —\n\n"
+                "Wird in einem zukünftigen Update implementiert."
             )
 
-    def _on_rtty_toggle(self):
-        if self._rtty_active:
-            self._stop_rtty()
-        else:
-            self._start_rtty()
-
-    def _start_rtty(self):
-        self._rtty_decoder.reset()
-        self._rtty_active = True
-        self.btn_rtty.setText("■ RTTY Stop")
-        self.decode_view.setPlainText("— RTTY läuft — Demo-Modus (kein TRX) —\n")
-        self.lbl_tx_status.setText("RTTY RX aktiv [Demo]")
-        self._rtty_demo_timer.start(random.randint(2000, 5000))
-
-    def _stop_rtty(self):
-        self._rtty_active = False
-        self._rtty_demo_timer.stop()
-        self.btn_rtty.setText("▶ RTTY Start")
-        self.lbl_tx_status.setText("RX — Warte auf Decodes...")
-
-    def _rtty_demo_tick(self):
-        """Simuliert eine zufällige RTTY-Decode-Zeile im Demo-Modus."""
-        if not self._rtty_active:
-            return
-        line = random.choice(self._RTTY_DEMO_LINES)
-        self._on_rtty_decoded(line)
-        self._rtty_demo_timer.start(random.randint(2000, 5000))
-
-    def _on_rtty_decoded(self, text: str):
-        """Dekodierten RTTY-Text in decode_view anhängen."""
-        cursor = self.decode_view.textCursor()
-        cursor.movePosition(cursor.MoveOperation.End)
-        cursor.insertText(text)
-        self.decode_view.setTextCursor(cursor)
-        self.decode_view.ensureCursorVisible()
+    # ── Styles ───────────────────────────────────────────────────────────────
 
     def _btn_style(self):
-        return f"""QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']};
-            border: 1px solid {T['border']}; border-radius: 4px; padding: 4px 12px; font-size: 12px; }}
-            QPushButton:hover {{ border-color: {T['border_hover']}; background-color: {T['bg_light']}; }}
-            QPushButton:disabled {{ color: {T['text_disabled']}; }}"""
+        return (f"QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']}; "
+                f"border: 1px solid {T['border']}; border-radius: 4px; padding: 4px 12px; font-size: 12px; }} "
+                f"QPushButton:hover {{ border-color: {T['border_hover']}; background-color: {T['bg_light']}; }} "
+                f"QPushButton:disabled {{ color: {T['text_disabled']}; }}")
 
     def _apply_combo_style(self):
         self.combo_mode.setStyleSheet(f"""
@@ -258,11 +268,6 @@ class DigiPanelOverlay(QWidget):
             QComboBox::drop-down {{ border: none; width: 20px; }}
             QComboBox QAbstractItemView {{ background-color: {T['bg_mid']}; color: {T['text']};
                 selection-background-color: {T['bg_light']}; border: 1px solid {T['border']}; }}""")
-
-    def show_overlay(self):
-        self.setGeometry(self.parent().rect())
-        self.setVisible(True)
-        self.raise_()
 
     def refresh_theme(self):
         self.setStyleSheet(f"background-color: {T['bg_dark']};")
@@ -275,3 +280,6 @@ class DigiPanelOverlay(QWidget):
                 border: 1px solid {T['border']};
                 border-radius: 4px;
             }}""")
+        self.progress_tx.setStyleSheet(f"""
+            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
+            QProgressBar::chunk {{ background-color: {T['accent']}; border-radius: 2px; }}""")
