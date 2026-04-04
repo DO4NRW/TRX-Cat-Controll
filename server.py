@@ -388,16 +388,16 @@ app = Flask(__name__, template_folder=TEMPLATE_DIR)
 # ── Theme-Presets ────────────────────────────────────────────────────────────
 
 THEMES = {
-    "Dark":           {"teal":"#06c6a4","bg":"#0d0d1a","bg_card":"#151528","bg_input":"#1a1a30","border":"#2a2a45","text":"#e0e0e0","dim":"#888888"},
-    "Midnight Blue":  {"teal":"#4fc3f7","bg":"#0a0e1a","bg_card":"#0f1628","bg_input":"#141d35","border":"#1e2d50","text":"#e0e8ff","dim":"#6080b0"},
-    "Forest Green":   {"teal":"#4caf50","bg":"#0a1a0a","bg_card":"#0f1f0f","bg_input":"#142814","border":"#1e3c1e","text":"#d0e8d0","dim":"#608060"},
-    "Solarized Dark": {"teal":"#2aa198","bg":"#002b36","bg_card":"#073642","bg_input":"#073642","border":"#586e75","text":"#839496","dim":"#586e75"},
-    "Dracula":        {"teal":"#50fa7b","bg":"#282a36","bg_card":"#383a59","bg_input":"#44475a","border":"#6272a4","text":"#f8f8f2","dim":"#6272a4"},
-    "Nord":           {"teal":"#88c0d0","bg":"#2e3440","bg_card":"#3b4252","bg_input":"#434c5e","border":"#4c566a","text":"#eceff4","dim":"#81a1c1"},
-    "Monokai":        {"teal":"#a6e22e","bg":"#272822","bg_card":"#383830","bg_input":"#3e3d32","border":"#75715e","text":"#f8f8f2","dim":"#75715e"},
-    "Gruvbox Dark":   {"teal":"#b8bb26","bg":"#282828","bg_card":"#3c3836","bg_input":"#504945","border":"#665c54","text":"#ebdbb2","dim":"#928374"},
-    "High Contrast":  {"teal":"#ffff00","bg":"#000000","bg_card":"#111111","bg_input":"#1a1a1a","border":"#444444","text":"#ffffff","dim":"#aaaaaa"},
-    "Light":          {"teal":"#00897b","bg":"#f5f5f5","bg_card":"#ffffff","bg_input":"#eeeeee","border":"#cccccc","text":"#1a1a1a","dim":"#666666"},
+    "Dark":           {"accent":"#06c6a4","accent_dark":"#048a73","error":"#ff4444","bg_dark":"#1a1a1a","bg_mid":"#2a2a2a","bg_light":"#3a3a3a","border":"#555555","border_hover":"#888888","text":"#ffffff","text_secondary":"#cccccc","text_muted":"#aaaaaa"},
+    "Midnight Blue":  {"accent":"#4fc3f7","accent_dark":"#0288d1","error":"#ff4444","bg_dark":"#0a0e1a","bg_mid":"#0f1628","bg_light":"#141d35","border":"#1e2d50","border_hover":"#3060a0","text":"#e0e8ff","text_secondary":"#b0c4e8","text_muted":"#6080b0"},
+    "Forest Green":   {"accent":"#4caf50","accent_dark":"#2e7d32","error":"#ff4444","bg_dark":"#0a1a0a","bg_mid":"#0f1f0f","bg_light":"#142814","border":"#1e3c1e","border_hover":"#2e5c2e","text":"#d0e8d0","text_secondary":"#a0c8a0","text_muted":"#608060"},
+    "Solarized Dark": {"accent":"#2aa198","accent_dark":"#1a756f","error":"#dc322f","bg_dark":"#002b36","bg_mid":"#073642","bg_light":"#073642","border":"#586e75","border_hover":"#839496","text":"#839496","text_secondary":"#93a1a1","text_muted":"#586e75"},
+    "Dracula":        {"accent":"#50fa7b","accent_dark":"#3ac55e","error":"#ff5555","bg_dark":"#282a36","bg_mid":"#383a59","bg_light":"#44475a","border":"#6272a4","border_hover":"#8294c4","text":"#f8f8f2","text_secondary":"#d8d8d2","text_muted":"#6272a4"},
+    "Nord":           {"accent":"#88c0d0","accent_dark":"#5e9cb0","error":"#bf616a","bg_dark":"#2e3440","bg_mid":"#3b4252","bg_light":"#434c5e","border":"#4c566a","border_hover":"#6c768a","text":"#eceff4","text_secondary":"#d8dee9","text_muted":"#81a1c1"},
+    "Monokai":        {"accent":"#a6e22e","accent_dark":"#7ab01e","error":"#f92672","bg_dark":"#272822","bg_mid":"#383830","bg_light":"#3e3d32","border":"#75715e","border_hover":"#95917e","text":"#f8f8f2","text_secondary":"#d8d8d2","text_muted":"#75715e"},
+    "Gruvbox Dark":   {"accent":"#b8bb26","accent_dark":"#98971a","error":"#fb4934","bg_dark":"#282828","bg_mid":"#3c3836","bg_light":"#504945","border":"#665c54","border_hover":"#928374","text":"#ebdbb2","text_secondary":"#d5c4a1","text_muted":"#928374"},
+    "High Contrast":  {"accent":"#ffff00","accent_dark":"#cccc00","error":"#ff0000","bg_dark":"#000000","bg_mid":"#111111","bg_light":"#1a1a1a","border":"#444444","border_hover":"#888888","text":"#ffffff","text_secondary":"#dddddd","text_muted":"#aaaaaa"},
+    "Light":          {"accent":"#00897b","accent_dark":"#00695c","error":"#d32f2f","bg_dark":"#f5f5f5","bg_mid":"#ffffff","bg_light":"#eeeeee","border":"#bdbdbd","border_hover":"#787878","text":"#0f0f0f","text_secondary":"#282828","text_muted":"#464646"},
 }
 app.logger.setLevel(logging.WARNING)
 
