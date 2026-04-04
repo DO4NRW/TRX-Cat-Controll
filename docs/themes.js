@@ -61,6 +61,19 @@ THEMES["dark"] = {
     "wf_color_7": "rgba(255, 140, 0, 255)",
     "wf_color_8": "rgba(255, 40, 0, 255)",
     "wf_color_9": "rgba(255, 255, 255, 255)",
+    "digi_cq": "rgba(0, 255, 0, 255)",
+    "digi_reply": "rgba(255, 0, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(30, 30, 30, 255)",
+    "digi_bg_odd": "rgba(40, 40, 40, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(6, 198, 164, 255)",
 };
 
 THEMES["light"] = {
@@ -114,6 +127,19 @@ THEMES["light"] = {
     "wf_freq_tick": "rgba(170, 175, 185, 255)",
     "wf_cursor": "rgba(0, 120, 100, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(0, 255, 0, 255)",
+    "digi_reply": "rgba(255, 0, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(240, 240, 240, 255)",
+    "digi_bg_odd": "rgba(230, 230, 230, 255)",
+    "digi_text": "rgba(40, 40, 40, 255)",
+    "digi_timestamp": "rgba(120, 120, 120, 255)",
+    "digi_freq": "rgba(6, 198, 164, 255)",
 };
 
 THEMES["solarized_light"] = {
@@ -167,6 +193,19 @@ THEMES["solarized_light"] = {
     "wf_freq_tick": "rgba(175, 168, 150, 255)",
     "wf_cursor": "rgba(42, 161, 152, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(133, 153, 0, 255)",
+    "digi_reply": "rgba(220, 50, 47, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(253, 246, 227, 255)",
+    "digi_bg_odd": "rgba(238, 232, 213, 255)",
+    "digi_text": "rgba(101, 123, 131, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(38, 139, 210, 255)",
 };
 
 THEMES["arctic"] = {
@@ -220,6 +259,19 @@ THEMES["arctic"] = {
     "wf_freq_tick": "rgba(175, 185, 200, 255)",
     "wf_cursor": "rgba(52, 199, 89, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(46, 139, 87, 255)",
+    "digi_reply": "rgba(255, 0, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(240, 245, 250, 255)",
+    "digi_bg_odd": "rgba(230, 238, 245, 255)",
+    "digi_text": "rgba(60, 70, 80, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(70, 130, 180, 255)",
 };
 
 THEMES["sakura"] = {
@@ -273,6 +325,19 @@ THEMES["sakura"] = {
     "wf_freq_tick": "rgba(195, 180, 188, 255)",
     "wf_cursor": "rgba(219, 112, 147, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(139, 195, 74, 255)",
+    "digi_reply": "rgba(255, 0, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(255, 245, 248, 255)",
+    "digi_bg_odd": "rgba(248, 235, 240, 255)",
+    "digi_text": "rgba(80, 60, 70, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(219, 112, 147, 255)",
 };
 
 THEMES["discord"] = {
@@ -326,6 +391,19 @@ THEMES["discord"] = {
     "wf_freq_tick": "rgba(55, 58, 65, 255)",
     "wf_cursor": "rgba(87, 242, 135, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(87, 242, 135, 255)",
+    "digi_reply": "rgba(255, 0, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 0, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(47, 49, 54, 255)",
+    "digi_bg_odd": "rgba(54, 57, 63, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(88, 101, 242, 255)",
 };
 
 THEMES["nord"] = {
@@ -379,6 +457,19 @@ THEMES["nord"] = {
     "wf_freq_tick": "rgba(65, 72, 88, 255)",
     "wf_cursor": "rgba(163, 190, 140, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(163, 190, 140, 255)",
+    "digi_reply": "rgba(191, 97, 106, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(180, 142, 173, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(255, 255, 0, 255)",
+    "digi_bg_even": "rgba(46, 52, 64, 255)",
+    "digi_bg_odd": "rgba(59, 66, 82, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(136, 192, 208, 255)",
 };
 
 THEMES["dracula"] = {
@@ -432,6 +523,19 @@ THEMES["dracula"] = {
     "wf_freq_tick": "rgba(60, 65, 80, 255)",
     "wf_cursor": "rgba(80, 250, 123, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(80, 250, 123, 255)",
+    "digi_reply": "rgba(255, 85, 85, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(255, 121, 198, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(241, 250, 140, 255)",
+    "digi_bg_even": "rgba(40, 42, 54, 255)",
+    "digi_bg_odd": "rgba(68, 71, 90, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(139, 233, 253, 255)",
 };
 
 THEMES["monokai"] = {
@@ -485,6 +589,19 @@ THEMES["monokai"] = {
     "wf_freq_tick": "rgba(65, 66, 58, 255)",
     "wf_cursor": "rgba(166, 226, 46, 255)",
     "wf_palette": "sdr",
+    "digi_cq": "rgba(166, 226, 46, 255)",
+    "digi_reply": "rgba(249, 38, 114, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(174, 129, 255, 255)",
+    "digi_new_grid": "rgba(255, 165, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(230, 219, 116, 255)",
+    "digi_bg_even": "rgba(39, 40, 34, 255)",
+    "digi_bg_odd": "rgba(49, 50, 44, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(102, 217, 239, 255)",
 };
 
 THEMES["colorblind"] = {
@@ -547,6 +664,19 @@ THEMES["colorblind"] = {
     "wf_color_7": "rgba(110, 206, 88, 255)",
     "wf_color_8": "rgba(181, 222, 43, 255)",
     "wf_color_9": "rgba(253, 231, 37, 255)",
+    "digi_cq": "rgba(0, 114, 178, 255)",
+    "digi_reply": "rgba(213, 94, 0, 255)",
+    "digi_own_call": "rgba(255, 0, 0, 255)",
+    "digi_worked": "rgba(180, 180, 180, 255)",
+    "digi_new_dxcc": "rgba(204, 121, 167, 255)",
+    "digi_new_grid": "rgba(230, 159, 0, 255)",
+    "digi_new_call": "rgba(0, 255, 255, 255)",
+    "digi_alert": "rgba(240, 228, 66, 255)",
+    "digi_bg_even": "rgba(30, 30, 30, 255)",
+    "digi_bg_odd": "rgba(40, 40, 40, 255)",
+    "digi_text": "rgba(220, 220, 220, 255)",
+    "digi_timestamp": "rgba(130, 130, 130, 255)",
+    "digi_freq": "rgba(0, 158, 115, 255)",
 };
 
 function applyTheme(name) {
