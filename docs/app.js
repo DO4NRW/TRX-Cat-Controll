@@ -775,6 +775,18 @@ function setupSettings() {
     }
     document.getElementById('menu-radio').addEventListener('click', () => openOverlay(settingsOverlay));
     document.getElementById('menu-audio').addEventListener('click', () => openOverlay(audioOverlay));
+    document.getElementById('menu-eq').addEventListener('click', () => {
+        menuOverlay.style.display = 'none';
+        alert('EQ — nur in der Desktop-App verfügbar.');
+    });
+    document.getElementById('menu-digi').addEventListener('click', () => {
+        menuOverlay.style.display = 'none';
+        alert('Digi-Modus — nur in der Desktop-App verfügbar.');
+    });
+    document.getElementById('menu-logbook').addEventListener('click', () => {
+        menuOverlay.style.display = 'none';
+        alert('Logbuch — nur in der Desktop-App verfügbar.');
+    });
     document.getElementById('menu-theme').addEventListener('click', () => openOverlay(themeOverlay));
     document.getElementById('menu-report').addEventListener('click', () => {
         menuOverlay.style.display = 'none';
