@@ -132,6 +132,8 @@ class MainWindow(QMainWindow):
 
         self.eq_overlay = EQOverlay(self)
         self.action_eq.triggered.connect(self.eq_overlay.show)
+        # EQ-Gains live an Rig-Widget weiterleiten
+        self.eq_overlay.eq_widget.changed.connect(self._on_eq_gains_changed)
 
         # Gauge wieder zeigen wenn Overlay geschlossen wird (nur für Vollbild-Overlays)
         for overlay in [self.radio_setup_overlay, self.audio_setup_overlay, self.theme_editor_overlay, self.logbook_overlay]:
@@ -503,6 +505,11 @@ class MainWindow(QMainWindow):
             self._disconnect_cat()
         else:
             self._connect_cat()
+
+    def _on_eq_gains_changed(self, gains: list):
+        """EQ-Gains live an aktives Rig-Widget weiterleiten."""
+        if self.rig_widget and hasattr(self.rig_widget, "update_eq_gains"):
+            self.rig_widget.update_eq_gains(gains)
 
     def _connect_cat(self):
         rig_name = "Yaesu FT-991A"

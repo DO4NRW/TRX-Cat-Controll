@@ -21,6 +21,7 @@ from PySide6.QtGui import QFont
 from core.theme import T, register_refresh, themed_icon
 from core.session_logger import log_action, log_event, log_error
 from core.smeter_widgets import create_smeter
+from core.audio.tx_processor import TxPipeline
 
 # ── Style Helpers ─────────────────────────────────────────────────────
 
@@ -159,6 +160,10 @@ class IC705Widget(QWidget):
         self._pw_tx_play = None
         self._tx_rms_db = -60.0
         self._RX_GAIN = 5.0
+
+        # TX Audio-Pipeline (EQ → Noise Gate → Kompressor)
+        self._tx_pipeline = TxPipeline(sample_rate=48000)
+        self._load_eq_state()
 
         # PTT Hardware
         self._ptt_method = "CAT"
@@ -1620,7 +1625,10 @@ class IC705Widget(QWidget):
                 self._tx_rms_db = max(-60.0, 20 * np.log10(max(rms, 1e-7)))
                 if self._pw_tx_play and self._pw_tx_play.stdin:
                     if self._ptt_active:
-                        self._pw_tx_play.stdin.write(data)
+                        # TX Audio-Pipeline: EQ → Noise Gate → Kompressor
+                        processed = self._tx_pipeline.process(samples / 32768.0)
+                        out_s16 = np.clip(processed * 32768.0, -32768, 32767).astype(np.int16)
+                        self._pw_tx_play.stdin.write(out_s16.tobytes())
                     else:
                         self._pw_tx_play.stdin.write(silence)
                     self._pw_tx_play.stdin.flush()
@@ -1645,6 +1653,32 @@ class IC705Widget(QWidget):
             except Exception:
                 pass
             self._ptt_ser = None
+
+    # ══════════════════════════════════════════════════════════════════
+    # TX AUDIO PIPELINE
+    # ══════════════════════════════════════════════════════════════════
+
+    def _load_eq_state(self):
+        """EQ-Gains aus configs/eq_state.json in die TX-Pipeline laden."""
+        eq_path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+            "configs", "eq_state.json")
+        try:
+            with open(eq_path) as f:
+                data = json.load(f)
+            gains = data.get("eq_gains", [])
+            if len(gains) == 10:
+                for idx, g in enumerate(gains):
+                    self._tx_pipeline.eq.set_gain_by_index(idx, float(g))
+                print(f"[TX-Pipeline] EQ-Gains geladen: {gains}")
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    def update_eq_gains(self, gains: list):
+        """Live-Update der EQ-Gains aus dem EQ-Panel."""
+        if len(gains) == 10:
+            for idx, g in enumerate(gains):
+                self._tx_pipeline.eq.set_gain_by_index(idx, float(g))
 
     # ══════════════════════════════════════════════════════════════════
     # THEME

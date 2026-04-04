@@ -22,6 +22,7 @@ from PySide6.QtGui import QIcon, QFont
 
 from core.theme import T, register_refresh, unregister_refresh
 from core.smeter_widgets import create_smeter
+from core.audio.tx_processor import TxPipeline
 
 _ICONS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       "..", "..", "..", "assets", "icons")
@@ -204,6 +205,10 @@ class FT991AWidget(QWidget):
         self._st_tx_in = None   # PC Mic → tx_input_cb
         self._st_tx_out = None  # → TRX Speaker
         self._tx_rms_db = -60.0
+
+        # TX Audio-Pipeline (EQ → Noise Gate → Kompressor)
+        self._tx_pipeline = TxPipeline(sample_rate=48000)
+        self._load_eq_state()
 
         # PTT Hardware
         self._ptt_method = "CAT"
@@ -846,7 +851,10 @@ class FT991AWidget(QWidget):
 
                 if self._pw_tx_play and self._pw_tx_play.stdin:
                     if self._ptt_active:
-                        self._pw_tx_play.stdin.write(data)
+                        # TX Audio-Pipeline: EQ → Noise Gate → Kompressor
+                        processed = self._tx_pipeline.process(samples / 32768.0)
+                        out_s16 = np.clip(processed * 32768.0, -32768, 32767).astype(np.int16)
+                        self._pw_tx_play.stdin.write(out_s16.tobytes())
                     else:
                         self._pw_tx_play.stdin.write(silence)
                     self._pw_tx_play.stdin.flush()
@@ -1329,6 +1337,32 @@ class FT991AWidget(QWidget):
         level = max(0, min(100, int((dbfs + 60) / 60 * 100)))
         self.tx_bar.setValue(level)
         self.lbl_tx_info.setText(f"TX: {dbfs:.1f} dBFS")
+
+    # ══════════════════════════════════════════════════════════════════
+    # TX AUDIO PIPELINE
+    # ══════════════════════════════════════════════════════════════════
+
+    def _load_eq_state(self):
+        """EQ-Gains aus configs/eq_state.json in die TX-Pipeline laden."""
+        eq_path = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+            "configs", "eq_state.json")
+        try:
+            with open(eq_path) as f:
+                data = json.load(f)
+            gains = data.get("eq_gains", [])
+            if len(gains) == 10:
+                for idx, g in enumerate(gains):
+                    self._tx_pipeline.eq.set_gain_by_index(idx, float(g))
+                print(f"[TX-Pipeline] EQ-Gains geladen: {gains}")
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    def update_eq_gains(self, gains: list):
+        """Live-Update der EQ-Gains aus dem EQ-Panel."""
+        if len(gains) == 10:
+            for idx, g in enumerate(gains):
+                self._tx_pipeline.eq.set_gain_by_index(idx, float(g))
 
     # ══════════════════════════════════════════════════════════════════
     # THEME REFRESH
