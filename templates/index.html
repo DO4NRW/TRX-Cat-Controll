@@ -207,6 +207,74 @@
   .theme-tile.active { border-color: var(--teal); box-shadow: 0 0 14px rgba(6,198,164,0.15); }
   .theme-tile .ti { font-size: 1.8rem; display: block; margin-bottom: 8px; }
 
+  /* ── Setup-Columns (2-Spalten-Layout im Radio-Setup) ── */
+  .setup-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 540px) {
+    .setup-columns { grid-template-columns: 1fr; }
+  }
+
+  /* ── Setup-Card (Untergruppen in Setup-Overlays) ── */
+  .setup-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .setup-card .card-label {
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Toggle-Group (On/Off Schalter-Gruppen) ── */
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-group:last-child { border-bottom: none; }
+  .toggle-group .tg-label {
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+  .toggle-group .tg-hint {
+    font-size: 0.7rem;
+    color: var(--dim);
+    margin-top: 2px;
+  }
+  .toggle-group .tg-switch {
+    position: relative;
+    width: 44px; height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+    flex-shrink: 0;
+  }
+  .toggle-group .tg-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    background: var(--text);
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle-group .tg-switch.on {
+    background: var(--teal);
+  }
+  .toggle-group .tg-switch.on::after {
+    transform: translateX(20px);
+  }
+
   /* ── Footer ── */
   footer {
     max-width: 700px; margin: 24px auto 0; text-align: center;
@@ -231,7 +299,7 @@
   <div class="card">
     <div class="card-label">Konfiguration</div>
     <div class="welcome-hint">
-      Über das <strong>Menü &#9776;</strong> oben rechts konfigurierst du CAT, Audio, Theme und siehst den Systemstatus.<br>
+      Über das <strong>Menü &#9776;</strong> oben links konfigurierst du CAT, Audio, Theme und siehst den Systemstatus.<br>
       Dieses Interface steuert <strong>nicht</strong> den Transceiver &mdash; nur die Einstellungen.
     </div>
   </div>
@@ -265,85 +333,119 @@
     <button class="overlay-x" onclick="closeAll()">&times;</button>
     <div class="overlay-head">Radio Setup</div>
 
-    <div class="two-col">
-      <!-- Links: CAT Control -->
+    <div class="setup-columns">
+      <!-- Linke Spalte: CAT Control -->
       <div>
-        <div class="col-title">CAT Control</div>
+        <div class="setup-card">
+          <div class="card-label">CAT Control</div>
 
-        <div class="field">
-          <label>Serial Port</label>
-          <select id="cfg-port"><option value="">Lade&hellip;</option></select>
+          <div class="field">
+            <label>Serial Port</label>
+            <select id="cfg-port"><option value="">Lade&hellip;</option></select>
+          </div>
+          <div class="field">
+            <label>Baud Rate</label>
+            <select id="cfg-baud">
+              <option value="4800">4800</option>
+              <option value="9600">9600</option>
+              <option value="19200">19200</option>
+              <option value="38400">38400</option>
+              <option value="57600">57600</option>
+              <option value="115200" selected>115200</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Data Bits</label>
+            <select id="cfg-databits">
+              <option value="7">7</option>
+              <option value="8" selected>8</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Stop Bits</label>
+            <select id="cfg-stopbits">
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+            </select>
+          </div>
         </div>
-        <div class="field">
-          <label>Baud Rate</label>
-          <select id="cfg-baud">
-            <option value="4800">4800</option>
-            <option value="9600">9600</option>
-            <option value="19200">19200</option>
-            <option value="38400">38400</option>
-            <option value="57600">57600</option>
-            <option value="115200" selected>115200</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Data Bits</label>
-          <select id="cfg-databits">
-            <option value="7">7</option>
-            <option value="8" selected>8</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Stop Bits</label>
-          <select id="cfg-stopbits">
-            <option value="1" selected>1</option>
-            <option value="2">2</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Handshake</label>
-          <select id="cfg-handshake">
-            <option value="none" selected>None</option>
-            <option value="rts">RTS/CTS</option>
-            <option value="xonxoff">XON/XOFF</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>CI-V Adresse</label>
-          <input type="text" id="cfg-civ" value="0xA4" placeholder="0xA4 (IC-705)" />
+
+        <div class="setup-card">
+          <div class="card-label">Erweitert</div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">Handshake RTS/CTS</div>
+              <div class="tg-hint">Hardware Flow Control</div>
+            </div>
+            <button class="tg-switch" id="tg-rts" onclick="tgToggle(this)"></button>
+          </div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">XON/XOFF</div>
+              <div class="tg-hint">Software Flow Control</div>
+            </div>
+            <button class="tg-switch" id="tg-xonxoff" onclick="tgToggle(this)"></button>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label>CI-V Adresse</label>
+            <input type="text" id="cfg-civ" value="0xA4" placeholder="0xA4 (IC-705)" />
+          </div>
         </div>
       </div>
 
-      <!-- Rechts: Transceiver + PTT -->
+      <!-- Rechte Spalte: Transceiver + PTT -->
       <div>
-        <div class="col-title">Transceiver</div>
+        <div class="setup-card">
+          <div class="card-label">Transceiver</div>
+          <div class="field">
+            <label>Hersteller</label>
+            <select id="cfg-manufacturer">
+              <option value="icom" selected>Icom</option>
+              <option value="yaesu">Yaesu</option>
+              <option value="kenwood">Kenwood</option>
+              <option value="elecraft">Elecraft</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Modell</label>
+            <input type="text" id="cfg-model" value="IC-705" />
+          </div>
+          <div class="field">
+            <label>Hamlib Model-ID</label>
+            <input type="text" id="cfg-hamlib-id" value="3085" />
+          </div>
+        </div>
 
-        <div class="field">
-          <label>Hersteller</label>
-          <select id="cfg-manufacturer">
-            <option value="icom" selected>Icom</option>
-            <option value="yaesu">Yaesu</option>
-            <option value="kenwood">Kenwood</option>
-            <option value="elecraft">Elecraft</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Modell</label>
-          <input type="text" id="cfg-model" value="IC-705" />
-        </div>
-        <div class="field">
-          <label>Hamlib Model-ID</label>
-          <input type="text" id="cfg-hamlib-id" value="3085" />
-        </div>
-
-        <div class="col-title" style="margin-top:18px">PTT</div>
-        <div class="field">
-          <label>PTT Methode</label>
-          <select id="cfg-ptt">
-            <option value="cat" selected>CAT (Software)</option>
-            <option value="rts">RTS</option>
-            <option value="dtr">DTR</option>
-            <option value="vox">VOX</option>
-          </select>
+        <div class="setup-card">
+          <div class="card-label">PTT Konfiguration</div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">CAT PTT</div>
+              <div class="tg-hint">Software-PTT via CI-V</div>
+            </div>
+            <button class="tg-switch on" id="tg-ptt-cat" onclick="tgToggle(this)"></button>
+          </div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">VOX</div>
+              <div class="tg-hint">Voice-Activated Transmit</div>
+            </div>
+            <button class="tg-switch" id="tg-ptt-vox" onclick="tgToggle(this)"></button>
+          </div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">RTS Signal</div>
+              <div class="tg-hint">Hardware-PTT via RTS-Pin</div>
+            </div>
+            <button class="tg-switch" id="tg-ptt-rts" onclick="tgToggle(this)"></button>
+          </div>
+          <div class="toggle-group">
+            <div>
+              <div class="tg-label">DTR Signal</div>
+              <div class="tg-hint">Hardware-PTT via DTR-Pin</div>
+            </div>
+            <button class="tg-switch" id="tg-ptt-dtr" onclick="tgToggle(this)"></button>
+          </div>
         </div>
       </div>
     </div>
@@ -363,24 +465,42 @@
     <button class="overlay-x" onclick="closeAll()">&times;</button>
     <div class="overlay-head">Audio Setup</div>
 
-    <div class="card">
-      <div class="card-label">Audio-Routing (PipeWire / ALSA)</div>
+    <div class="setup-card">
+      <div class="card-label">TRX Audio-Routing (PipeWire / ALSA)</div>
 
-      <div class="field">
-        <label>PC Mikrofon &rarr; TX-Quelle</label>
-        <select id="a-pc-mic"><option value="">Lade&hellip;</option></select>
+      <div class="toggle-group">
+        <div>
+          <div class="tg-label">Auto-Detect</div>
+          <div class="tg-hint">USB-Soundkarte automatisch erkennen</div>
+        </div>
+        <button class="tg-switch on" id="tg-audio-auto" onclick="tgToggle(this)"></button>
       </div>
-      <div class="field">
-        <label>TRX Mikrofon-Eingang &rarr; TX-Ziel</label>
+
+      <div class="field" style="margin-top:14px">
+        <label>TRX Mikrofon-Eingang (TX-Ziel)</label>
         <select id="a-trx-mic"><option value="">Lade&hellip;</option></select>
       </div>
       <div class="field">
-        <label>TRX Lautsprecher &rarr; RX-Quelle</label>
+        <label>TRX Lautsprecher (RX-Quelle)</label>
         <select id="a-trx-spk"><option value="">Lade&hellip;</option></select>
       </div>
-      <div class="field">
-        <label>PC Lautsprecher &rarr; RX-Ziel</label>
-        <select id="a-pc-spk"><option value="">Lade&hellip;</option></select>
+    </div>
+
+    <div class="setup-card">
+      <div class="card-label">Streaming</div>
+      <div class="toggle-group">
+        <div>
+          <div class="tg-label">RX-Audio aktiv</div>
+          <div class="tg-hint">TRX-Empfang aufnehmen</div>
+        </div>
+        <button class="tg-switch" id="tg-rx-active" onclick="toggleRxStream(this)"></button>
+      </div>
+      <div class="toggle-group">
+        <div>
+          <div class="tg-label">TX-Audio aktiv</div>
+          <div class="tg-hint">Audio an TRX senden</div>
+        </div>
+        <button class="tg-switch" id="tg-tx-active" onclick="toggleTxStream(this)"></button>
       </div>
     </div>
 
@@ -465,13 +585,14 @@
   <div class="overlay-box" style="max-width:420px">
     <button class="overlay-x" onclick="closeAll()">&times;</button>
     <div class="overlay-head">Theme</div>
-    <div class="theme-row">
-      <button class="theme-tile active" id="t-dark" onclick="applyTheme('dark')">
-        <span class="ti">&#9790;</span> Dark
-      </button>
-      <button class="theme-tile" id="t-light" onclick="applyTheme('light')">
-        <span class="ti">&#9788;</span> Light
-      </button>
+    <div class="setup-card">
+      <div class="card-label">Preset wählen</div>
+      <div class="field">
+        <label>Theme</label>
+        <select id="theme-select" onchange="changeTheme()">
+          <option>Lade&hellip;</option>
+        </select>
+      </div>
     </div>
   </div>
 </div>
@@ -496,6 +617,7 @@ function showOv(id) {
   if (id === 'radio')  loadPorts();
   if (id === 'audio')  loadNodes();
   if (id === 'status') loadStatus();
+  if (id === 'theme')  loadThemeList();
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
 
@@ -602,21 +724,16 @@ async function cfgTestPTT() {
 async function loadNodes() {
   try {
     const d = await (await fetch('/api/audio/nodes')).json();
-    fillSel('a-pc-mic',  d.sources||[], '-- Nicht zugewiesen --');
     fillSel('a-trx-mic', d.sinks||[],   '-- Nicht zugewiesen --');
     fillSel('a-trx-spk', d.sources||[], '-- Nicht zugewiesen --');
-    fillSel('a-pc-spk',  d.sinks||[],   '-- Nicht zugewiesen --');
-    // Gespeicherte Werte laden
     try {
       const c = await (await fetch('/api/config')).json();
       const a = c.audio || {};
-      if (a.pc_mic)  setSel('a-pc-mic', a.pc_mic);
       if (a.trx_mic) setSel('a-trx-mic', a.trx_mic);
       if (a.trx_spk) setSel('a-trx-spk', a.trx_spk);
-      if (a.pc_spk)  setSel('a-pc-spk', a.pc_spk);
     } catch(e) {}
   } catch(e) {
-    ['a-pc-mic','a-trx-mic','a-trx-spk','a-pc-spk'].forEach(id =>
+    ['a-trx-mic','a-trx-spk'].forEach(id =>
       $(id).innerHTML = '<option>Fehler</option>');
   }
 }
@@ -626,14 +743,24 @@ async function audioSave() {
     const d = await (await fetch('/api/config/save', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ audio: {
-        pc_mic:  $('a-pc-mic').value,
         trx_mic: $('a-trx-mic').value,
         trx_spk: $('a-trx-spk').value,
-        pc_spk:  $('a-pc-spk').value,
       }}),
     })).json();
     msg('audio-msg', d.ok ? 'Gespeichert!' : 'Fehler', d.ok);
   } catch(e) { msg('audio-msg', 'Verbindungsfehler', false); }
+}
+
+async function toggleRxStream(el) {
+  const on = !el.classList.contains('on');
+  el.classList.toggle('on', on);
+  await fetch('/api/audio/rx/' + (on ? 'start' : 'stop'), { method: 'POST' });
+}
+
+async function toggleTxStream(el) {
+  const on = !el.classList.contains('on');
+  el.classList.toggle('on', on);
+  await fetch('/api/audio/tx/' + (on ? 'start' : 'stop'), { method: 'POST' });
 }
 
 /* ── Status ───────────────────────────────────────────────────────────────── */
@@ -679,23 +806,57 @@ async function loadStatus() {
   } catch(e) {}
 }
 
-/* ── Theme ────────────────────────────────────────────────────────────────── */
-const THEMES = {
-  dark:  { bg:'#0d0d1a', card:'#151528', input:'#1a1a30', border:'#2a2a45', text:'#e0e0e0', dim:'#888' },
-  light: { bg:'#f0f0f5', card:'#ffffff', input:'#f5f5fa', border:'#d0d0d8', text:'#1a1a2e', dim:'#666' },
-};
-function applyTheme(t) {
-  const v = THEMES[t];
+/* ── Theme — dynamisch via /api/theme ────────────────────────────────────── */
+function tgToggle(el) { el.classList.toggle('on'); }
+
+function applyColors(d) {
   const r = document.documentElement.style;
-  r.setProperty('--bg', v.bg);
-  r.setProperty('--bg-card', v.card);
-  r.setProperty('--bg-input', v.input);
-  r.setProperty('--border', v.border);
-  r.setProperty('--text', v.text);
-  r.setProperty('--dim', v.dim);
-  $('t-dark').classList.toggle('active', t === 'dark');
-  $('t-light').classList.toggle('active', t === 'light');
+  if (d.teal)     r.setProperty('--teal', d.teal);
+  if (d.bg)       r.setProperty('--bg', d.bg);
+  if (d.bg_card)  r.setProperty('--bg-card', d.bg_card);
+  if (d.bg_input) r.setProperty('--bg-input', d.bg_input);
+  if (d.border)   r.setProperty('--border', d.border);
+  if (d.text)     r.setProperty('--text', d.text);
+  if (d.dim)      r.setProperty('--dim', d.dim);
 }
+
+async function loadTheme() {
+  try {
+    const d = await (await fetch('/api/theme')).json();
+    applyColors(d);
+    if (d.preset && $('theme-select')) $('theme-select').value = d.preset;
+  } catch(e) {
+    console.warn('Theme konnte nicht geladen werden:', e);
+  }
+}
+
+async function loadThemeList() {
+  try {
+    const names = await (await fetch('/api/themes')).json();
+    const sel = $('theme-select');
+    sel.innerHTML = '';
+    names.forEach(n => {
+      const o = document.createElement('option');
+      o.value = n; o.textContent = n; sel.appendChild(o);
+    });
+    // Aktuelles Preset vorbelegen
+    const cur = await (await fetch('/api/theme')).json();
+    if (cur.preset) sel.value = cur.preset;
+  } catch(e) {}
+}
+
+async function changeTheme() {
+  const preset = $('theme-select').value;
+  try {
+    const d = await (await fetch('/api/theme/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ preset }),
+    })).json();
+    applyColors(d);
+  } catch(e) {}
+}
+
+loadTheme();
 
 /* ── Connection-Badge Polling ─────────────────────────────────────────────── */
 async function pollConn() {

@@ -384,6 +384,21 @@ def _poll_loop():
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
+
+# ── Theme-Presets ────────────────────────────────────────────────────────────
+
+THEMES = {
+    "Dark":           {"teal":"#06c6a4","bg":"#0d0d1a","bg_card":"#151528","bg_input":"#1a1a30","border":"#2a2a45","text":"#e0e0e0","dim":"#888888"},
+    "Midnight Blue":  {"teal":"#4fc3f7","bg":"#0a0e1a","bg_card":"#0f1628","bg_input":"#141d35","border":"#1e2d50","text":"#e0e8ff","dim":"#6080b0"},
+    "Forest Green":   {"teal":"#4caf50","bg":"#0a1a0a","bg_card":"#0f1f0f","bg_input":"#142814","border":"#1e3c1e","text":"#d0e8d0","dim":"#608060"},
+    "Solarized Dark": {"teal":"#2aa198","bg":"#002b36","bg_card":"#073642","bg_input":"#073642","border":"#586e75","text":"#839496","dim":"#586e75"},
+    "Dracula":        {"teal":"#50fa7b","bg":"#282a36","bg_card":"#383a59","bg_input":"#44475a","border":"#6272a4","text":"#f8f8f2","dim":"#6272a4"},
+    "Nord":           {"teal":"#88c0d0","bg":"#2e3440","bg_card":"#3b4252","bg_input":"#434c5e","border":"#4c566a","text":"#eceff4","dim":"#81a1c1"},
+    "Monokai":        {"teal":"#a6e22e","bg":"#272822","bg_card":"#383830","bg_input":"#3e3d32","border":"#75715e","text":"#f8f8f2","dim":"#75715e"},
+    "Gruvbox Dark":   {"teal":"#b8bb26","bg":"#282828","bg_card":"#3c3836","bg_input":"#504945","border":"#665c54","text":"#ebdbb2","dim":"#928374"},
+    "High Contrast":  {"teal":"#ffff00","bg":"#000000","bg_card":"#111111","bg_input":"#1a1a1a","border":"#444444","text":"#ffffff","dim":"#aaaaaa"},
+    "Light":          {"teal":"#00897b","bg":"#f5f5f5","bg_card":"#ffffff","bg_input":"#eeeeee","border":"#cccccc","text":"#1a1a1a","dim":"#666666"},
+}
 app.logger.setLevel(logging.WARNING)
 
 # Audio-Streamer (PCM2901 / USB-Audio)
@@ -795,28 +810,29 @@ def api_status_extended():
     })
 
 
+@app.route("/api/themes")
+def get_themes():
+    """Liste aller verfügbaren Theme-Preset-Namen."""
+    return jsonify(list(THEMES.keys()))
+
+
 @app.route("/api/theme")
 def get_theme():
-    """Theme-Farben als JSON — wird von der UI beim Laden abgerufen."""
+    """Aktives Theme als JSON — Farben des gewählten Presets."""
     cfg = load_config()
-    theme = cfg.get("theme", {})
-    return jsonify({
-        "teal":     theme.get("teal", "#06c6a4"),
-        "bg":       theme.get("bg", "#0d0d1a"),
-        "bg_card":  theme.get("bg_card", "#151528"),
-        "bg_input": theme.get("bg_input", "#1a1a30"),
-        "border":   theme.get("border", "#2a2a45"),
-        "text":     theme.get("text", "#e0e0e0"),
-        "dim":      theme.get("dim", "#888888"),
-    })
+    preset = cfg.get("theme_preset", "Dark")
+    colors = THEMES.get(preset, THEMES["Dark"])
+    return jsonify({**colors, "preset": preset})
 
 
 @app.route("/api/theme/save", methods=["POST"])
 def save_theme():
-    """Theme-Farben speichern."""
-    data = request.get_json(silent=True) or {}
-    ok = save_config({"theme": data})
-    return jsonify({"ok": ok})
+    """Theme-Preset speichern."""
+    data = request.get_json(force=True)
+    preset = data.get("preset", "Dark")
+    save_config({"theme_preset": preset})
+    colors = THEMES.get(preset, THEMES["Dark"])
+    return jsonify({"ok": True, "preset": preset, **colors})
 
 
 @app.route("/api/db/test")
