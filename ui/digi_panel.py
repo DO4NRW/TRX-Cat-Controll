@@ -1,19 +1,22 @@
 """
 RigLink — Digi-Modus Panel
-FT8/FT4 Decode-Ansicht mit Demo-Daten, RTTY, PSK31, CW Platzhalter.
+FT8/FT4 Decode-Ansicht.
+- WSJT-X UDP-Listener (Port 2237): echte Decodes wenn WSJT-X läuft
+- Demo-Modus: simulierte FT8-Decodes wenn kein WSJT-X verbunden
 """
 
+import time
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QComboBox, QTextEdit, QSplitter,
                                QFrame, QProgressBar)
-from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor, QTextCharFormat, QTextCursor
 
 from core.theme import T, register_refresh
-from ui._constants import _ICONS
+from core.digi.wsjtx_listener import WsjtxListener
 
 
 # ── FT8 Demo-Daten ────────────────────────────────────────────────────────────
@@ -36,6 +39,8 @@ _FT8_CALLS = [
     ("CQ EU IK4EST JN54",  +4, 0.8, 14078),
 ]
 
+_LIVE_TIMEOUT = 30.0   # Sekunden ohne Decode → Status-Hinweis
+
 
 class DigiPanelOverlay(QDialog):
     """Freistehender Digi-Modus Dialog — FT8/FT4 Decode + Demo-Betrieb."""
@@ -46,9 +51,18 @@ class DigiPanelOverlay(QDialog):
         self.setMinimumSize(700, 500)
         self.setSizeGripEnabled(True)
 
-        self._demo_timer = QTimer(self)
+        self._demo_timer    = QTimer(self)
         self._demo_timer.timeout.connect(self._ft8_demo_tick)
-        self._demo_counter = 0
+        self._demo_counter  = 0
+
+        self._listener: WsjtxListener | None = None
+        self._live_mode      = False
+        self._last_real_ts   = 0.0   # Unix-Timestamp letzter echter Decode
+
+        # Watchdog: alle 5s prüfen ob WSJT-X noch Daten liefert
+        self._watchdog = QTimer(self)
+        self._watchdog.setInterval(5000)
+        self._watchdog.timeout.connect(self._live_watchdog)
 
         self._build_ui()
         register_refresh(self.refresh_theme)
@@ -57,13 +71,123 @@ class DigiPanelOverlay(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not self._demo_timer.isActive():
+        self._start_listener()
+        if not self._live_mode and not self._demo_timer.isActive():
             self._start_ft8_demo()
+        self._watchdog.start()
 
     def closeEvent(self, event):
         self._demo_timer.stop()
         self._progress_timer.stop()
+        self._watchdog.stop()
+        self._stop_listener()
+        self._live_mode = False
         super().closeEvent(event)
+
+    # ── WSJT-X Listener ───────────────────────────────────────────────────────
+
+    def _start_listener(self):
+        if self._listener is not None:
+            return
+        self._listener = WsjtxListener(parent=self)
+        self._listener.decoded.connect(self._on_wsjtx_decode)
+        self._listener.error.connect(self._on_listener_error)
+        if not self._listener.start():
+            self._listener = None  # Fehler wurde per error-Signal gemeldet
+
+    def _stop_listener(self):
+        if self._listener:
+            self._listener.stop()
+            self._listener = None
+
+    def _on_wsjtx_decode(self, utc: str, snr: int, dt: float,
+                         freq_hz: int, message: str, mode: str):
+        """Slot im Main-Thread — Qt-Signal vom UDP-Thread."""
+        if not self._live_mode:
+            # Erster echter Decode: Demo abschalten
+            self._live_mode = True
+            self._demo_timer.stop()
+            self.decode_view.clear()
+            self.lbl_tx_status.setText(f"RX — WSJT-X Live ({mode})")
+            self.lbl_info.setText(f"WSJT-X Live — {mode} Decodes (Port 2237)")
+
+        self._last_real_ts = time.monotonic()
+        self._append_decode(utc, snr, dt, freq_hz, message)
+        self._progress_value = 0
+
+    def _on_listener_error(self, msg: str):
+        self.lbl_tx_status.setText(f"⚠ {msg}")
+        self._listener = None  # kein Stop-Versuch beim close
+
+    def _live_watchdog(self):
+        """Alle 5s: Status aktualisieren wenn keine echten Daten kommen."""
+        if self._live_mode:
+            age = time.monotonic() - self._last_real_ts
+            if age > _LIVE_TIMEOUT:
+                self.lbl_tx_status.setText(
+                    f"RX — Warte auf WSJT-X… (kein Decode seit {int(age)}s)")
+
+    # ── Decode ausgeben ───────────────────────────────────────────────────────
+
+    def _append_decode(self, utc: str, snr: int, dt: float,
+                       freq_hz: int, message: str):
+        """Zeile in decode_view einhängen — mit Theme-Farbe."""
+        snr_str = f"{snr:+4d}"
+        line    = f"{utc}  {snr_str}  {dt:.1f}  {freq_hz:5d}  {message}\n"
+
+        cursor = self.decode_view.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        fmt = QTextCharFormat()
+        if "CQ" in message:
+            fmt.setForeground(QColor(T["digi_cq"]))
+        elif message.startswith("DO4NRW"):
+            fmt.setForeground(QColor(T["digi_own_call"]))
+        elif "DO4NRW" in message:
+            fmt.setForeground(QColor(T["digi_reply"]))
+        else:
+            fmt.setForeground(QColor(T["text"]))
+        cursor.insertText(line, fmt)
+        self.decode_view.setTextCursor(cursor)
+        self.decode_view.ensureCursorVisible()
+
+    # ── FT8 Demo ──────────────────────────────────────────────────────────────
+
+    def _start_ft8_demo(self):
+        self.decode_view.clear()
+        self.lbl_tx_status.setText("RX — FT8 Demo-Modus (kein WSJT-X)")
+        self.lbl_info.setText("Demo-Modus: simulierte FT8-Decodes. WSJT-X starten für Live-Daten.")
+        self._demo_counter = 0
+        self._ft8_demo_tick()
+        self._demo_timer.start(15000)
+
+    def _ft8_demo_tick(self):
+        entry = _FT8_CALLS[self._demo_counter % len(_FT8_CALLS)]
+        msg, snr, dt, freq = entry
+        utc = datetime.now().strftime("%H:%M:%S")
+        self._append_decode(utc, snr, dt, freq, msg)
+        self._demo_counter += 1
+        self._progress_value = 0
+
+    def _progress_tick(self):
+        self._progress_value = min(15, self._progress_value + 1)
+        self.progress_tx.setValue(self._progress_value)
+
+    # ── Modus-Wechsel ─────────────────────────────────────────────────────────
+
+    def _on_mode_changed(self, mode: str):
+        self.decode_view.clear()
+        if mode == "FT8":
+            if self._live_mode:
+                self.lbl_tx_status.setText(f"RX — WSJT-X Live ({mode})")
+            elif not self._demo_timer.isActive():
+                self._start_ft8_demo()
+        else:
+            self._demo_timer.stop()
+            self.lbl_tx_status.setText(f"RX — {mode} noch nicht implementiert")
+            self.decode_view.setPlainText(
+                f"— {mode} ist in dieser Version noch nicht verfügbar —\n\n"
+                "Wird in einem zukünftigen Update implementiert."
+            )
 
     # ── UI aufbauen ───────────────────────────────────────────────────────────
 
@@ -81,10 +205,8 @@ class DigiPanelOverlay(QDialog):
         title.setFont(QFont("Roboto", 16, QFont.Bold))
         title.setStyleSheet(f"color: {T['accent']}; border: none;")
         header.addWidget(title)
-
         header.addStretch()
 
-        # Modus-Auswahl
         self.combo_mode = QComboBox()
         self.combo_mode.addItems(["FT8", "FT4", "RTTY", "PSK31", "CW", "JS8Call", "OLIVIA"])
         self.combo_mode.setMinimumWidth(120)
@@ -92,7 +214,6 @@ class DigiPanelOverlay(QDialog):
         self.combo_mode.currentTextChanged.connect(self._on_mode_changed)
         header.addWidget(self.combo_mode)
 
-        # Schließen-Button
         self.btn_close = QPushButton("Schließen")
         self.btn_close.setFixedHeight(36)
         self.btn_close.setStyleSheet(self._btn_style())
@@ -102,16 +223,15 @@ class DigiPanelOverlay(QDialog):
 
         root.addLayout(header)
 
-        # ── Splitter: Decode-Liste oben, TX-Bereich unten ──────────
+        # ── Splitter ───────────────────────────────────────────────
         splitter = QSplitter(Qt.Vertical)
 
-        # Oberer Bereich: Decode-Liste
+        # Decode-Liste
         decode_widget = QFrame()
         decode_layout = QVBoxLayout(decode_widget)
         decode_layout.setContentsMargins(0, 0, 0, 0)
         decode_layout.setSpacing(4)
 
-        # Spalten-Header
         col_header = QHBoxLayout()
         for label, stretch in [("UTC", 2), ("dB", 1), ("DT", 1), ("Freq", 1), ("Message", 4)]:
             lbl = QLabel(label)
@@ -119,48 +239,36 @@ class DigiPanelOverlay(QDialog):
             col_header.addWidget(lbl, stretch=stretch)
         decode_layout.addLayout(col_header)
 
-        # Decode-Textfeld
         self.decode_view = QTextEdit()
         self.decode_view.setReadOnly(True)
         self.decode_view.setFont(QFont("Consolas", 11))
-        self.decode_view.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {T['bg_mid']};
-                color: {T['text']};
-                border: 1px solid {T['border']};
-                border-radius: 4px;
-            }}""")
+        self.decode_view.setStyleSheet(self._decode_style())
         decode_layout.addWidget(self.decode_view)
 
         splitter.addWidget(decode_widget)
 
-        # Unterer Bereich: TX-Eingabe + Buttons
+        # TX-Bereich
         tx_widget = QFrame()
         tx_layout = QVBoxLayout(tx_widget)
         tx_layout.setContentsMargins(0, 0, 0, 0)
         tx_layout.setSpacing(6)
 
-        # TX-Status-Zeile
         tx_status = QHBoxLayout()
-        self.lbl_tx_status = QLabel("RX — Warte auf Decodes...")
+        self.lbl_tx_status = QLabel("RX — Warte auf Decodes…")
         self.lbl_tx_status.setStyleSheet(f"color: {T['text_secondary']}; font-size: 12px; border: none;")
         tx_status.addWidget(self.lbl_tx_status)
         tx_status.addStretch()
 
-        # Fortschrittsbalken (TX Timing)
         self.progress_tx = QProgressBar()
         self.progress_tx.setRange(0, 15)
         self.progress_tx.setValue(0)
         self.progress_tx.setFixedHeight(8)
         self.progress_tx.setFixedWidth(200)
         self.progress_tx.setTextVisible(False)
-        self.progress_tx.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
-            QProgressBar::chunk {{ background-color: {T['accent']}; border-radius: 2px; }}""")
+        self.progress_tx.setStyleSheet(self._progress_style())
         tx_status.addWidget(self.progress_tx)
         tx_layout.addLayout(tx_status)
 
-        # TX-Buttons
         tx_buttons = QHBoxLayout()
         tx_buttons.setSpacing(4)
         for label in ["Enable TX", "Halt TX", "Tune", "Log QSO"]:
@@ -177,10 +285,10 @@ class DigiPanelOverlay(QDialog):
         sep.setStyleSheet(f"color: {T['border']};")
         tx_layout.addWidget(sep)
 
-        info = QLabel("Demo-Modus: FT8-Decodes werden simuliert. TX erfordert TRX-Verbindung.")
-        info.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none;")
-        info.setAlignment(Qt.AlignCenter)
-        tx_layout.addWidget(info)
+        self.lbl_info = QLabel("Demo-Modus: simulierte FT8-Decodes. WSJT-X starten für Live-Daten.")
+        self.lbl_info.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none;")
+        self.lbl_info.setAlignment(Qt.AlignCenter)
+        tx_layout.addWidget(self.lbl_info)
 
         splitter.addWidget(tx_widget)
         splitter.setStretchFactor(0, 3)
@@ -194,73 +302,21 @@ class DigiPanelOverlay(QDialog):
         self._progress_value = 0
         self._progress_timer.start(1000)
 
-    # ── FT8 Demo ─────────────────────────────────────────────────────────────
-
-    def _start_ft8_demo(self):
-        self.decode_view.clear()
-        self.lbl_tx_status.setText("RX — FT8 Demo-Modus (kein TRX verbunden)")
-        self._demo_counter = 0
-        # Erste Zeile sofort
-        self._ft8_demo_tick()
-        # Danach alle 15 Sekunden
-        self._demo_timer.start(15000)
-
-    def _ft8_demo_tick(self):
-        """Hängt eine simulierte FT8-Decode-Zeile an."""
-        entry = _FT8_CALLS[self._demo_counter % len(_FT8_CALLS)]
-        msg, snr, dt, freq = entry
-        # Uhrzeit leicht variieren (immer richtiger 15s-Zyklus)
-        base = datetime.now().replace(second=0, microsecond=0)
-        utc = base.strftime("%H:%M:%S")
-        snr_str = f"{snr:+4d}"
-        line = f"{utc}  {snr_str}  {dt:.1f}  {freq:5d}  {msg}\n"
-
-        # Farbe je nach Nachrichtstyp
-        cursor = self.decode_view.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        fmt = QTextCharFormat()
-        if "CQ" in msg:
-            fmt.setForeground(QColor(T["digi_cq"]))
-        elif "DO4NRW" in msg and msg.startswith("DO4NRW"):
-            fmt.setForeground(QColor(T["digi_own_call"]))
-        elif "DO4NRW" in msg:
-            fmt.setForeground(QColor(T["digi_reply"]))
-        else:
-            fmt.setForeground(QColor(T["text"]))
-        cursor.insertText(line, fmt)
-        self.decode_view.setTextCursor(cursor)
-        self.decode_view.ensureCursorVisible()
-
-        self._demo_counter += 1
-        self._progress_value = 0
-
-    def _progress_tick(self):
-        self._progress_value = min(15, self._progress_value + 1)
-        self.progress_tx.setValue(self._progress_value)
-
-    # ── Modus-Wechsel ─────────────────────────────────────────────────────────
-
-    def _on_mode_changed(self, mode: str):
-        self.decode_view.clear()
-        if mode == "FT8":
-            self.lbl_tx_status.setText("RX — FT8 Demo-Modus (kein TRX verbunden)")
-            if not self._demo_timer.isActive():
-                self._start_ft8_demo()
-        else:
-            self._demo_timer.stop()
-            self.lbl_tx_status.setText(f"RX — {mode} noch nicht implementiert")
-            self.decode_view.setPlainText(
-                f"— {mode} ist in dieser Version noch nicht verfügbar —\n\n"
-                "Wird in einem zukünftigen Update implementiert."
-            )
-
-    # ── Styles ───────────────────────────────────────────────────────────────
+    # ── Styles ────────────────────────────────────────────────────────────────
 
     def _btn_style(self):
         return (f"QPushButton {{ background-color: {T['bg_mid']}; color: {T['text']}; "
                 f"border: 1px solid {T['border']}; border-radius: 4px; padding: 4px 12px; font-size: 12px; }} "
                 f"QPushButton:hover {{ border-color: {T['border_hover']}; background-color: {T['bg_light']}; }} "
                 f"QPushButton:disabled {{ color: {T['text_disabled']}; }}")
+
+    def _decode_style(self):
+        return (f"QTextEdit {{ background-color: {T['bg_mid']}; color: {T['text']}; "
+                f"border: 1px solid {T['border']}; border-radius: 4px; }}")
+
+    def _progress_style(self):
+        return (f"QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}"
+                f"QProgressBar::chunk {{ background-color: {T['accent']}; border-radius: 2px; }}")
 
     def _apply_combo_style(self):
         self.combo_mode.setStyleSheet(f"""
@@ -274,13 +330,5 @@ class DigiPanelOverlay(QDialog):
         self.setStyleSheet(f"background-color: {T['bg_dark']};")
         self._apply_combo_style()
         self.btn_close.setStyleSheet(self._btn_style())
-        self.decode_view.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {T['bg_mid']};
-                color: {T['text']};
-                border: 1px solid {T['border']};
-                border-radius: 4px;
-            }}""")
-        self.progress_tx.setStyleSheet(f"""
-            QProgressBar {{ background-color: {T['bg_dark']}; border: 1px solid {T['border']}; border-radius: 3px; }}
-            QProgressBar::chunk {{ background-color: {T['accent']}; border-radius: 2px; }}""")
+        self.decode_view.setStyleSheet(self._decode_style())
+        self.progress_tx.setStyleSheet(self._progress_style())
