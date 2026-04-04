@@ -335,6 +335,23 @@ class IC705Widget(QWidget):
         self.lbl_span.setText("50k")
         slider_col.addWidget(self.lbl_span)  # Wert unten
 
+        # RF Gain Slider
+        lbl_rf = QLabel("RF")
+        lbl_rf.setStyleSheet(_lbl_style)
+        lbl_rf.setAlignment(Qt.AlignCenter)
+        lbl_rf.setFixedWidth(_col_w)
+        slider_col.addWidget(lbl_rf)
+
+        self.slider_rf = QSlider(Qt.Vertical)
+        self.slider_rf.setRange(0, 20)   # 0 = stumm, 10 = Normal, 20 = 2x Boost
+        self.slider_rf.setValue(5)        # entspricht self._RX_GAIN = 5.0
+        self.slider_rf.setFixedWidth(_col_w)
+        self.slider_rf.setToolTip("RX Audio Gain")
+        self.slider_rf.setFocusPolicy(Qt.NoFocus)
+        self.slider_rf.setStyleSheet(_vslider_style)
+        self.slider_rf.valueChanged.connect(self._on_rf_gain_changed)
+        slider_col.addWidget(self.slider_rf, stretch=1)
+
         # Palette wird über Theme gesteuert
         self._palette_names = list(self.waterfall.PALETTES.keys())
         self._palette_idx = 0
@@ -1144,6 +1161,10 @@ class IC705Widget(QWidget):
         """Rausch-Filter (black_level)."""
         self.waterfall._black_level = val
 
+    def _on_rf_gain_changed(self, value):
+        """RX Audio Gain — wird in _rx_routing_loop() als Multiplikator genutzt."""
+        self._RX_GAIN = float(value)
+
     # ══════════════════════════════════════════════════════════════════
     # DEMO RECORDER (F9 Start/Stop)
     # ══════════════════════════════════════════════════════════════════
@@ -1375,24 +1396,31 @@ class IC705Widget(QWidget):
             out = subprocess.run(["pw-cli", "list-objects"],
                 capture_output=True, text=True, timeout=3).stdout
             active_nodes = re.findall(r'node\.name\s*=\s*"([^"]+)"', out)
-        except Exception:
+            print(f"[AUDIO] PipeWire Nodes aktiv: {len(active_nodes)}")
+        except Exception as e:
+            print(f"[AUDIO] pw-cli Fehler: {e}")
             return node_name  # Fallback: Config-Wert verwenden
         # Exakter Match
         if node_name in active_nodes:
+            print(f"[AUDIO] Node exakt gefunden: {node_name}")
             return node_name
         # Fuzzy: Basisname ohne Nummer-Suffix matchen
-        # "alsa_input.usb-Burr-Brown...-00.2.analog-stereo" → Basis "alsa_input.usb-Burr-Brown..."
-        # Entferne -XX oder -XX.Y vor .analog-stereo
-        base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', node_name)
+        # Entferne -XX oder -XX.Y vor .analog (z.B. -00.analog, -01.2.analog)
+        # Auch Variante ohne Bindestrich: _CODEC-00.analog → _CODEC.analog
+        base = re.sub(r'-\d+(\.\d+)*\.analog', '.analog', node_name)
         # Gleichen Typ (input/output) beibehalten
         is_input = "input" in node_name or "source" in node_name
+        print(f"[AUDIO] Fuzzy-Suche: '{node_name}' → Basis '{base}' (input={is_input})")
         for n in active_nodes:
-            n_base = re.sub(r'-\d+(\.\d+)?\.analog', '.analog', n)
+            n_base = re.sub(r'-\d+(\.\d+)*\.analog', '.analog', n)
             n_is_input = "input" in n or "source" in n
             if n_base == base and n_is_input == is_input:
                 print(f"[AUDIO] Fuzzy-Match: {node_name} → {n}")
                 return n
-        print(f"[AUDIO] Node nicht gefunden: {node_name}")
+        # Kein Match — alle Nodes gleichen Typs auflisten als Debug-Hilfe
+        same_type = [n for n in active_nodes if ("input" in n or "source" in n) == is_input]
+        print(f"[AUDIO] Node NICHT gefunden: {node_name}")
+        print(f"[AUDIO] Verfügbare Nodes ({('input' if is_input else 'output')}): {same_type}")
         return node_name  # Fallback
 
     def _update_audio_nodes(self, config_path, resolved, audio_cfg):
@@ -1475,8 +1503,14 @@ class IC705Widget(QWidget):
         trx_spk = audio.get("trx_speaker", {})
         pc_spk = audio.get("pc_speaker", {})
 
+        print(f"[AUDIO] Config-Geräte:")
+        print(f"  PC Mic:     {pc_mic.get('device', '(leer)')}")
+        print(f"  TRX Mic:    {trx_mic.get('device', '(leer)')}")
+        print(f"  TRX Speaker:{trx_spk.get('device', '(leer)')}")
+        print(f"  PC Speaker: {pc_spk.get('device', '(leer)')}")
+
         if not any(d.get("device") for d in [pc_mic, trx_mic, trx_spk, pc_spk]):
-            print("Audio: Keine Geräte konfiguriert")
+            print("[AUDIO] Keine Geräte konfiguriert — Abbruch")
             return False
 
         try:
@@ -1486,13 +1520,19 @@ class IC705Widget(QWidget):
                 pw_trx_spk = self._get_pw_node_name(trx_spk.get("device", ""))
                 pw_pc_spk = self._get_pw_node_name(pc_spk.get("device", ""))
 
+                print(f"[AUDIO] Resolved PW-Nodes:")
+                print(f"  PC Mic:      {pw_pc_mic or '(None)'}")
+                print(f"  TRX Mic:     {pw_trx_mic or '(None)'}")
+                print(f"  TRX Speaker: {pw_trx_spk or '(None)'}")
+                print(f"  PC Speaker:  {pw_pc_spk or '(None)'}")
+
                 missing = []
                 if not pw_pc_mic: missing.append("PC Mic")
                 if not pw_trx_mic: missing.append("TRX Mic")
                 if not pw_trx_spk: missing.append("TRX Spk")
                 if not pw_pc_spk: missing.append("PC Spk")
                 if missing:
-                    print(f"Audio: PipeWire Nodes fehlen: {', '.join(missing)}")
+                    print(f"[AUDIO] PipeWire Nodes fehlen: {', '.join(missing)} — Abbruch")
                     return False
 
                 # Config updaten wenn sich Node-Names geändert haben (USB umgesteckt)
@@ -1560,7 +1600,8 @@ class IC705Widget(QWidget):
                     else:
                         self._pw_rx_play.stdin.write(silence)
                     self._pw_rx_play.stdin.flush()
-            except Exception:
+            except Exception as e:
+                print(f"[AUDIO RX] Routing-Fehler: {e}")
                 break
 
     def _tx_routing_loop(self):
@@ -1583,7 +1624,8 @@ class IC705Widget(QWidget):
                     else:
                         self._pw_tx_play.stdin.write(silence)
                     self._pw_tx_play.stdin.flush()
-            except Exception:
+            except Exception as e:
+                print(f"[AUDIO TX] Routing-Fehler: {e}")
                 if self._disconnecting:
                     break
 
@@ -1644,6 +1686,7 @@ class IC705Widget(QWidget):
         self.slider_span.setStyleSheet(_vs)
         self.slider_signal.setStyleSheet(_vs)
         self.slider_noise.setStyleSheet(_vs)
+        self.slider_rf.setStyleSheet(_vs)
 
         # S-Meter — Style-Wechsel wenn Theme andere smeter_style hat
         new_style = T.get("smeter_style", "segment")
