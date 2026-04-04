@@ -3,7 +3,8 @@ import json
 import threading
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                                QPushButton, QComboBox, QApplication)
+                                QPushButton, QComboBox, QApplication,
+                                QStackedWidget)
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import QSize, QPoint, Qt, QEvent, QRect, QTimer, Signal
 
@@ -111,27 +112,69 @@ class RadioSetupOverlay(QWidget):
         # ── LEFT: CAT Control card ────────────────────────────────────
         self._cat_card, cat_l = _card("CAT Control")
 
-        cat_l.addWidget(_section_label("Serial Port:", "connection.svg"))
+        # ── Tab-Leiste: Lokal / Remote ────────────────────────────
+        self._cat_tab_buttons = []
+        self._cat_current_tab = 0
+        cat_tab_row = QHBoxLayout()
+        cat_tab_row.setSpacing(0)
+        for i, name in enumerate(["Lokal", "Remote"]):
+            btn = QPushButton(name)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setFixedHeight(28)
+            btn.setFocusPolicy(Qt.NoFocus)
+            btn.clicked.connect(lambda checked, idx=i: self._switch_cat_tab(idx))
+            cat_tab_row.addWidget(btn)
+            self._cat_tab_buttons.append(btn)
+        cat_tab_row.addStretch()
+        cat_l.addLayout(cat_tab_row)
+        self._apply_cat_tab_styles()
+
+        self._cat_tab_stack = QStackedWidget()
+        self._cat_tab_stack.setStyleSheet("background: transparent;")
+
+        # ── TAB 0: Lokal ──────────────────────────────────────────
+        _tab_lokal = QWidget()
+        lokal_l = QVBoxLayout(_tab_lokal)
+        lokal_l.setContentsMargins(0, 4, 0, 0)
+        lokal_l.setSpacing(4)
+
+        lokal_l.addWidget(_section_label("Serial Port:", "connection.svg"))
         self.combo_cat_port = _combo(_list_serial_ports())
-        cat_l.addWidget(self.combo_cat_port)
+        lokal_l.addWidget(self.combo_cat_port)
 
-        cat_l.addWidget(_section_label("Baud Rate:", "settings.svg"))
+        lokal_l.addWidget(_section_label("Baud Rate:", "settings.svg"))
         self.combo_baud = _combo(["1200","2400","4800","9600","19200","38400","57600","115200"], "38400")
-        cat_l.addWidget(self.combo_baud)
+        lokal_l.addWidget(self.combo_baud)
 
-        cat_l.addWidget(_section_label("Data Bits", "build.svg"))
+        lokal_l.addWidget(_section_label("Data Bits", "build.svg"))
         self.tg_data_bits = ToggleGroup(["Default","Seven","Eight"], wrap_at=3)
-        cat_l.addWidget(self.tg_data_bits)
+        lokal_l.addWidget(self.tg_data_bits)
 
-        cat_l.addWidget(_section_label("Stop Bits", "build.svg"))
+        lokal_l.addWidget(_section_label("Stop Bits", "build.svg"))
         self.tg_stop_bits = ToggleGroup(["Default","One","Two"], wrap_at=3)
-        cat_l.addWidget(self.tg_stop_bits)
+        lokal_l.addWidget(self.tg_stop_bits)
 
-        cat_l.addWidget(_section_label("Handshake", "settings.svg"))
+        lokal_l.addWidget(_section_label("Handshake", "settings.svg"))
         self.tg_handshake = ToggleGroup(["Default","None","XON/XOFF","Hardware"], wrap_at=3)
-        cat_l.addWidget(self.tg_handshake)
+        lokal_l.addWidget(self.tg_handshake)
 
-        cat_l.addStretch()
+        lokal_l.addStretch()
+        self._cat_tab_stack.addWidget(_tab_lokal)
+
+        # ── TAB 1: Remote ─────────────────────────────────────────
+        _tab_remote = QWidget()
+        remote_l = QVBoxLayout(_tab_remote)
+        remote_l.setContentsMargins(0, 8, 0, 0)
+        remote_l.setSpacing(4)
+        remote_lbl = QLabel("Remote-Verbindung (coming soon)")
+        remote_lbl.setAlignment(Qt.AlignCenter)
+        remote_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 13px; border: none;")
+        remote_l.addStretch()
+        remote_l.addWidget(remote_lbl)
+        remote_l.addStretch()
+        self._cat_tab_stack.addWidget(_tab_remote)
+
+        cat_l.addWidget(self._cat_tab_stack)
         cols.addWidget(self._cat_card, stretch=1)
 
         # ── RIGHT: PTT / Mode card ──────────────────────────────────
@@ -185,6 +228,29 @@ class RadioSetupOverlay(QWidget):
 
         # Signals direkt verbinden
         self._connect_signals()
+
+    # ── CAT-Tab-System ────────────────────────────────────────────────────────
+
+    def _switch_cat_tab(self, idx: int):
+        self._cat_current_tab = idx
+        self._cat_tab_stack.setCurrentIndex(idx)
+        self._apply_cat_tab_styles()
+
+    def _apply_cat_tab_styles(self):
+        """Tab-Buttons der CAT-Card stylen — aktiver Tab hervorgehoben."""
+        for i, btn in enumerate(self._cat_tab_buttons):
+            if i == self._cat_current_tab:
+                btn.setStyleSheet(f"""
+                    QPushButton {{ background: {T['bg_mid']}; color: {T['text']};
+                        border: 1px solid {T['border']}; border-bottom: none;
+                        border-radius: 6px 6px 0 0; padding: 4px 12px;
+                        font-size: 11px; font-weight: bold; }}""")
+            else:
+                btn.setStyleSheet(f"""
+                    QPushButton {{ background: transparent; color: {T['text_muted']};
+                        border: none; border-bottom: 1px solid {T['border']};
+                        border-radius: 0; padding: 4px 12px; font-size: 11px; }}
+                    QPushButton:hover {{ color: {T['text']}; }}""")
 
     def _apply_panel_style(self):
         self.panel.setStyleSheet(f"""
@@ -360,6 +426,8 @@ class RadioSetupOverlay(QWidget):
                 background-color: {T['bg_mid']}; color: {T['text_secondary']};
                 selection-background-color: {T['bg_light']}; border: 1px solid {T['border']};
             }}"""
+        if hasattr(self, '_cat_tab_buttons'):
+            self._apply_cat_tab_styles()
         self._cat_card.setObjectName("catCard")
         self._ptt_card.setObjectName("pttCard")
         _card_style_cat = f"""
