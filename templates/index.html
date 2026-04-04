@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RigLink — IC-705 Setup</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal:     #06c6a4;
+    --teal-dim: #05a88b;
+    --bg:       #0d0d1a;
+    --bg-card:  #151528;
+    --bg-input: #1a1a30;
+    --border:   #2a2a45;
+    --text:     #e0e0e0;
+    --dim:      #888;
+    --red:      #e74c3c;
+    --yellow:   #f0a500;
+    --green:    #2ecc71;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 20px 16px 40px;
+  }
+
+  /* ── Header — exakt wie Demo ── */
+  .header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 0; max-width: 700px;
+    margin-left: auto; margin-right: auto; padding-bottom: 16px;
+  }
+  .logo { color: var(--teal); font-size: 1.45rem; font-weight: 700; letter-spacing: 0.06em; }
+  .logo em { color: var(--dim); font-style: normal; font-weight: 400; font-size: 1rem; }
+  .conn-badge {
+    margin-left: auto; display: flex; align-items: center; gap: 7px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 13px; font-size: 0.82rem;
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--dim); flex-shrink: 0; transition: all 0.3s;
+  }
+  .dot.on  { background: var(--teal); box-shadow: 0 0 7px var(--teal); }
+  .dot.off { background: var(--red);  box-shadow: 0 0 7px var(--red); }
+  #conn-text { color: var(--dim); }
+
+  .hamburger {
+    background: none; border: 1px solid var(--border);
+    color: var(--text); font-size: 1.5rem; width: 42px; height: 38px;
+    border-radius: 7px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hamburger:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ── Card — Demo-Stil ── */
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--dim); margin-bottom: 12px;
+  }
+
+  /* ── Willkommens-Card ── */
+  .welcome { max-width: 700px; margin: 0 auto; }
+  .welcome-hint { color: var(--dim); font-size: 0.9rem; line-height: 1.6; }
+  .welcome-hint strong { color: var(--teal); }
+
+  /* ── Overlay ── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65); z-index: 100;
+    justify-content: center; align-items: flex-start;
+    padding: 50px 16px 30px; overflow-y: auto;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .overlay.open { display: flex; }
+  .overlay-box {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px; width: 100%; max-width: 680px;
+    position: relative; animation: slideIn 0.15s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .overlay-x {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; color: var(--dim);
+    font-size: 1.6rem; cursor: pointer; line-height: 1;
+    transition: color 0.15s;
+  }
+  .overlay-x:hover { color: var(--text); }
+  .overlay-head {
+    font-size: 1.15rem; font-weight: 600; color: var(--teal);
+    margin-bottom: 18px; letter-spacing: 0.04em;
+  }
+
+  /* ── Menü-Liste ── */
+  .menu-list { list-style: none; }
+  .menu-list li {
+    padding: 15px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; font-size: 1rem; transition: all 0.15s;
+    display: flex; align-items: center; gap: 14px; border-radius: 6px;
+  }
+  .menu-list li:last-child { border-bottom: none; }
+  .menu-list li:hover { color: var(--teal); background: var(--bg-input); }
+  .menu-list li .mi { width: 26px; text-align: center; font-size: 1.15rem; flex-shrink: 0; }
+  .menu-list li .ml { font-size: 0.72rem; color: var(--dim); margin-left: auto; }
+
+  /* ── Formular-Elemente — Demo select-Stil ── */
+  select {
+    width: 100%; background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 10px 14px; font-size: 0.95rem; font-family: inherit;
+    outline: none; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%23888' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+  }
+  select:focus { border-color: var(--teal); }
+  select option { background: var(--bg-card); }
+
+  input[type=text] {
+    width: 100%; background: var(--bg-input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 10px 14px; font-size: 0.95rem; font-family: inherit; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--teal); }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 0.72rem; color: var(--dim);
+    margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* ── 2-Spalten-Grid (Radio Setup) ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 540px) { .two-col { grid-template-columns: 1fr; } }
+  .col-title {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--dim); margin-bottom: 14px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Buttons — Demo-Stil ── */
+  .btn {
+    border: 1px solid var(--border); background: transparent; color: var(--text);
+    border-radius: 7px; padding: 10px 22px; cursor: pointer; font-size: 0.9rem;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--teal); color: var(--teal); }
+  .btn-save {
+    background: var(--teal); border-color: var(--teal); color: #000;
+    font-weight: 600; padding: 10px 28px;
+  }
+  .btn-save:hover { background: var(--teal-dim); border-color: var(--teal-dim); }
+  .btn-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+  .btn-msg {
+    font-size: 0.82rem; color: var(--dim); margin-left: 6px;
+    transition: color 0.2s;
+  }
+
+  /* ── Status-Grid — exakt Demo ── */
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 480px) { .status-grid { grid-template-columns: 1fr; } }
+  .status-item {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 7px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .si-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); }
+  .si-val   { font-size: 0.95rem; color: var(--text); }
+  .si-val.ok  { color: var(--teal); }
+  .si-val.err { color: var(--red); }
+
+  /* ── Audio-Chips — Demo ── */
+  .audio-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .audio-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 5px; padding: 6px 10px; font-size: 0.78rem;
+  }
+  .audio-chip .dot { width: 7px; height: 7px; }
+
+  /* ── USB-Geräte ── */
+  .usb-list { list-style: none; margin-top: 8px; }
+  .usb-list li {
+    padding: 7px 12px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 5px; margin-bottom: 5px; font-size: 0.8rem; font-family: 'Courier New', monospace;
+    color: var(--dim);
+  }
+
+  /* ── Theme-Kacheln ── */
+  .theme-row { display: flex; gap: 14px; }
+  .theme-tile {
+    flex: 1; padding: 24px 16px; text-align: center;
+    border: 2px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: all 0.2s; background: transparent;
+    color: var(--text); font-family: inherit; font-size: 1rem;
+  }
+  .theme-tile:hover { border-color: var(--teal); }
+  .theme-tile.active { border-color: var(--teal); box-shadow: 0 0 14px rgba(6,198,164,0.15); }
+  .theme-tile .ti { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+
+  /* ── Footer ── */
+  footer {
+    max-width: 700px; margin: 24px auto 0; text-align: center;
+    font-size: 0.7rem; color: var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Header ═══ -->
+<div class="header">
+  <button class="hamburger" onclick="toggleMenu()" id="burger">&#9776;</button>
+  <div class="logo">RigLink <em>// IC-705</em></div>
+  <div class="conn-badge">
+    <div class="dot" id="conn-dot"></div>
+    <span id="conn-text">Verbinde&hellip;</span>
+  </div>
+</div>
+
+<!-- Willkommen -->
+<div class="welcome" id="welcome">
+  <div class="card">
+    <div class="card-label">Konfiguration</div>
+    <div class="welcome-hint">
+      Über das <strong>Menü &#9776;</strong> oben rechts konfigurierst du CAT, Audio, Theme und siehst den Systemstatus.<br>
+      Dieses Interface steuert <strong>nicht</strong> den Transceiver &mdash; nur die Einstellungen.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Menü-Overlay ═══ -->
+<div class="overlay" id="ov-menu" onclick="if(event.target===this)closeAll()">
+  <div class="overlay-box" style="max-width:400px">
+    <button class="overlay-x" onclick="closeAll()">&times;</button>
+    <div class="overlay-head">Menü</div>
+    <ul class="menu-list">
+      <li onclick="showOv('radio')">
+        <span class="mi">&#9881;</span> Radio Setup <span class="ml">CAT &amp; PTT</span>
+      </li>
+      <li onclick="showOv('audio')">
+        <span class="mi">&#9835;</span> Audio Setup <span class="ml">PipeWire</span>
+      </li>
+      <li onclick="showOv('status')">
+        <span class="mi">&#9878;</span> Status <span class="ml">System</span>
+      </li>
+      <li onclick="showOv('theme')">
+        <span class="mi">&#9788;</span> Theme <span class="ml">Dark / Light</span>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══ Radio Setup Overlay ═══ -->
+<div class="overlay" id="ov-radio" onclick="if(event.target===this)closeAll()">
+  <div class="overlay-box">
+    <button class="overlay-x" onclick="closeAll()">&times;</button>
+    <div class="overlay-head">Radio Setup</div>
+
+    <div class="two-col">
+      <!-- Links: CAT Control -->
+      <div>
+        <div class="col-title">CAT Control</div>
+
+        <div class="field">
+          <label>Serial Port</label>
+          <select id="cfg-port"><option value="">Lade&hellip;</option></select>
+        </div>
+        <div class="field">
+          <label>Baud Rate</label>
+          <select id="cfg-baud">
+            <option value="4800">4800</option>
+            <option value="9600">9600</option>
+            <option value="19200">19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200" selected>115200</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data Bits</label>
+          <select id="cfg-databits">
+            <option value="7">7</option>
+            <option value="8" selected>8</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Stop Bits</label>
+          <select id="cfg-stopbits">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Handshake</label>
+          <select id="cfg-handshake">
+            <option value="none" selected>None</option>
+            <option value="rts">RTS/CTS</option>
+            <option value="xonxoff">XON/XOFF</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>CI-V Adresse</label>
+          <input type="text" id="cfg-civ" value="0xA4" placeholder="0xA4 (IC-705)" />
+        </div>
+      </div>
+
+      <!-- Rechts: Transceiver + PTT -->
+      <div>
+        <div class="col-title">Transceiver</div>
+
+        <div class="field">
+          <label>Hersteller</label>
+          <select id="cfg-manufacturer">
+            <option value="icom" selected>Icom</option>
+            <option value="yaesu">Yaesu</option>
+            <option value="kenwood">Kenwood</option>
+            <option value="elecraft">Elecraft</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Modell</label>
+          <input type="text" id="cfg-model" value="IC-705" />
+        </div>
+        <div class="field">
+          <label>Hamlib Model-ID</label>
+          <input type="text" id="cfg-hamlib-id" value="3085" />
+        </div>
+
+        <div class="col-title" style="margin-top:18px">PTT</div>
+        <div class="field">
+          <label>PTT Methode</label>
+          <select id="cfg-ptt">
+            <option value="cat" selected>CAT (Software)</option>
+            <option value="rts">RTS</option>
+            <option value="dtr">DTR</option>
+            <option value="vox">VOX</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-save" onclick="cfgSave()">Speichern</button>
+      <button class="btn" onclick="cfgTestCAT()">Test CAT</button>
+      <button class="btn" onclick="cfgTestPTT()">Test PTT</button>
+      <span class="btn-msg" id="radio-msg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Audio Setup Overlay ═══ -->
+<div class="overlay" id="ov-audio" onclick="if(event.target===this)closeAll()">
+  <div class="overlay-box">
+    <button class="overlay-x" onclick="closeAll()">&times;</button>
+    <div class="overlay-head">Audio Setup</div>
+
+    <div class="card">
+      <div class="card-label">Audio-Routing (PipeWire / ALSA)</div>
+
+      <div class="field">
+        <label>PC Mikrofon &rarr; TX-Quelle</label>
+        <select id="a-pc-mic"><option value="">Lade&hellip;</option></select>
+      </div>
+      <div class="field">
+        <label>TRX Mikrofon-Eingang &rarr; TX-Ziel</label>
+        <select id="a-trx-mic"><option value="">Lade&hellip;</option></select>
+      </div>
+      <div class="field">
+        <label>TRX Lautsprecher &rarr; RX-Quelle</label>
+        <select id="a-trx-spk"><option value="">Lade&hellip;</option></select>
+      </div>
+      <div class="field">
+        <label>PC Lautsprecher &rarr; RX-Ziel</label>
+        <select id="a-pc-spk"><option value="">Lade&hellip;</option></select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-save" onclick="audioSave()">Speichern</button>
+      <span class="btn-msg" id="audio-msg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Status Overlay ═══ -->
+<div class="overlay" id="ov-status" onclick="if(event.target===this)closeAll()">
+  <div class="overlay-box">
+    <button class="overlay-x" onclick="closeAll()">&times;</button>
+    <div class="overlay-head">Systemstatus</div>
+
+    <div class="card">
+      <div class="card-label">Übersicht</div>
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="si-label">Server</div>
+          <div class="si-val ok">Läuft</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">rigctld</div>
+          <div class="si-val" id="st-rigctld">&mdash;</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">IC-705 verbunden</div>
+          <div class="si-val" id="st-rig">&mdash;</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">Uptime</div>
+          <div class="si-val" id="st-uptime">&mdash;</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">IP-Adresse</div>
+          <div class="si-val" id="st-ip">&mdash;</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">Hamlib</div>
+          <div class="si-val">{{ hamlib_ver }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Audio</div>
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="si-label">Soundkarte</div>
+          <div class="si-val" id="st-audio-card">&mdash;</div>
+        </div>
+        <div class="status-item">
+          <div class="si-label">Backend</div>
+          <div class="si-val" id="st-audio-be">&mdash;</div>
+        </div>
+      </div>
+      <div class="audio-row">
+        <div class="audio-chip">
+          <div class="dot" id="rx-dot"></div>
+          <span>RX:</span> <span id="rx-st">Inaktiv</span>
+        </div>
+        <div class="audio-chip">
+          <div class="dot" id="tx-dot"></div>
+          <span>TX:</span> <span id="tx-st">Inaktiv</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">USB-Geräte</div>
+      <ul class="usb-list" id="usb-list">
+        <li>Lade&hellip;</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Theme Overlay ═══ -->
+<div class="overlay" id="ov-theme" onclick="if(event.target===this)closeAll()">
+  <div class="overlay-box" style="max-width:420px">
+    <button class="overlay-x" onclick="closeAll()">&times;</button>
+    <div class="overlay-head">Theme</div>
+    <div class="theme-row">
+      <button class="theme-tile active" id="t-dark" onclick="applyTheme('dark')">
+        <span class="ti">&#9790;</span> Dark
+      </button>
+      <button class="theme-tile" id="t-light" onclick="applyTheme('light')">
+        <span class="ti">&#9788;</span> Light
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer>RigLink &copy; DO4NRW &mdash; Hamlib {{ hamlib_ver }}</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Overlay-System ───────────────────────────────────────────────────────── */
+function closeAll() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+}
+function toggleMenu() {
+  const m = document.getElementById('ov-menu');
+  if (m.classList.contains('open')) { closeAll(); return; }
+  closeAll();
+  m.classList.add('open');
+}
+function showOv(id) {
+  closeAll();
+  document.getElementById('ov-' + id).classList.add('open');
+  if (id === 'radio')  loadPorts();
+  if (id === 'audio')  loadNodes();
+  if (id === 'status') loadStatus();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+
+/* ── Hilfsfunktionen ──────────────────────────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
+function setSel(id, v) {
+  const s = $(id); if (!s) return;
+  for (const o of s.options) if (o.value === v) { o.selected = true; return; }
+}
+function fillSel(id, items, empty) {
+  const s = $(id);
+  s.innerHTML = '<option value="">' + (empty || '-- Keine --') + '</option>';
+  items.forEach(n => {
+    const o = document.createElement('option');
+    o.value = n.name || n;
+    o.textContent = n.description || n.name || n;
+    s.appendChild(o);
+  });
+}
+function msg(id, txt, ok) {
+  const el = $(id);
+  el.textContent = txt;
+  el.style.color = ok === true ? 'var(--teal)' : ok === false ? 'var(--red)' : 'var(--dim)';
+}
+
+/* ── Radio Setup ──────────────────────────────────────────────────────────── */
+async function loadPorts() {
+  try {
+    const d = await (await fetch('/api/ports')).json();
+    const sel = $('cfg-port');
+    sel.innerHTML = '';
+    (d.ports || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p; sel.appendChild(o);
+    });
+    if (!d.ports || !d.ports.length)
+      sel.innerHTML = '<option value="">Keine Ports</option>';
+    loadCfg();
+  } catch(e) {
+    $('cfg-port').innerHTML = '<option value="">Fehler</option>';
+  }
+}
+
+async function loadCfg() {
+  try {
+    const d = await (await fetch('/api/config')).json();
+    if (d.port)         setSel('cfg-port', d.port);
+    if (d.baud)         setSel('cfg-baud', String(d.baud));
+    if (d.databits)     setSel('cfg-databits', String(d.databits));
+    if (d.stopbits)     setSel('cfg-stopbits', String(d.stopbits));
+    if (d.handshake)    setSel('cfg-handshake', d.handshake);
+    if (d.civ)          $('cfg-civ').value = d.civ;
+    if (d.manufacturer) setSel('cfg-manufacturer', d.manufacturer);
+    if (d.model)        $('cfg-model').value = d.model;
+    if (d.hamlib_id)    $('cfg-hamlib-id').value = d.hamlib_id;
+    if (d.ptt_method)   setSel('cfg-ptt', d.ptt_method);
+  } catch(e) {}
+}
+
+function getRadioCfg() {
+  return {
+    port:         $('cfg-port').value,
+    baud:         parseInt($('cfg-baud').value),
+    databits:     parseInt($('cfg-databits').value),
+    stopbits:     parseInt($('cfg-stopbits').value),
+    handshake:    $('cfg-handshake').value,
+    civ:          $('cfg-civ').value,
+    manufacturer: $('cfg-manufacturer').value,
+    model:        $('cfg-model').value,
+    hamlib_id:    $('cfg-hamlib-id').value,
+    ptt_method:   $('cfg-ptt').value,
+  };
+}
+
+async function cfgSave() {
+  try {
+    const d = await (await fetch('/api/config/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(getRadioCfg()),
+    })).json();
+    msg('radio-msg', d.ok ? 'Gespeichert!' : 'Fehler: ' + (d.error||'?'), d.ok);
+  } catch(e) { msg('radio-msg', 'Verbindungsfehler', false); }
+}
+
+async function cfgTestCAT() {
+  msg('radio-msg', 'Teste CAT...', null);
+  try {
+    const d = await (await fetch('/api/cat/test', { method:'POST' })).json();
+    msg('radio-msg',
+      d.ok ? 'CAT OK — ' + (d.frequency||'?') : 'Fehler: ' + (d.error||'?'),
+      d.ok);
+  } catch(e) { msg('radio-msg', 'Verbindungsfehler', false); }
+}
+
+async function cfgTestPTT() {
+  msg('radio-msg', 'PTT Test (1s)...', null);
+  try {
+    const d = await (await fetch('/api/ptt/test', { method:'POST' })).json();
+    msg('radio-msg', d.ok ? 'PTT OK!' : 'Fehler: ' + (d.error||'?'), d.ok);
+  } catch(e) { msg('radio-msg', 'Verbindungsfehler', false); }
+}
+
+/* ── Audio Setup ──────────────────────────────────────────────────────────── */
+async function loadNodes() {
+  try {
+    const d = await (await fetch('/api/audio/nodes')).json();
+    fillSel('a-pc-mic',  d.sources||[], '-- Nicht zugewiesen --');
+    fillSel('a-trx-mic', d.sinks||[],   '-- Nicht zugewiesen --');
+    fillSel('a-trx-spk', d.sources||[], '-- Nicht zugewiesen --');
+    fillSel('a-pc-spk',  d.sinks||[],   '-- Nicht zugewiesen --');
+    // Gespeicherte Werte laden
+    try {
+      const c = await (await fetch('/api/config')).json();
+      const a = c.audio || {};
+      if (a.pc_mic)  setSel('a-pc-mic', a.pc_mic);
+      if (a.trx_mic) setSel('a-trx-mic', a.trx_mic);
+      if (a.trx_spk) setSel('a-trx-spk', a.trx_spk);
+      if (a.pc_spk)  setSel('a-pc-spk', a.pc_spk);
+    } catch(e) {}
+  } catch(e) {
+    ['a-pc-mic','a-trx-mic','a-trx-spk','a-pc-spk'].forEach(id =>
+      $(id).innerHTML = '<option>Fehler</option>');
+  }
+}
+
+async function audioSave() {
+  try {
+    const d = await (await fetch('/api/config/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ audio: {
+        pc_mic:  $('a-pc-mic').value,
+        trx_mic: $('a-trx-mic').value,
+        trx_spk: $('a-trx-spk').value,
+        pc_spk:  $('a-pc-spk').value,
+      }}),
+    })).json();
+    msg('audio-msg', d.ok ? 'Gespeichert!' : 'Fehler', d.ok);
+  } catch(e) { msg('audio-msg', 'Verbindungsfehler', false); }
+}
+
+/* ── Status ───────────────────────────────────────────────────────────────── */
+async function loadStatus() {
+  try {
+    const d = await (await fetch('/api/status')).json();
+
+    const rc = $('st-rigctld');
+    rc.textContent = d.rigctld_running ? 'Aktiv (Port 4532)' : 'Gestoppt';
+    rc.className = 'si-val ' + (d.rigctld_running ? 'ok' : 'err');
+
+    $('st-ip').textContent = d.host || '?';
+
+    const s = Math.floor(d.uptime_sec || 0);
+    $('st-uptime').textContent =
+      Math.floor(s/3600) + 'h ' +
+      String(Math.floor((s%3600)/60)).padStart(2,'0') + 'm ' +
+      String(s%60).padStart(2,'0') + 's';
+
+    // Audio
+    const au = d.audio || {};
+    $('st-audio-card').textContent = au.card_name || 'Nicht erkannt';
+    $('st-audio-card').className = 'si-val ' + (au.available ? 'ok' : 'err');
+    $('st-audio-be').textContent = au.backend || 'none';
+    $('rx-st').textContent = au.rx_active ? 'Aktiv' : 'Inaktiv';
+    $('rx-dot').className = 'dot ' + (au.rx_active ? 'on' : '');
+    $('tx-st').textContent = au.tx_active ? 'Aktiv' : 'Inaktiv';
+    $('tx-dot').className = 'dot ' + (au.tx_active ? 'on' : '');
+
+    // IC-705
+    const d2 = await (await fetch('/api/state')).json();
+    const re = $('st-rig');
+    re.textContent = d2.connected ? 'Ja' : 'Nein';
+    re.className = 'si-val ' + (d2.connected ? 'ok' : 'err');
+
+    // USB
+    const ul = $('usb-list');
+    if (d.usb_devices && d.usb_devices.length) {
+      ul.innerHTML = d.usb_devices.map(u => '<li>' + u + '</li>').join('');
+    } else {
+      ul.innerHTML = '<li>Keine erkannt</li>';
+    }
+  } catch(e) {}
+}
+
+/* ── Theme ────────────────────────────────────────────────────────────────── */
+const THEMES = {
+  dark:  { bg:'#0d0d1a', card:'#151528', input:'#1a1a30', border:'#2a2a45', text:'#e0e0e0', dim:'#888' },
+  light: { bg:'#f0f0f5', card:'#ffffff', input:'#f5f5fa', border:'#d0d0d8', text:'#1a1a2e', dim:'#666' },
+};
+function applyTheme(t) {
+  const v = THEMES[t];
+  const r = document.documentElement.style;
+  r.setProperty('--bg', v.bg);
+  r.setProperty('--bg-card', v.card);
+  r.setProperty('--bg-input', v.input);
+  r.setProperty('--border', v.border);
+  r.setProperty('--text', v.text);
+  r.setProperty('--dim', v.dim);
+  $('t-dark').classList.toggle('active', t === 'dark');
+  $('t-light').classList.toggle('active', t === 'light');
+}
+
+/* ── Connection-Badge Polling ─────────────────────────────────────────────── */
+async function pollConn() {
+  try {
+    const d = await (await fetch('/api/state')).json();
+    $('conn-dot').className = 'dot ' + (d.connected ? 'on' : 'off');
+    $('conn-text').textContent = d.connected ? 'IC-705 verbunden' : 'Getrennt';
+  } catch(e) {
+    $('conn-dot').className = 'dot off';
+    $('conn-text').textContent = 'Server offline';
+  }
+}
+setInterval(pollConn, 3000);
+pollConn();
+</script>
+</body>
+</html>

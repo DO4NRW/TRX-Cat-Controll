@@ -1,0 +1,12 @@
+{
+  "port": "/dev/ttyACM0",
+  "baud": 115200,
+  "model": "IC-705",
+  "databits": 8,
+  "stopbits": 1,
+  "handshake": "none",
+  "civ": "0xA4",
+  "manufacturer": "icom",
+  "hamlib_id": "3085",
+  "ptt_method": "cat"
+}
