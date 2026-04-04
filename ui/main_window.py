@@ -601,8 +601,10 @@ class MainWindow(QMainWindow):
 
     def _disconnect_cat(self):
         log_event("CAT Disconnect")
-        if self._cat_handler:
-            self._cat_handler.connected = False
+        old_handler = self._cat_handler   # lokale Referenz sichern
+        self._cat_handler = None          # sofort freigeben — kein Zugriff mehr vom Thread
+        if old_handler:
+            old_handler.connected = False
 
         if self.rig_widget:
             if hasattr(self.rig_widget, "stop_polling"):
@@ -615,15 +617,14 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-        def close_handler():
-            if self._cat_handler:
+        def close_handler(handler):      # handler als Parameter — kein self-Zugriff
+            if handler:
                 try:
-                    self._cat_handler.disconnect()
+                    handler.disconnect()
                 except Exception:
                     pass
-                self._cat_handler = None
 
-        threading.Thread(target=close_handler, daemon=True).start()
+        threading.Thread(target=close_handler, args=(old_handler,), daemon=True).start()
 
         self._cat_connected = False
         self.btn_cat_con.setStyleSheet(self._CAT_BTN_OFF)

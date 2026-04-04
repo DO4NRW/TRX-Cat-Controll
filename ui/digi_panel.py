@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QFont, QColor, QTextCharFormat, QTextCursor
 
-from core.theme import T, register_refresh, themed_icon
+from core.theme import T, register_refresh
 from ui._constants import _ICONS
 
 
@@ -62,6 +62,7 @@ class DigiPanelOverlay(QDialog):
 
     def closeEvent(self, event):
         self._demo_timer.stop()
+        self._progress_timer.stop()
         super().closeEvent(event)
 
     # ── UI aufbauen ───────────────────────────────────────────────────────────
